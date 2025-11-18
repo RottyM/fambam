@@ -52,19 +52,19 @@ function TodosContent() {
 
   return (
     <>
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 lg:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-display font-bold mb-2">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold mb-2">
             <span className="gradient-text">Family To-Dos</span>
           </h1>
-          <p className="text-gray-600 font-semibold">
+          <p className="text-sm sm:text-base text-gray-600 font-semibold">
             {activeTodos.length} active • {completedTodos.length} completed
           </p>
         </div>
-        
+
         <button
           onClick={() => setShowAddModal(true)}
-          className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+          className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 sm:px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 w-full sm:w-auto"
         >
           <FaPlus /> Add Todo
         </button>
@@ -122,9 +122,9 @@ function TodosContent() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl"
+              className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto"
             >
-              <h2 className="text-3xl font-display font-bold mb-6 gradient-text">
+              <h2 className="text-2xl sm:text-3xl font-display font-bold mb-4 sm:mb-6 gradient-text">
                 ✨ Add New Todo
               </h2>
 
@@ -166,16 +166,16 @@ function TodosContent() {
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     Choose an icon
                   </label>
-                  <div className="grid grid-cols-6 gap-2">
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                     {ICON_CATEGORIES.status.concat(ICON_CATEGORIES.fun).slice(0, 12).map(icon => (
                       <button
                         key={icon.id}
                         type="button"
                         onClick={() => setNewTodo({...newTodo, iconId: icon.id})}
-                        className={`p-3 text-2xl rounded-xl border-2 transition-all ${
+                        className={`p-2 sm:p-3 text-xl sm:text-2xl rounded-xl border-2 transition-all touch-manipulation ${
                           newTodo.iconId === icon.id
                             ? 'border-purple-500 bg-purple-50 scale-110'
-                            : 'border-gray-200 hover:border-purple-300'
+                            : 'border-gray-200 hover:border-purple-300 active:border-purple-400'
                         }`}
                       >
                         {getIcon(icon.id)}
@@ -200,13 +200,13 @@ function TodosContent() {
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 transition-all"
+                    className="flex-1 bg-gray-200 text-gray-700 py-3 sm:py-3 rounded-xl font-bold hover:bg-gray-300 active:bg-gray-400 transition-all touch-manipulation min-h-[48px]"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg"
+                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 sm:py-3 rounded-xl font-bold hover:from-purple-600 hover:to-pink-600 active:from-purple-700 active:to-pink-700 transition-all shadow-lg touch-manipulation min-h-[48px]"
                   >
                     Add Todo
                   </button>

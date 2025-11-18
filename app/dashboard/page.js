@@ -5,6 +5,7 @@ import DailyMeme from '@/components/DailyMeme';
 import UserAvatar from '@/components/UserAvatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useTodos, useChores, useMemories } from '@/hooks/useFirebase';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
@@ -32,6 +33,7 @@ function StatsCard({ icon, title, value, color, href }) {
 function DashboardContent() {
   const { userData } = useAuth();
   const { family, members } = useFamily();
+  const { theme, currentTheme } = useTheme();
   const { todos } = useTodos();
   const { chores } = useChores();
   const { memories } = useMemories();
@@ -41,30 +43,30 @@ function DashboardContent() {
   const recentMemories = memories.length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8">
       {/* Welcome header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-3xl p-8 shadow-xl border-4 border-purple-200"
+        className={`${theme.colors.bgCard} rounded-2xl lg:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-xl border-4 ${theme.colors.border}`}
       >
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-display font-bold mb-2">
-              <span className="gradient-text">
-                Welcome back, {userData?.displayName}!
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold mb-2">
+              <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
+                {theme.messages.welcome}, {userData?.displayName}!
               </span>
             </h1>
-            <p className="text-xl text-gray-600 font-semibold">
-              {family?.name || 'Your Family'} • {new Date().toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                month: 'long', 
-                day: 'numeric' 
+            <p className={`text-sm sm:text-base lg:text-xl ${theme.colors.textMuted} font-semibold`}>
+              {family?.name || (currentTheme === 'dark' ? 'Your Coven' : 'Your Family')} • {new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
               })}
             </p>
           </div>
-          <div className="text-6xl animate-wiggle">
-            👋
+          <div className="text-4xl sm:text-5xl lg:text-6xl animate-wiggle flex-shrink-0">
+            {currentTheme === 'dark' ? '🦇' : '👋'}
           </div>
         </div>
 
@@ -87,31 +89,31 @@ function DashboardContent() {
       {/* Stats grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
-          icon="✅"
-          title="Pending To-Dos"
+          icon={currentTheme === 'dark' ? '☑️' : '✅'}
+          title={currentTheme === 'dark' ? 'Pending Tasks' : 'Pending To-Dos'}
           value={pendingTodos}
-          color="bg-gradient-to-br from-blue-500 to-blue-600"
+          color={`bg-gradient-to-br ${theme.colors.statBlue}`}
           href="/todos"
         />
         <StatsCard
-          icon="🧹"
-          title="Active Chores"
+          icon={currentTheme === 'dark' ? '🧟' : '🧹'}
+          title={currentTheme === 'dark' ? 'Active Duties' : 'Active Chores'}
           value={pendingChores}
-          color="bg-gradient-to-br from-purple-500 to-purple-600"
+          color={`bg-gradient-to-br ${theme.colors.statPurple}`}
           href="/chores"
         />
         <StatsCard
-          icon="👥"
-          title="Family Members"
+          icon={currentTheme === 'dark' ? '🦇' : '👥'}
+          title={currentTheme === 'dark' ? 'Coven Members' : 'Family Members'}
           value={members.length}
-          color="bg-gradient-to-br from-pink-500 to-pink-600"
+          color={`bg-gradient-to-br ${theme.colors.statPink}`}
           href="/settings"
         />
         <StatsCard
-          icon="📸"
-          title="Memories"
+          icon={currentTheme === 'dark' ? '💀' : '📸'}
+          title={currentTheme === 'dark' ? 'Archives' : 'Memories'}
           value={recentMemories}
-          color="bg-gradient-to-br from-green-500 to-green-600"
+          color={`bg-gradient-to-br ${theme.colors.statGreen}`}
           href="/memories"
         />
       </div>

@@ -1,11 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import UserAvatar from './UserAvatar';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   FaHome,
   FaCheckSquare,
@@ -17,6 +19,10 @@ import {
   FaCog,
   FaShoppingCart,
   FaUtensils,
+  FaBars,
+  FaTimes,
+  FaMoon,
+  FaSun,
 } from 'react-icons/fa';
 
 const navItems = [
@@ -35,15 +41,45 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { user, userData, signOut } = useAuth();
   const { family, members } = useFamily();
+  const { theme, toggleTheme, currentTheme } = useTheme();
+  const [isOpen, setIsOpen] = useState(false);
+
+  const closeSidebar = () => setIsOpen(false);
 
   return (
-    <motion.div
-      initial={{ x: -300 }}
-      animate={{ x: 0 }}
-      className="w-72 bg-white shadow-2xl h-screen fixed left-0 top-0 flex flex-col border-r-4 border-purple-200"
-    >
+    <>
+      {/* Mobile hamburger button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`lg:hidden fixed top-4 left-4 z-50 bg-gradient-to-r ${theme.colors.sidebarHeader} text-white p-3 rounded-xl shadow-lg hover:shadow-xl transition-all`}
+        aria-label="Toggle menu"
+      >
+        {isOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
+      </button>
+
+      {/* Backdrop overlay for mobile */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closeSidebar}
+            className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Sidebar */}
+      <div
+        className={`w-72 ${theme.colors.sidebarBg} bg-opacity-100 shadow-2xl h-screen fixed left-0 top-0 flex flex-col border-r-4 ${theme.colors.border} z-40 transition-all duration-300 ease-in-out
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:translate-x-0
+        `}
+        style={{ backgroundColor: currentTheme === 'dark' ? '#030712' : '#ffffff' }}
+      >
       {/* Header */}
-      <div className="p-6 bg-gradient-to-br from-pink-500 via-purple-500 to-blue-500">
+      <div className={`p-6 bg-gradient-to-br ${theme.colors.sidebarHeader}`}>
         <Link href="/dashboard">
           <h1 className="text-3xl font-display font-bold text-white mb-2 cursor-pointer hover:scale-105 transition-transform">
             Family OS
@@ -55,20 +91,20 @@ export default function Sidebar() {
       </div>
 
       {/* User profile */}
-      <div className="p-6 border-b-2 border-gray-100">
-        <div className="flex items-center gap-3">
-          <UserAvatar user={userData || user} size={48} />
+      <div className={`p-3 border-b ${theme.colors.borderLight}`}>
+        <div className="flex items-center gap-2">
+          <UserAvatar user={userData || user} size={32} />
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-gray-800 truncate">
+            <h3 className={`text-sm font-bold ${theme.colors.text} truncate`}>
               {userData?.displayName || user?.displayName || 'User'}
             </h3>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-purple-600">
-                {userData?.role === 'parent' ? '👑 Parent' : '🎮 Kid'}
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className={`font-semibold ${currentTheme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
+                {userData?.role === 'parent' ? (currentTheme === 'dark' ? '🦇' : '👑') : (currentTheme === 'dark' ? '🕸️' : '🎮')}
               </span>
               {userData?.points !== undefined && (
-                <span className="text-xs font-bold text-yellow-600">
-                  ⭐ {userData.points}
+                <span className={`font-bold ${currentTheme === 'dark' ? 'text-amber-500' : 'text-yellow-600'}`}>
+                  {currentTheme === 'dark' ? '🕷️' : '⭐'} {userData.points}
                 </span>
               )}
             </div>
@@ -77,64 +113,74 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4">
+      <nav className="flex-1 overflow-y-auto py-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-4 px-6 py-3 transition-all ${
+              onClick={closeSidebar}
+              className={`flex items-center gap-3 px-4 py-2 transition-all ${
                 isActive
-                  ? 'bg-gradient-to-r from-purple-100 to-pink-100 border-r-4 border-purple-500 text-purple-700 font-bold'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-purple-600'
+                  ? `bg-gradient-to-r ${theme.colors.sidebarActive} border-r-4 ${theme.colors.sidebarActiveBorder} ${theme.colors.sidebarActiveText} font-bold`
+                  : `${theme.colors.sidebarText} hover:bg-opacity-10 hover:${theme.colors.sidebarActiveText}`
               }`}
             >
-              <span className="text-2xl">{item.emoji}</span>
-              <span className="font-semibold">{item.label}</span>
+              <span className="text-xl">{item.emoji}</span>
+              <span className="font-semibold text-sm">{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
-      {/* Family members preview */}
-      {members.length > 0 && (
-        <div className="p-4 border-t-2 border-gray-100">
-          <p className="text-xs font-bold text-gray-500 mb-2 uppercase">
-            Family Members
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {members.slice(0, 6).map((member) => (
-              <div key={member.id} title={member.displayName}>
-                <UserAvatar user={member} size={32} />
+      {/* Bottom tools - compact */}
+      <div className={`border-t ${theme.colors.borderLight}`}>
+        {/* Family members - minimal */}
+        {members.length > 0 && (
+          <div className={`px-3 py-2 flex items-center justify-center gap-1.5 border-b ${theme.colors.borderLight}`}>
+            {members.slice(0, 4).map((member) => (
+              <div key={member.id} title={member.displayName} className={`ring-1 ${currentTheme === 'dark' ? 'ring-gray-800' : 'ring-gray-200'} rounded-full`}>
+                <UserAvatar user={member} size={24} />
               </div>
             ))}
-            {members.length > 6 && (
-              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
-                +{members.length - 6}
+            {members.length > 4 && (
+              <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${currentTheme === 'dark' ? 'from-purple-900 to-gray-800' : 'from-purple-400 to-pink-400'} flex items-center justify-center text-xs font-bold text-white`}>
+                +{members.length - 4}
               </div>
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Bottom actions */}
-      <div className="p-4 border-t-2 border-gray-100 space-y-2">
-        <Link
-          href="/settings"
-          className="flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-xl transition-all font-semibold"
-        >
-          <FaCog />
-          <span>Settings</span>
-        </Link>
-        <button
-          onClick={signOut}
-          className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 rounded-xl transition-all font-semibold"
-        >
-          <FaSignOutAlt />
-          <span>Sign Out</span>
-        </button>
+        {/* Action buttons - icon grid */}
+        <div className="grid grid-cols-3 gap-1 p-2">
+          <button
+            onClick={toggleTheme}
+            title={currentTheme === 'dark' ? 'Switch to Family Mode' : 'Switch to Dark Mode'}
+            className={`flex items-center justify-center p-3 ${theme.colors.sidebarText} ${currentTheme === 'dark' ? 'hover:bg-purple-900/30' : 'hover:bg-gray-100'} rounded-lg transition-all`}
+          >
+            {currentTheme === 'dark' ? <FaSun size={18} /> : <FaMoon size={18} />}
+          </button>
+
+          <Link
+            href="/settings"
+            onClick={closeSidebar}
+            title="Settings"
+            className={`flex items-center justify-center p-3 ${theme.colors.sidebarText} ${currentTheme === 'dark' ? 'hover:bg-purple-900/30' : 'hover:bg-gray-100'} rounded-lg transition-all`}
+          >
+            <FaCog size={18} />
+          </Link>
+
+          <button
+            onClick={signOut}
+            title="Sign Out"
+            className={`flex items-center justify-center p-3 ${currentTheme === 'dark' ? 'text-red-400 hover:bg-red-900/30' : 'text-red-600 hover:bg-red-100'} rounded-lg transition-all`}
+          >
+            <FaSignOutAlt size={18} />
+          </button>
+        </div>
       </div>
-    </motion.div>
+      </div>
+    </>
   );
 }

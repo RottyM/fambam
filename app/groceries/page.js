@@ -66,33 +66,34 @@ function GroceriesContent() {
 
   return (
     <>
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-display font-bold mb-2">
-            <span className="gradient-text">Grocery List</span>
-          </h1>
-          <p className="text-gray-600 font-semibold">
-            {uncheckedCount} items to buy
-            {checkedCount > 0 && ` • ${checkedCount} checked`}
-          </p>
-        </div>
+      <div className="mb-6 lg:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold mb-2">
+              <span className="gradient-text">Grocery List</span>
+            </h1>
+            <p className="text-sm sm:text-base text-gray-600 font-semibold">
+              {uncheckedCount} items to buy
+              {checkedCount > 0 && ` • ${checkedCount} checked`}
+            </p>
+          </div>
 
-        <div className="flex gap-3">
-          {checkedCount > 0 && (
-            <button
-              onClick={clearCheckedItems}
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded-2xl font-bold transition-all shadow-lg flex items-center gap-2"
-            >
-              <FaTrash /> Clear Checked
-            </button>
-          )}
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-green-600 hover:to-blue-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+            className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-4 sm:px-6 py-3 rounded-2xl font-bold hover:from-green-600 hover:to-blue-600 active:from-green-700 active:to-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 w-full sm:w-auto touch-manipulation min-h-[48px]"
           >
             <FaPlus /> Add Item
           </button>
         </div>
+
+        {checkedCount > 0 && (
+          <button
+            onClick={clearCheckedItems}
+            className="bg-red-500 hover:bg-red-600 active:bg-red-700 text-white px-4 py-3 rounded-2xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 w-full sm:w-auto touch-manipulation min-h-[48px]"
+          >
+            <FaTrash /> Clear Checked ({checkedCount})
+          </button>
+        )}
       </div>
 
       {groceries.length === 0 ? (

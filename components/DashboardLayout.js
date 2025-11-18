@@ -1,12 +1,14 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 
 export default function DashboardLayout({ children }) {
   const { user, loading } = useAuth();
+  const { theme } = useTheme();
   const router = useRouter();
 
   useEffect(() => {
@@ -31,9 +33,9 @@ export default function DashboardLayout({ children }) {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className={`flex min-h-screen ${theme.colors.bg} transition-colors duration-300`}>
       <Sidebar />
-      <main className="flex-1 ml-72 p-8">
+      <main className="flex-1 lg:ml-72 p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 w-full">
         {children}
       </main>
     </div>

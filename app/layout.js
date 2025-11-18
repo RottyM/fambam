@@ -2,7 +2,9 @@ import { Inter, Poppins } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { FamilyProvider } from '@/contexts/FamilyContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Toaster } from 'react-hot-toast';
+import ClientLayout from '@/components/ClientLayout';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const poppins = Poppins({ 
@@ -19,37 +21,41 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${poppins.variable} font-sans bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 min-h-screen`}>
-        <AuthProvider>
-          <FamilyProvider>
-            {children}
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 3000,
-                style: {
-                  background: '#fff',
-                  color: '#363636',
-                  fontWeight: '600',
-                  borderRadius: '12px',
-                  padding: '16px',
-                },
-                success: {
-                  iconTheme: {
-                    primary: '#10b981',
-                    secondary: '#fff',
+      <body className={`${inter.variable} ${poppins.variable} font-sans`}>
+        <ThemeProvider>
+          <AuthProvider>
+            <FamilyProvider>
+              <ClientLayout>
+                {children}
+              </ClientLayout>
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 3000,
+                  style: {
+                    background: '#fff',
+                    color: '#363636',
+                    fontWeight: '600',
+                    borderRadius: '12px',
+                    padding: '16px',
                   },
-                },
-                error: {
-                  iconTheme: {
-                    primary: '#ef4444',
-                    secondary: '#fff',
+                  success: {
+                    iconTheme: {
+                      primary: '#10b981',
+                      secondary: '#fff',
+                    },
                   },
-                },
-              }}
-            />
-          </FamilyProvider>
-        </AuthProvider>
+                  error: {
+                    iconTheme: {
+                      primary: '#ef4444',
+                      secondary: '#fff',
+                    },
+                  },
+                }}
+              />
+            </FamilyProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

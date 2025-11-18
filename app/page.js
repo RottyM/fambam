@@ -29,7 +29,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -95,7 +95,7 @@ export default function HomePage() {
           {/* Google Sign In */}
           <button
             onClick={signInWithGoogle}
-            className="w-full bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-50 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 mb-6"
+            className="w-full bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-50 active:bg-gray-100 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 mb-6 touch-manipulation min-h-[48px]"
           >
             <FaGoogle className="text-red-500" />
             Continue with Google
@@ -140,7 +140,7 @@ export default function HomePage() {
 
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white py-3 rounded-xl font-bold hover:from-pink-600 hover:via-purple-600 hover:to-blue-600 transition-all shadow-lg hover:shadow-xl"
+              className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white py-3 rounded-xl font-bold hover:from-pink-600 hover:via-purple-600 hover:to-blue-600 active:from-pink-700 active:via-purple-700 active:to-blue-700 transition-all shadow-lg hover:shadow-xl touch-manipulation min-h-[48px]"
             >
               {isSignUp ? '🚀 Create Account' : '🎯 Sign In'}
             </button>
@@ -149,7 +149,7 @@ export default function HomePage() {
           {/* Toggle sign up/in */}
           <button
             onClick={() => setIsSignUp(!isSignUp)}
-            className="w-full mt-4 text-purple-600 hover:text-purple-700 font-semibold"
+            className="w-full mt-4 text-purple-600 hover:text-purple-700 active:text-purple-800 font-semibold py-2 touch-manipulation min-h-[44px]"
           >
             {isSignUp
               ? 'Already have an account? Sign in! 👉'
@@ -164,22 +164,37 @@ export default function HomePage() {
           transition={{ delay: 0.5 }}
           className="mt-8 text-center text-gray-600"
         >
-          <p className="font-semibold mb-3">✨ What's inside:</p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <span className="bg-white px-4 py-2 rounded-full shadow-md text-sm font-semibold">
-              📅 Family Calendar
+          <p className="font-semibold mb-4 text-lg">✨ Everything your family needs in one place:</p>
+          <div className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
+            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
+              🏠 Family Dashboard
             </span>
-            <span className="bg-white px-4 py-2 rounded-full shadow-md text-sm font-semibold">
+            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
+              💝 Daily Check-In
+            </span>
+            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
               ✅ Shared To-Dos
             </span>
-            <span className="bg-white px-4 py-2 rounded-full shadow-md text-sm font-semibold">
-              🏆 Chore Tracker
+            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
+              🧹 Chore Tracker
             </span>
-            <span className="bg-white px-4 py-2 rounded-full shadow-md text-sm font-semibold">
+            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
+              📅 Family Calendar
+            </span>
+            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
+              🛒 Grocery Lists
+            </span>
+            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
+              🍳 Recipe Collection
+            </span>
+            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
+              📄 Document Storage
+            </span>
+            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
               📸 Memory Vault
             </span>
-            <span className="bg-white px-4 py-2 rounded-full shadow-md text-sm font-semibold">
-              😂 Daily Memes
+            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
+              ⏰ Time Capsules
             </span>
           </div>
         </motion.div>
