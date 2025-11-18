@@ -1,0 +1,206 @@
+'use client';
+
+import { useState } from 'react';
+import DashboardLayout from '@/components/DashboardLayout';
+import { useDocuments } from '@/hooks/useFirebase';
+import { useAuth } from '@/contexts/AuthContext';
+import { motion } from 'framer-motion';
+import { FaFileAlt, FaFilePdf, FaFileImage, FaUpload, FaSearch, FaDownload } from 'react-icons/fa';
+import { storage, db } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import toast from 'react-hot-toast';
+import { useDropzone } from 'react-dropzone';
+
+function DocumentsContent() {
+  const { documents, loading } = useDocuments();
+  const { userData } = useAuth();
+  const [uploading, setUploading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const onDrop = async (acceptedFiles) => {
+    if (!userData?.familyId) return;
+    
+    setUploading(true);
+    
+    for (const file of acceptedFiles) {
+      try {
+        const timestamp = Date.now();
+        const fileName = `${timestamp}_${file.name}`;
+        const storageRef = ref(storage, `families/${userData.familyId}/documents/${fileName}`);
+        
+        await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(storageRef);
+        
+        await addDoc(collection(db, 'families', userData.familyId, 'documents'), {
+          name: file.name,
+          uploadedBy: userData.uid,
+          storagePath: storageRef.fullPath,
+          downloadURL: downloadURL,
+          mimeType: file.type,
+          size: file.size,
+          uploadedAt: serverTimestamp(),
+          ocrText: '', // Will be populated by Cloud Function
+        });
+        
+        toast.success(`${file.name} uploaded!`);
+      } catch (error) {
+        console.error('Upload error:', error);
+        toast.error(`Failed to upload ${file.name}`);
+      }
+    }
+    
+    setUploading(false);
+  };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'image/*': ['.png', '.jpg', '.jpeg', '.gif'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+    },
+  });
+
+  const getFileIcon = (mimeType) => {
+    if (mimeType?.includes('pdf')) return <FaFilePdf className="text-red-500" />;
+    if (mimeType?.includes('image')) return <FaFileImage className="text-blue-500" />;
+    return <FaFileAlt className="text-gray-500" />;
+  };
+
+  const filteredDocs = documents.filter(doc =>
+    doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    doc.ocrText?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="text-6xl mb-4 animate-bounce">📄</div>
+          <p className="text-xl font-bold text-purple-600">Loading documents...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="mb-8">
+        <h1 className="text-4xl font-display font-bold mb-2">
+          <span className="gradient-text">Family Documents</span>
+        </h1>
+        <p className="text-gray-600 font-semibold">
+          {documents.length} documents stored securely
+        </p>
+      </div>
+
+      {/* Upload area */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        {...getRootProps()}
+        className={`border-4 border-dashed rounded-3xl p-12 mb-8 text-center cursor-pointer transition-all ${
+          isDragActive
+            ? 'border-purple-500 bg-purple-50'
+            : 'border-gray-300 hover:border-purple-400 bg-white'
+        }`}
+      >
+        <input {...getInputProps()} />
+        <div className="text-6xl mb-4 animate-bounce-slow">
+          {uploading ? '⏳' : '📤'}
+        </div>
+        <h3 className="text-2xl font-display font-bold mb-2 text-gray-800">
+          {uploading ? 'Uploading...' : isDragActive ? 'Drop files here!' : 'Upload Documents'}
+        </h3>
+        <p className="text-gray-600 font-semibold">
+          Drag & drop files or click to browse<br />
+          <span className="text-sm">Supports PDF, Images, Word documents</span>
+        </p>
+      </motion.div>
+
+      {/* Search bar */}
+      <div className="mb-6">
+        <div className="relative">
+          <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search documents (including OCR text)..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold shadow-md"
+          />
+        </div>
+      </div>
+
+      {/* Documents grid */}
+      {filteredDocs.length === 0 ? (
+        <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
+          <div className="text-6xl mb-4">📁</div>
+          <p className="text-xl font-bold text-gray-600">
+            {searchTerm ? 'No documents found' : 'No documents yet'}
+          </p>
+          <p className="text-gray-500">
+            {searchTerm ? 'Try a different search term' : 'Upload your first document above'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredDocs.map(doc => (
+            <motion.div
+              key={doc.id}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              whileHover={{ scale: 1.02 }}
+              className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all"
+            >
+              <div className="flex items-start gap-4 mb-4">
+                <div className="text-4xl">
+                  {getFileIcon(doc.mimeType)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-gray-800 mb-1 truncate">
+                    {doc.name}
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    {new Date(doc.uploadedAt?.seconds * 1000).toLocaleDateString()}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {(doc.size / 1024).toFixed(0)} KB
+                  </p>
+                </div>
+              </div>
+
+              {doc.ocrText && (
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-600 line-clamp-3">
+                    <span className="font-bold">OCR: </span>
+                    {doc.ocrText}
+                  </p>
+                </div>
+              )}
+
+              <a
+                href={doc.downloadURL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all"
+              >
+                <FaDownload /> Download
+              </a>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+export default function DocumentsPage() {
+  return (
+    <DashboardLayout>
+      <DocumentsContent />
+    </DashboardLayout>
+  );
+}

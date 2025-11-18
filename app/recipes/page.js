@@ -1,0 +1,463 @@
+'use client';
+
+import { useState } from 'react';
+import DashboardLayout from '@/components/DashboardLayout';
+import { useRecipes, useGroceries } from '@/hooks/useFirebase';
+import { useAuth } from '@/contexts/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaPlus, FaTrash, FaShoppingCart, FaCalendar } from 'react-icons/fa';
+import { storage } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import toast from 'react-hot-toast';
+import Image from 'next/image';
+
+function RecipesContent() {
+  const { recipes, loading, addRecipe, deleteRecipe } = useRecipes();
+  const { addGroceryItem } = useGroceries();
+  const { userData } = useAuth();
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [newRecipe, setNewRecipe] = useState({
+    name: '',
+    description: '',
+    servings: '',
+    prepTime: '',
+    ingredients: [{ name: '', amount: '', category: 'other' }],
+    instructions: '',
+    imageFile: null,
+  });
+
+  const handleAddIngredient = () => {
+    setNewRecipe({
+      ...newRecipe,
+      ingredients: [...newRecipe.ingredients, { name: '', amount: '', category: 'other' }],
+    });
+  };
+
+  const handleRemoveIngredient = (index) => {
+    setNewRecipe({
+      ...newRecipe,
+      ingredients: newRecipe.ingredients.filter((_, i) => i !== index),
+    });
+  };
+
+  const handleIngredientChange = (index, field, value) => {
+    const updated = [...newRecipe.ingredients];
+    updated[index][field] = value;
+    setNewRecipe({ ...newRecipe, ingredients: updated });
+  };
+
+  const handleImageChange = (e) => {
+    if (e.target.files[0]) {
+      setNewRecipe({ ...newRecipe, imageFile: e.target.files[0] });
+    }
+  };
+
+  const handleAddRecipe = async (e) => {
+    e.preventDefault();
+    setUploading(true);
+
+    try {
+      let imageUrl = '';
+
+      // Upload image if provided
+      if (newRecipe.imageFile) {
+        const timestamp = Date.now();
+        const storageRef = ref(
+          storage,
+          `families/${userData.familyId}/recipes/${timestamp}_${newRecipe.imageFile.name}`
+        );
+        await uploadBytes(storageRef, newRecipe.imageFile);
+        imageUrl = await getDownloadURL(storageRef);
+      }
+
+      await addRecipe({
+        name: newRecipe.name,
+        description: newRecipe.description,
+        servings: newRecipe.servings,
+        prepTime: newRecipe.prepTime,
+        ingredients: newRecipe.ingredients.filter(ing => ing.name),
+        instructions: newRecipe.instructions,
+        imageUrl,
+      });
+
+      setNewRecipe({
+        name: '',
+        description: '',
+        servings: '',
+        prepTime: '',
+        ingredients: [{ name: '', amount: '', category: 'other' }],
+        instructions: '',
+        imageFile: null,
+      });
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Error adding recipe:', error);
+      toast.error('Failed to add recipe');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const addAllToGroceries = async (recipe) => {
+    for (const ing of recipe.ingredients || []) {
+      await addGroceryItem({
+        name: ing.name,
+        quantity: ing.amount,
+        category: ing.category || 'other',
+      });
+    }
+    toast.success(`Added ${recipe.name} ingredients to grocery list! 🛒`);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="text-6xl mb-4 animate-bounce">🍳</div>
+          <p className="text-xl font-bold text-purple-600">Loading recipes...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-display font-bold mb-2">
+            <span className="gradient-text">Family Recipes</span>
+          </h1>
+          <p className="text-gray-600 font-semibold">{recipes.length} saved recipes</p>
+        </div>
+
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-orange-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+        >
+          <FaPlus /> Add Recipe
+        </button>
+      </div>
+
+      {recipes.length === 0 ? (
+        <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
+          <div className="text-6xl mb-4">🍳</div>
+          <p className="text-xl font-bold text-gray-600">No recipes yet</p>
+          <p className="text-gray-500">Add your family's favorite recipes!</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {recipes.map(recipe => (
+            <motion.div
+              key={recipe.id}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer"
+              onClick={() => setSelectedRecipe(recipe)}
+            >
+              {recipe.imageUrl ? (
+                <div className="relative h-48">
+                  <Image
+                    src={recipe.imageUrl}
+                    alt={recipe.name}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+              ) : (
+                <div className="h-48 bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center">
+                  <span className="text-6xl">🍳</span>
+                </div>
+              )}
+
+              <div className="p-6">
+                <h3 className="text-xl font-bold text-gray-800 mb-2">{recipe.name}</h3>
+                {recipe.description && (
+                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">{recipe.description}</p>
+                )}
+
+                <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                  {recipe.servings && <span>👥 {recipe.servings}</span>}
+                  {recipe.prepTime && <span>⏱️ {recipe.prepTime}</span>}
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      addAllToGroceries(recipe);
+                    }}
+                    className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-1"
+                  >
+                    <FaShoppingCart /> Add to List
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* Recipe Detail Modal */}
+      <AnimatePresence>
+        {selectedRecipe && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+            onClick={() => setSelectedRecipe(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl my-8"
+            >
+              {selectedRecipe.imageUrl && (
+                <div className="relative h-64">
+                  <Image
+                    src={selectedRecipe.imageUrl}
+                    alt={selectedRecipe.name}
+                    fill
+                    className="object-cover rounded-t-3xl"
+                    unoptimized
+                  />
+                </div>
+              )}
+
+              <div className="p-8">
+                <div className="flex items-start justify-between mb-4">
+                  <h2 className="text-3xl font-display font-bold gradient-text">
+                    {selectedRecipe.name}
+                  </h2>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm('Delete this recipe?')) {
+                        deleteRecipe(selectedRecipe.id);
+                        setSelectedRecipe(null);
+                      }
+                    }}
+                    className="text-red-500 hover:text-red-700 p-2"
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
+
+                {selectedRecipe.description && (
+                  <p className="text-gray-600 mb-4">{selectedRecipe.description}</p>
+                )}
+
+                <div className="flex gap-4 mb-6">
+                  {selectedRecipe.servings && (
+                    <div className="bg-purple-50 px-4 py-2 rounded-xl">
+                      <span className="font-bold text-purple-700">👥 {selectedRecipe.servings}</span>
+                    </div>
+                  )}
+                  {selectedRecipe.prepTime && (
+                    <div className="bg-blue-50 px-4 py-2 rounded-xl">
+                      <span className="font-bold text-blue-700">⏱️ {selectedRecipe.prepTime}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mb-6">
+                  <h3 className="text-xl font-bold mb-3">📝 Ingredients:</h3>
+                  <div className="space-y-2">
+                    {selectedRecipe.ingredients?.map((ing, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                        <span className="font-semibold text-gray-800">{ing.name}</span>
+                        {ing.amount && <span className="text-gray-600">- {ing.amount}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {selectedRecipe.instructions && (
+                  <div className="mb-6">
+                    <h3 className="text-xl font-bold mb-3">👨‍🍳 Instructions:</h3>
+                    <p className="text-gray-700 whitespace-pre-line bg-gray-50 p-4 rounded-xl">
+                      {selectedRecipe.instructions}
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    addAllToGroceries(selectedRecipe);
+                    setSelectedRecipe(null);
+                  }}
+                  className="w-full bg-gradient-to-r from-green-500 to-blue-500 text-white py-4 rounded-2xl font-bold hover:from-green-600 hover:to-blue-600 transition-all shadow-lg flex items-center justify-center gap-2"
+                >
+                  <FaShoppingCart /> Add All Ingredients to Grocery List
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Recipe Modal - Simplified for space */}
+      <AnimatePresence>
+        {showAddModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+            onClick={() => !uploading && setShowAddModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl my-8"
+            >
+              <h2 className="text-3xl font-display font-bold mb-6 gradient-text">
+                🍳 Add Recipe
+              </h2>
+
+              <form onSubmit={handleAddRecipe} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Recipe Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newRecipe.name}
+                      onChange={(e) => setNewRecipe({ ...newRecipe, name: e.target.value })}
+                      placeholder="Spaghetti Carbonara"
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Photo
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Servings
+                    </label>
+                    <input
+                      type="text"
+                      value={newRecipe.servings}
+                      onChange={(e) => setNewRecipe({ ...newRecipe, servings: e.target.value })}
+                      placeholder="4 servings"
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Prep Time
+                    </label>
+                    <input
+                      type="text"
+                      value={newRecipe.prepTime}
+                      onChange={(e) => setNewRecipe({ ...newRecipe, prepTime: e.target.value })}
+                      placeholder="30 mins"
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Ingredients
+                  </label>
+                  {newRecipe.ingredients.map((ing, index) => (
+                    <div key={index} className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        value={ing.name}
+                        onChange={(e) => handleIngredientChange(index, 'name', e.target.value)}
+                        placeholder="Ingredient"
+                        className="flex-1 px-4 py-2 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none"
+                      />
+                      <input
+                        type="text"
+                        value={ing.amount}
+                        onChange={(e) => handleIngredientChange(index, 'amount', e.target.value)}
+                        placeholder="Amount"
+                        className="w-32 px-4 py-2 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveIngredient(index)}
+                        className="px-3 text-red-500 hover:text-red-700"
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={handleAddIngredient}
+                    className="text-sm text-purple-600 font-bold hover:underline"
+                  >
+                    + Add Ingredient
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Instructions
+                  </label>
+                  <textarea
+                    value={newRecipe.instructions}
+                    onChange={(e) => setNewRecipe({ ...newRecipe, instructions: e.target.value })}
+                    placeholder="Step-by-step instructions..."
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                    rows={4}
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 transition-all"
+                    disabled={uploading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={uploading}
+                    className="flex-1 bg-gradient-to-r from-orange-500 to-pink-500 text-white py-3 rounded-xl font-bold hover:from-orange-600 hover:to-pink-600 transition-all shadow-lg disabled:opacity-50"
+                  >
+                    {uploading ? 'Adding...' : 'Add Recipe'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+export default function RecipesPage() {
+  return (
+    <DashboardLayout>
+      <RecipesContent />
+    </DashboardLayout>
+  );
+}
