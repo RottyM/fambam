@@ -1,6 +1,10 @@
 import {setGlobalOptions} from "firebase-functions";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {onSchedule} from "firebase-functions/v2/scheduler";
+import {
+  onDocumentCreated,
+  onDocumentUpdated,
+} from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import {google} from "googleapis";
@@ -462,3 +466,264 @@ export const deleteEventFromGoogleCalendar = onCall(async (request) => {
     throw new HttpsError("internal", "Failed to delete event");
   }
 });
+
+/**
+ * Helper function to send push notification to a user
+ */
+async function sendNotificationToUser(
+  userId: string,
+  title: string,
+  body: string,
+  data?: Record<string, string>
+) {
+  try {
+    // Get user's FCM token
+    const userDoc = await db.collection("users").doc(userId).get();
+    const userData = userDoc.data();
+
+    if (!userData?.fcmToken || !userData?.notificationsEnabled) {
+      logger.info(`User ${userId} doesn't have notifications enabled`);
+      return null;
+    }
+
+    // Send notification using FCM
+    const message = {
+      token: userData.fcmToken,
+      notification: {
+        title,
+        body,
+      },
+      data: data || {},
+      webpush: {
+        fcmOptions: {
+          link: data?.url || "/dashboard",
+        },
+      },
+    };
+
+    const response = await admin.messaging().send(message);
+    logger.info(`Notification sent successfully to ${userId}:`, response);
+    return response;
+  } catch (error) {
+    logger.error(`Error sending notification to ${userId}:`, error);
+    // Don't throw - notifications failing shouldn't break the main flow
+    return null;
+  }
+}
+
+/**
+ * Send notification when a chore is assigned
+ */
+export const onChoreAssigned = onDocumentCreated(
+  "families/{familyId}/chores/{choreId}",
+  async (event) => {
+    const choreData = event.data?.data();
+
+    if (!choreData || !choreData.assignedTo) {
+      return;
+    }
+
+    logger.info(`New chore assigned to ${choreData.assignedTo}`);
+
+    await sendNotificationToUser(
+      choreData.assignedTo,
+      "🧹 New Chore Assigned",
+      `You've been assigned: ${choreData.title}`,
+      {
+        type: "chore_assigned",
+        choreId: event.params.choreId,
+        url: "/chores",
+      }
+    );
+  }
+);
+
+/**
+ * Send notification when a chore assignment changes
+ */
+export const onChoreUpdated = onDocumentUpdated(
+  "families/{familyId}/chores/{choreId}",
+  async (event) => {
+    const beforeData = event.data?.before.data();
+    const afterData = event.data?.after.data();
+
+    if (!beforeData || !afterData) {
+      return;
+    }
+
+    // Check if assignedTo changed
+    if (
+      beforeData.assignedTo !== afterData.assignedTo &&
+      afterData.assignedTo
+    ) {
+      logger.info(`Chore reassigned to ${afterData.assignedTo}`);
+
+      await sendNotificationToUser(
+        afterData.assignedTo,
+        "🧹 Chore Reassigned to You",
+        `You've been assigned: ${afterData.title}`,
+        {
+          type: "chore_reassigned",
+          choreId: event.params.choreId,
+          url: "/chores",
+        }
+      );
+    }
+
+    // Check if chore was approved
+    if (
+      beforeData.status !== "approved" &&
+      afterData.status === "approved" &&
+      afterData.assignedTo
+    ) {
+      logger.info(`Chore approved for ${afterData.assignedTo}`);
+
+      await sendNotificationToUser(
+        afterData.assignedTo,
+        "✅ Chore Approved!",
+        `Great job! Your chore "${afterData.title}" was approved and you earned ${afterData.pointValue || 0} points!`,
+        {
+          type: "chore_approved",
+          choreId: event.params.choreId,
+          points: String(afterData.pointValue || 0),
+          url: "/chores",
+        }
+      );
+    }
+  }
+);
+
+/**
+ * Send notification when a todo is assigned
+ */
+export const onTodoAssigned = onDocumentCreated(
+  "families/{familyId}/todos/{todoId}",
+  async (event) => {
+    const todoData = event.data?.data();
+
+    if (!todoData || !todoData.assignedTo) {
+      return;
+    }
+
+    logger.info(`New todo assigned to ${todoData.assignedTo}`);
+
+    await sendNotificationToUser(
+      todoData.assignedTo,
+      "✅ New To-Do Assigned",
+      `You've been assigned: ${todoData.title}`,
+      {
+        type: "todo_assigned",
+        todoId: event.params.todoId,
+        url: "/todos",
+      }
+    );
+  }
+);
+
+/**
+ * Send notification when a todo assignment changes
+ */
+export const onTodoUpdated = onDocumentUpdated(
+  "families/{familyId}/todos/{todoId}",
+  async (event) => {
+    const beforeData = event.data?.before.data();
+    const afterData = event.data?.after.data();
+
+    if (!beforeData || !afterData) {
+      return;
+    }
+
+    // Check if assignedTo changed
+    if (
+      beforeData.assignedTo !== afterData.assignedTo &&
+      afterData.assignedTo
+    ) {
+      logger.info(`Todo reassigned to ${afterData.assignedTo}`);
+
+      await sendNotificationToUser(
+        afterData.assignedTo,
+        "✅ To-Do Reassigned to You",
+        `You've been assigned: ${afterData.title}`,
+        {
+          type: "todo_reassigned",
+          todoId: event.params.todoId,
+          url: "/todos",
+        }
+      );
+    }
+  }
+);
+
+/**
+ * Send calendar event reminders
+ * Runs every hour to check for upcoming events
+ */
+export const sendCalendarReminders = onSchedule(
+  {
+    schedule: "0 * * * *", // Run every hour
+    timeZone: "America/New_York",
+  },
+  async () => {
+    try {
+      logger.info("Checking for calendar reminders...");
+
+      const now = new Date();
+      const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+
+      // Query all families
+      const familiesSnapshot = await db.collection("families").get();
+
+      for (const familyDoc of familiesSnapshot.docs) {
+        const familyId = familyDoc.id;
+
+        // Get calendar events starting in the next hour
+        const eventsSnapshot = await db
+          .collection("families")
+          .doc(familyId)
+          .collection("calendar-events")
+          .where("start", ">=", now.toISOString())
+          .where("start", "<=", oneHourLater.toISOString())
+          .get();
+
+        for (const eventDoc of eventsSnapshot.docs) {
+          const eventData = eventDoc.data();
+
+          // Check if reminder was already sent
+          if (eventData.reminderSent) {
+            continue;
+          }
+
+          logger.info(`Sending reminder for event: ${eventData.title}`);
+
+          // Get all family members
+          const familyData = familyDoc.data();
+          const memberIds = familyData?.members || [];
+
+          // Send notification to all family members
+          for (const memberId of memberIds) {
+            await sendNotificationToUser(
+              memberId,
+              "📅 Upcoming Event",
+              `${eventData.title} starts in 1 hour`,
+              {
+                type: "calendar_reminder",
+                eventId: eventDoc.id,
+                url: "/calendar",
+              }
+            );
+          }
+
+          // Mark reminder as sent
+          await eventDoc.ref.update({
+            reminderSent: true,
+          });
+        }
+      }
+
+      logger.info("Calendar reminders sent successfully");
+    } catch (error) {
+      logger.error("Error sending calendar reminders:", error);
+      throw error;
+    }
+  }
+);

@@ -3,6 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { FamilyProvider } from '@/contexts/FamilyContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 import { Toaster } from 'react-hot-toast';
 import ClientLayout from '@/components/ClientLayout';
 
@@ -25,9 +26,11 @@ export default function RootLayout({ children }) {
         <ThemeProvider>
           <AuthProvider>
             <FamilyProvider>
-              <ClientLayout>
-                {children}
-              </ClientLayout>
+              <NotificationProvider>
+                <ClientLayout>
+                  {children}
+                </ClientLayout>
+              </NotificationProvider>
               <Toaster
                 position="top-right"
                 toastOptions={{

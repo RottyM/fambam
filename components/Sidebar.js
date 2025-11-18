@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 import UserAvatar from './UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -23,6 +24,8 @@ import {
   FaTimes,
   FaMoon,
   FaSun,
+  FaBell,
+  FaBellSlash,
 } from 'react-icons/fa';
 
 const navItems = [
@@ -42,6 +45,7 @@ export default function Sidebar() {
   const { user, userData, signOut } = useAuth();
   const { family, members } = useFamily();
   const { theme, toggleTheme, currentTheme } = useTheme();
+  const { permission, requestPermission, disableNotifications, notificationsSupported } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
 
   const closeSidebar = () => setIsOpen(false);
@@ -153,7 +157,7 @@ export default function Sidebar() {
         )}
 
         {/* Action buttons - icon grid */}
-        <div className="grid grid-cols-3 gap-1 p-2">
+        <div className="grid grid-cols-4 gap-1 p-2">
           <button
             onClick={toggleTheme}
             title={currentTheme === 'dark' ? 'Switch to Family Mode' : 'Switch to Dark Mode'}
@@ -161,6 +165,16 @@ export default function Sidebar() {
           >
             {currentTheme === 'dark' ? <FaSun size={18} /> : <FaMoon size={18} />}
           </button>
+
+          {notificationsSupported && (
+            <button
+              onClick={permission === 'granted' ? disableNotifications : requestPermission}
+              title={permission === 'granted' ? 'Disable Notifications' : 'Enable Notifications'}
+              className={`flex items-center justify-center p-3 ${permission === 'granted' ? (currentTheme === 'dark' ? 'text-green-400' : 'text-green-600') : theme.colors.sidebarText} ${currentTheme === 'dark' ? 'hover:bg-purple-900/30' : 'hover:bg-gray-100'} rounded-lg transition-all`}
+            >
+              {permission === 'granted' ? <FaBell size={18} /> : <FaBellSlash size={18} />}
+            </button>
+          )}
 
           <Link
             href="/settings"
