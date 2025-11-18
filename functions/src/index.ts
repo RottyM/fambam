@@ -469,6 +469,11 @@ export const deleteEventFromGoogleCalendar = onCall(async (request) => {
 
 /**
  * Helper function to send push notification to a user
+ * @param {string} userId - The ID of the user to send notification to
+ * @param {string} title - The notification title
+ * @param {string} body - The notification body text
+ * @param {Record<string, string>} data - Optional data payload
+ * @return {Promise<any>} The FCM response or null
  */
 async function sendNotificationToUser(
   userId: string,
@@ -578,10 +583,14 @@ export const onChoreUpdated = onDocumentUpdated(
     ) {
       logger.info(`Chore approved for ${afterData.assignedTo}`);
 
+      const points = afterData.pointValue || 0;
+      const message = `Great job! Your chore "${afterData.title}" ` +
+        `was approved and you earned ${points} points!`;
+
       await sendNotificationToUser(
         afterData.assignedTo,
         "✅ Chore Approved!",
-        `Great job! Your chore "${afterData.title}" was approved and you earned ${afterData.pointValue || 0} points!`,
+        message,
         {
           type: "chore_approved",
           choreId: event.params.choreId,
