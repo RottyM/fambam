@@ -5,14 +5,13 @@ importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
 // Initialize Firebase in the service worker
-// Note: These will be replaced with actual config values
 firebase.initializeApp({
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCGqgnFv00GBTUo2ufp_5i6dGW9aQr7uIQ",
+  authDomain: "fambam-d5582.firebaseapp.com",
+  projectId: "fambam-d5582",
+  storageBucket: "fambam-d5582.firebasestorage.app",
+  messagingSenderId: "582301224528",
+  appId: "1:582301224528:web:81a330a6364e98a7e18b55"
 });
 
 const messaging = firebase.messaging();
