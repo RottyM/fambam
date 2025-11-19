@@ -7,14 +7,18 @@ import { useChores } from '@/hooks/useFirebase';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaPlus, FaTrophy } from 'react-icons/fa';
+import { FaPlus, FaTrophy, FaUndo, FaTrash, FaTimes } from 'react-icons/fa';
 import { ICON_CATEGORIES, getIcon } from '@/lib/icons';
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import toast from 'react-hot-toast';
 
 function ChoresContent() {
   const { chores, loading, addChore } = useChores();
   const { members, isParent } = useFamily();
   const { userData } = useAuth();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
   const [newChore, setNewChore] = useState({
     title: '',
     description: '',
@@ -36,6 +40,52 @@ function ChoresContent() {
     });
   };
 
+  const handleResetPoints = async (memberId = 'all') => {
+    if (!userData?.familyId) return;
+
+    try {
+      const membersToReset = memberId === 'all'
+        ? members.filter(m => m.role !== 'parent')
+        : members.filter(m => m.id === memberId);
+
+      await Promise.all(
+        membersToReset.map(member =>
+          updateDoc(doc(db, 'users', member.id), {
+            points: 0
+          })
+        )
+      );
+
+      toast.success(
+        memberId === 'all'
+          ? 'All points reset successfully! 🔄'
+          : 'Points reset successfully! 🔄'
+      );
+      setShowResetModal(false);
+    } catch (error) {
+      console.error('Error resetting points:', error);
+      toast.error('Failed to reset points');
+    }
+  };
+
+  const handleClearCompletedChores = async () => {
+    if (!userData?.familyId) return;
+    if (!confirm('Clear all completed chores? This cannot be undone.')) return;
+
+    try {
+      const completedChores = chores.filter(c => c.status === 'approved');
+      await Promise.all(
+        completedChores.map(chore =>
+          deleteDoc(doc(db, 'families', userData.familyId, 'chores', chore.id))
+        )
+      );
+      toast.success('Completed chores cleared! 🧹');
+    } catch (error) {
+      console.error('Error clearing chores:', error);
+      toast.error('Failed to clear completed chores');
+    }
+  };
+
   const pendingChores = chores.filter(c => c.status === 'pending');
   const submittedChores = chores.filter(c => c.status === 'submitted');
   const approvedChores = chores.filter(c => c.status === 'approved');
@@ -54,22 +104,44 @@ function ChoresContent() {
 
   return (
     <>
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-display font-bold mb-2">
-            <span className="gradient-text">Chore Tracker</span>
-          </h1>
-          <p className="text-gray-600 font-semibold">
-            {pendingChores.length} pending • {submittedChores.length} submitted • {approvedChores.length} completed
-          </p>
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-4xl font-display font-bold mb-2">
+              <span className="gradient-text">Chore Tracker</span>
+            </h1>
+            <p className="text-gray-600 font-semibold">
+              {pendingChores.length} pending • {submittedChores.length} submitted • {approvedChores.length} completed
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            {isParent() && (
+              <>
+                <button
+                  onClick={() => setShowResetModal(true)}
+                  className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-3 rounded-2xl font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+                >
+                  <FaUndo /> Reset Points
+                </button>
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-green-600 hover:to-blue-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+                >
+                  <FaPlus /> Create Chore
+                </button>
+              </>
+            )}
+          </div>
         </div>
-        
-        {isParent() && (
+
+        {/* Clear completed chores button for parents */}
+        {isParent() && approvedChores.length > 0 && (
           <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-green-600 hover:to-blue-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+            onClick={handleClearCompletedChores}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 text-sm"
           >
-            <FaPlus /> Create Chore
+            <FaTrash /> Clear {approvedChores.length} Completed Chore{approvedChores.length !== 1 ? 's' : ''}
           </button>
         )}
       </div>
@@ -87,7 +159,49 @@ function ChoresContent() {
               Family Leaderboard
             </h2>
           </div>
-          
+
+          <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4">
+            <div className="space-y-2">
+              {members
+                .filter(m => m.role !== 'parent')
+                .sort((a, b) => (b.points || 0) - (a.points || 0))
+                .map((member, index) => (
+                  <div
+                    key={member.id}
+                    className="flex items-center gap-3 bg-white/80 rounded-xl p-3"
+                  >
+                    <span className="text-2xl font-bold w-8">
+                      {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
+                    </span>
+                    <span className="flex-1 font-bold text-gray-800">
+                      {member.displayName}
+                    </span>
+                    <span className="text-xl font-bold text-yellow-600">
+                      ⭐ {member.points || 0}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Leaderboard for parents */}
+      {isParent() && members.filter(m => m.role !== 'parent').length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 rounded-3xl p-6 mb-8 shadow-xl"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <FaTrophy className="text-4xl text-white" />
+              <h2 className="text-2xl font-display font-bold text-white">
+                Family Leaderboard
+              </h2>
+            </div>
+          </div>
+
           <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4">
             <div className="space-y-2">
               {members
@@ -119,6 +233,9 @@ function ChoresContent() {
         <div className="mb-8">
           <h2 className="text-2xl font-display font-bold mb-4 flex items-center gap-2">
             <span>⏳</span> Pending Approval
+            <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-bold">
+              {submittedChores.length}
+            </span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {submittedChores.map(chore => (
@@ -132,8 +249,13 @@ function ChoresContent() {
       <div className="mb-8">
         <h2 className="text-2xl font-display font-bold mb-4 flex items-center gap-2">
           <span>🔥</span> {isParent() ? 'Active Chores' : 'Your Chores'}
+          {(isParent() ? pendingChores : myChores.filter(c => c.status !== 'approved')).length > 0 && (
+            <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold">
+              {(isParent() ? pendingChores : myChores.filter(c => c.status !== 'approved')).length}
+            </span>
+          )}
         </h2>
-        
+
         {(isParent() ? pendingChores : myChores.filter(c => c.status !== 'approved')).length === 0 ? (
           <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
             <div className="text-6xl mb-4">🎉</div>
@@ -158,14 +280,96 @@ function ChoresContent() {
         <div>
           <h2 className="text-2xl font-display font-bold mb-4 flex items-center gap-2">
             <span>✅</span> Completed This Week
+            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-bold">
+              {approvedChores.length}
+            </span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-70">
             {approvedChores.slice(0, 6).map(chore => (
               <ChoreCard key={chore.id} chore={chore} />
             ))}
           </div>
+          {approvedChores.length > 6 && (
+            <p className="text-center text-gray-500 mt-4 text-sm">
+              + {approvedChores.length - 6} more completed chores
+            </p>
+          )}
         </div>
       )}
+
+      {/* Reset Points Modal */}
+      <AnimatePresence>
+        {showResetModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto p-4"
+            onClick={() => setShowResetModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-3xl font-display font-bold gradient-text">
+                  🔄 Reset Points
+                </h2>
+                <button
+                  onClick={() => setShowResetModal(false)}
+                  className="text-gray-400 hover:text-gray-600 p-2"
+                >
+                  <FaTimes size={24} />
+                </button>
+              </div>
+
+              <p className="text-gray-600 mb-6">
+                Select who you want to reset points for. This action cannot be undone!
+              </p>
+
+              <div className="space-y-3 mb-6">
+                {members
+                  .filter(m => m.role !== 'parent')
+                  .map(member => (
+                    <button
+                      key={member.id}
+                      onClick={() => {
+                        if (confirm(`Reset ${member.displayName}'s points (${member.points || 0} ⭐) to 0?`)) {
+                          handleResetPoints(member.id);
+                        }
+                      }}
+                      className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all border-2 border-gray-200 hover:border-orange-300"
+                    >
+                      <span className="font-bold text-gray-800">{member.displayName}</span>
+                      <span className="text-yellow-600 font-bold">⭐ {member.points || 0}</span>
+                    </button>
+                  ))}
+              </div>
+
+              <button
+                onClick={() => {
+                  if (confirm('Reset ALL family members points to 0? This cannot be undone!')) {
+                    handleResetPoints('all');
+                  }
+                }}
+                className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-2xl font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg flex items-center justify-center gap-2"
+              >
+                <FaUndo /> Reset All Points
+              </button>
+
+              <button
+                onClick={() => setShowResetModal(false)}
+                className="w-full mt-3 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 transition-all"
+              >
+                Cancel
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Add Chore Modal */}
       <AnimatePresence>
@@ -174,19 +378,27 @@ function ChoresContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto p-4"
             onClick={() => setShowAddModal(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto"
             >
-              <h2 className="text-3xl font-display font-bold mb-6 gradient-text">
-                🧹 Create New Chore
-              </h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-3xl font-display font-bold gradient-text">
+                  🧹 Create New Chore
+                </h2>
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="text-gray-400 hover:text-gray-600 p-2"
+                >
+                  <FaTimes size={24} />
+                </button>
+              </div>
 
               <form onSubmit={handleAddChore} className="space-y-4">
                 <div>
@@ -223,10 +435,10 @@ function ChoresContent() {
                   <select
                     value={newChore.assignedTo}
                     onChange={(e) => setNewChore({...newChore, assignedTo: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold bg-white"
                     required
                   >
-                    <option value="">Select a family member</option>
+                    <option value="">Select a family member...</option>
                     {members.map(member => (
                       <option key={member.id} value={member.id}>
                         {member.displayName}

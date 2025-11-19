@@ -386,6 +386,20 @@ export function useGroceries() {
     }
   };
 
+  const clearAllItems = async () => {
+    try {
+      await Promise.all(
+        groceries.map(item =>
+          deleteDoc(doc(db, 'families', userData.familyId, 'groceries', item.id))
+        )
+      );
+      toast.success('All items cleared!');
+    } catch (error) {
+      toast.error('Failed to clear all items');
+      console.error(error);
+    }
+  };
+
   return {
     groceries,
     loading,
@@ -393,6 +407,7 @@ export function useGroceries() {
     toggleGroceryItem,
     deleteGroceryItem,
     clearCheckedItems,
+    clearAllItems,
   };
 }
 
@@ -510,4 +525,79 @@ export function useMealPlan() {
   };
 
   return { meals, loading, addMeal, deleteMeal };
+}
+
+// Hook for Family Credentials
+export function useCredentials() {
+  const { userData } = useAuth();
+  const [credentials, setCredentials] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userData?.familyId) {
+      setLoading(false);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'families', userData.familyId, 'credentials'),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const credentialsList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setCredentials(credentialsList);
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [userData?.familyId]);
+
+  const addCredential = async (credentialData) => {
+    try {
+      await addDoc(collection(db, 'families', userData.familyId, 'credentials'), {
+        ...credentialData,
+        createdBy: userData.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      toast.success('Credential added!');
+    } catch (error) {
+      toast.error('Failed to add credential');
+      console.error(error);
+    }
+  };
+
+  const updateCredential = async (credentialId, updates) => {
+    try {
+      await updateDoc(
+        doc(db, 'families', userData.familyId, 'credentials', credentialId),
+        {
+          ...updates,
+          updatedAt: serverTimestamp(),
+        }
+      );
+      toast.success('Credential updated!');
+    } catch (error) {
+      toast.error('Failed to update credential');
+      console.error(error);
+    }
+  };
+
+  const deleteCredential = async (credentialId) => {
+    try {
+      await deleteDoc(
+        doc(db, 'families', userData.familyId, 'credentials', credentialId)
+      );
+      toast.success('Credential deleted!');
+    } catch (error) {
+      toast.error('Failed to delete credential');
+      console.error(error);
+    }
+  };
+
+  return { credentials, loading, addCredential, updateCredential, deleteCredential };
 }

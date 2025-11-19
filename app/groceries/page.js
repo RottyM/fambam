@@ -26,6 +26,7 @@ function GroceriesContent() {
     toggleGroceryItem,
     deleteGroceryItem,
     clearCheckedItems,
+    clearAllItems,
   } = useGroceries();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -86,13 +87,27 @@ function GroceriesContent() {
           </button>
         </div>
 
-        {checkedCount > 0 && (
-          <button
-            onClick={clearCheckedItems}
-            className="bg-red-500 hover:bg-red-600 active:bg-red-700 text-white px-4 py-3 rounded-2xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 w-full sm:w-auto touch-manipulation min-h-[48px]"
-          >
-            <FaTrash /> Clear Checked ({checkedCount})
-          </button>
+        {groceries.length > 0 && (
+          <div className="flex flex-col sm:flex-row gap-3">
+            {checkedCount > 0 && (
+              <button
+                onClick={clearCheckedItems}
+                className="bg-red-500 hover:bg-red-600 active:bg-red-700 text-white px-4 py-3 rounded-2xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 w-full sm:w-auto touch-manipulation min-h-[48px]"
+              >
+                <FaTrash /> Clear Checked ({checkedCount})
+              </button>
+            )}
+            <button
+              onClick={() => {
+                if (confirm(`Are you sure you want to clear ALL ${groceries.length} items? This cannot be undone.`)) {
+                  clearAllItems();
+                }
+              }}
+              className="bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white px-4 py-3 rounded-2xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 w-full sm:w-auto touch-manipulation min-h-[48px]"
+            >
+              <FaTrash /> Clear All ({groceries.length})
+            </button>
+          </div>
         )}
       </div>
 

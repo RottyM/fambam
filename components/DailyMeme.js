@@ -58,25 +58,23 @@ export default function DailyMeme() {
       initial={{ scale: 0.9, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="bg-gradient-to-br from-pink-400 via-purple-400 to-blue-500 p-6 rounded-3xl shadow-2xl hover:shadow-3xl transition-shadow"
+      className="bg-gradient-to-br from-pink-400 via-purple-400 to-blue-500 p-3 rounded-3xl shadow-2xl hover:shadow-3xl transition-shadow"
     >
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <span className="text-4xl animate-bounce-slow">😂</span>
-          <h3 className="text-2xl font-display font-bold text-white">
-            Today's Family Meme
-          </h3>
-        </div>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+          <span className="text-lg">😂</span>
+          Today's Meme
+        </h3>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-xl font-bold transition-all disabled:opacity-50"
+          className="bg-white/20 hover:bg-white/30 text-white px-2 py-1 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
         >
-          {refreshing ? '⏳' : '🔄'} Refresh
+          {refreshing ? '⏳' : '🔄'}
         </button>
       </div>
-      
-      <div className="bg-white rounded-2xl p-4 shadow-lg overflow-hidden">
+
+      <div className="bg-white rounded-2xl p-2 shadow-lg overflow-hidden">
         <div className="relative w-full aspect-video">
           <Image
             src={meme.url}
@@ -86,9 +84,9 @@ export default function DailyMeme() {
             unoptimized
           />
         </div>
-        
+
         {meme.title && (
-          <p className="text-center mt-3 text-sm font-semibold text-gray-700">
+          <p className="text-center mt-2 text-xs font-semibold text-gray-700 line-clamp-2">
             {meme.title}
           </p>
         )}

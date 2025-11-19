@@ -1,6 +1,7 @@
+// Test edit by Grok  
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { FaGoogle, FaListUl, FaTasks, FaUsers, FaCameraRetro } from 'react-icons/fa';

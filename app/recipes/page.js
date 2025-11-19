@@ -4,8 +4,10 @@ import { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useRecipes, useGroceries } from '@/hooks/useFirebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaPlus, FaTrash, FaShoppingCart, FaCalendar } from 'react-icons/fa';
+import { searchRecipes, getRecipeInformation } from '@/lib/spoonacular';
+import { FaPlus, FaTrash, FaShoppingCart, FaCalendar, FaSearch } from 'react-icons/fa';
 import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import toast from 'react-hot-toast';
@@ -15,9 +17,16 @@ function RecipesContent() {
   const { recipes, loading, addRecipe, deleteRecipe } = useRecipes();
   const { addGroceryItem } = useGroceries();
   const { userData } = useAuth();
+  const { currentTheme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedSearchRecipe, setSelectedSearchRecipe] = useState(null);
+  const [loadingRecipeDetails, setLoadingRecipeDetails] = useState(false);
+  const [activeTab, setActiveTab] = useState('my-recipes');
   const [newRecipe, setNewRecipe] = useState({
     name: '',
     description: '',
@@ -27,6 +36,81 @@ function RecipesContent() {
     instructions: '',
     imageFile: null,
   });
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    try {
+      const results = await searchRecipes(searchQuery);
+      setSearchResults(results);
+      setActiveTab('search-results');
+      toast.success(`Found ${results.length} recipes!`);
+    } catch (error) {
+      console.error('Search failed:', error);
+      toast.error('Failed to search recipes. Please check your API key.');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleViewRecipeDetails = async (recipeId) => {
+    setLoadingRecipeDetails(true);
+    try {
+      const fullRecipe = await getRecipeInformation(recipeId);
+      setSelectedSearchRecipe(fullRecipe);
+    } catch (error) {
+      console.error('Failed to get recipe details:', error);
+      toast.error('Failed to load recipe details');
+    } finally {
+      setLoadingRecipeDetails(false);
+    }
+  };
+
+  const handleAddApiRecipe = async (apiRecipe) => {
+    try {
+      // Parse ingredients from API format
+      const ingredients = apiRecipe.extendedIngredients?.map(ing => ({
+        name: ing.name || ing.original,
+        amount: ing.measures?.us?.amount && ing.measures?.us?.unitShort
+          ? `${ing.measures.us.amount} ${ing.measures.us.unitShort}`
+          : ing.amount || '',
+        category: ing.aisle?.toLowerCase().includes('produce') ? 'produce'
+          : ing.aisle?.toLowerCase().includes('meat') ? 'meat'
+          : ing.aisle?.toLowerCase().includes('dairy') ? 'dairy'
+          : 'other'
+      })) || [];
+
+      // Parse instructions
+      let instructions = '';
+      if (apiRecipe.analyzedInstructions?.[0]?.steps) {
+        instructions = apiRecipe.analyzedInstructions[0].steps
+          .map((step, i) => `${i + 1}. ${step.step}`)
+          .join('\n\n');
+      } else if (apiRecipe.instructions) {
+        instructions = apiRecipe.instructions;
+      }
+
+      await addRecipe({
+        name: apiRecipe.title,
+        description: apiRecipe.summary?.replace(/<[^>]*>/g, '').substring(0, 200) || '',
+        servings: `${apiRecipe.servings || ''} servings`,
+        prepTime: `${apiRecipe.readyInMinutes || ''} mins`,
+        ingredients,
+        instructions,
+        imageUrl: apiRecipe.image,
+        nutrition: apiRecipe.nutrition,
+        sourceUrl: apiRecipe.sourceUrl,
+      });
+
+      toast.success(`Added ${apiRecipe.title} to your recipes!`);
+      setSelectedSearchRecipe(null);
+      setActiveTab('my-recipes');
+    } catch (error) {
+      console.error('Error adding recipe:', error);
+      toast.error('Failed to add recipe');
+    }
+  };  
 
   const handleAddIngredient = () => {
     setNewRecipe({
@@ -124,76 +208,190 @@ function RecipesContent() {
 
   return (
     <>
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-display font-bold mb-2">
-            <span className="gradient-text">Family Recipes</span>
-          </h1>
-          <p className="text-gray-600 font-semibold">{recipes.length} saved recipes</p>
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-4xl font-display font-bold mb-2">
+              <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
+                {currentTheme === 'dark' ? 'Potion Recipes' : 'Family Recipes'}
+              </span>
+            </h1>
+            <p className={currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-semibold>
+              {recipes.length} {currentTheme === 'dark' ? 'potions' : 'saved recipes'}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-orange-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+          >
+            <FaPlus /> {currentTheme === 'dark' ? 'Add Potion' : 'Add Recipe'}
+          </button>
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-orange-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
-        >
-          <FaPlus /> Add Recipe
-        </button>
+        {/* Search Bar */}
+        <form onSubmit={handleSearch} className="mb-6">
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="🔍 Search for recipes (e.g., chicken pasta, healthy salad)..."
+              className="flex-1 px-6 py-4 rounded-2xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold text-lg shadow-lg"
+              required
+            />
+            <button
+              type="submit"
+              disabled={searching}
+              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-8 py-4 rounded-2xl font-bold hover:from-blue-600 hover:to-purple-600 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center gap-2"
+            >
+              {searching ? 'Searching...' : <><FaSearch /> Search</>}
+            </button>
+          </div>
+        </form>
+
+        {/* Tabs */}
+        {searchResults.length > 0 && (
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setActiveTab('my-recipes')}
+              className={`px-6 py-3 rounded-xl font-bold transition-all ${
+                activeTab === 'my-recipes'
+                  ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              My Recipes ({recipes.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('search-results')}
+              className={`px-6 py-3 rounded-xl font-bold transition-all ${
+                activeTab === 'search-results'
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Search Results ({searchResults.length})
+            </button>
+          </div>
+        )}
       </div>
 
-      {recipes.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
-          <div className="text-6xl mb-4">🍳</div>
-          <p className="text-xl font-bold text-gray-600">No recipes yet</p>
-          <p className="text-gray-500">Add your family's favorite recipes!</p>
-        </div>
-      ) : (
+      {/* My Recipes Tab */}
+      {activeTab === 'my-recipes' && (
+        <>
+          {recipes.length === 0 ? (
+            <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
+              <div className="text-6xl mb-4">🍳</div>
+              <p className="text-xl font-bold text-gray-600">No recipes yet</p>
+              <p className="text-gray-500">Add your family's favorite recipes or search for new ones!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recipes.map(recipe => (
+                <motion.div
+                  key={recipe.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer"
+                  onClick={() => setSelectedRecipe(recipe)}
+                >
+                  {recipe.imageUrl ? (
+                    <div className="relative h-48">
+                      <Image
+                        src={recipe.imageUrl}
+                        alt={recipe.name}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-48 bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center">
+                      <span className="text-6xl">🍳</span>
+                    </div>
+                  )}
+
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">{recipe.name}</h3>
+                    {recipe.description && (
+                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">{recipe.description}</p>
+                    )}
+
+                    <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                      {recipe.servings && <span>👥 {recipe.servings}</span>}
+                      {recipe.prepTime && <span>⏱️ {recipe.prepTime}</span>}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addAllToGroceries(recipe);
+                        }}
+                        className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-1"
+                      >
+                        <FaShoppingCart /> Add to List
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Delete "${recipe.name}"?`)) {
+                            deleteRecipe(recipe.id);
+                          }
+                        }}
+                        className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-xl transition-all flex items-center justify-center"
+                        title="Delete recipe"
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Search Results Tab */}
+      {activeTab === 'search-results' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {recipes.map(recipe => (
+          {searchResults.map(recipe => (
             <motion.div
               key={recipe.id}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer"
-              onClick={() => setSelectedRecipe(recipe)}
+              className="bg-white border-2 border-blue-200 rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl hover:border-purple-400 transition-all cursor-pointer"
+              onClick={() => handleViewRecipeDetails(recipe.id)}
             >
-              {recipe.imageUrl ? (
+              {recipe.image ? (
                 <div className="relative h-48">
                   <Image
-                    src={recipe.imageUrl}
-                    alt={recipe.name}
+                    src={recipe.image}
+                    alt={recipe.title}
                     fill
                     className="object-cover"
                     unoptimized
                   />
                 </div>
               ) : (
-                <div className="h-48 bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center">
-                  <span className="text-6xl">🍳</span>
+                <div className="h-48 bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center">
+                  <span className="text-6xl">🍽️</span>
                 </div>
               )}
-
               <div className="p-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-2">{recipe.name}</h3>
-                {recipe.description && (
-                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">{recipe.description}</p>
-                )}
-
-                <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                <h3 className="text-xl font-bold text-gray-800 mb-2 line-clamp-2">
+                  {recipe.title}
+                </h3>
+                <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                  {recipe.readyInMinutes && <span>⏱️ {recipe.readyInMinutes} mins</span>}
                   {recipe.servings && <span>👥 {recipe.servings}</span>}
-                  {recipe.prepTime && <span>⏱️ {recipe.prepTime}</span>}
                 </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      addAllToGroceries(recipe);
-                    }}
-                    className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-1"
-                  >
-                    <FaShoppingCart /> Add to List
-                  </button>
-                </div>
+                <button
+                  className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-xl font-bold hover:from-purple-600 hover:to-blue-600 transition-all shadow-lg"
+                >
+                  View Details & Add
+                </button>
               </div>
             </motion.div>
           ))}
@@ -207,7 +405,7 @@ function RecipesContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto p-4"
             onClick={() => setSelectedRecipe(null)}
           >
             <motion.div
@@ -215,7 +413,7 @@ function RecipesContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl my-8"
+              className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto"
             >
               {selectedRecipe.imageUrl && (
                 <div className="relative h-64">
@@ -308,7 +506,7 @@ function RecipesContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto p-4"
             onClick={() => !uploading && setShowAddModal(false)}
           >
             <motion.div
@@ -316,7 +514,7 @@ function RecipesContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl my-8"
+              className="bg-white rounded-3xl p-6 max-w-2xl w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto"
             >
               <h2 className="text-3xl font-display font-bold mb-6 gradient-text">
                 🍳 Add Recipe
@@ -446,6 +644,152 @@ function RecipesContent() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* Search Recipe Detail Modal */}
+      <AnimatePresence>
+        {selectedSearchRecipe && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto p-4"
+            onClick={() => setSelectedSearchRecipe(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl p-6 max-w-5xl w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto"
+            >
+              {loadingRecipeDetails ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="text-center">
+                    <div className="text-6xl mb-4 animate-bounce">🍳</div>
+                    <p className="text-xl font-bold text-purple-600">Loading recipe details...</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setSelectedSearchRecipe(null)}
+                    className="mb-4 text-purple-600 font-bold hover:text-purple-800 flex items-center gap-2"
+                  >
+                    ← Back to results
+                  </button>
+
+                  {selectedSearchRecipe.image && (
+                    <div className="relative h-64 rounded-2xl overflow-hidden mb-6">
+                      <Image
+                        src={selectedSearchRecipe.image}
+                        alt={selectedSearchRecipe.title}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                  )}
+
+                  <h2 className="text-3xl font-display font-bold mb-4 gradient-text">
+                    {selectedSearchRecipe.title}
+                  </h2>
+
+                  {/* Recipe Info Cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                    {selectedSearchRecipe.readyInMinutes && (
+                      <div className="bg-blue-50 p-4 rounded-xl text-center">
+                        <div className="text-2xl mb-1">⏱️</div>
+                        <div className="text-sm font-bold text-blue-900">{selectedSearchRecipe.readyInMinutes} mins</div>
+                      </div>
+                    )}
+                    {selectedSearchRecipe.servings && (
+                      <div className="bg-purple-50 p-4 rounded-xl text-center">
+                        <div className="text-2xl mb-1">👥</div>
+                        <div className="text-sm font-bold text-purple-900">{selectedSearchRecipe.servings} servings</div>
+                      </div>
+                    )}
+                    {selectedSearchRecipe.healthScore && (
+                      <div className="bg-green-50 p-4 rounded-xl text-center">
+                        <div className="text-2xl mb-1">💚</div>
+                        <div className="text-sm font-bold text-green-900">Health: {selectedSearchRecipe.healthScore}/100</div>
+                      </div>
+                    )}
+                    {selectedSearchRecipe.pricePerServing && (
+                      <div className="bg-orange-50 p-4 rounded-xl text-center">
+                        <div className="text-2xl mb-1">💰</div>
+                        <div className="text-sm font-bold text-orange-900">${(selectedSearchRecipe.pricePerServing / 100).toFixed(2)}/serving</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Nutrition Info */}
+                  {selectedSearchRecipe.nutrition && (
+                    <div className="bg-gradient-to-br from-green-50 to-blue-50 p-6 rounded-2xl mb-6">
+                      <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                        <span>📊</span> Nutrition Facts
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {selectedSearchRecipe.nutrition.nutrients?.slice(0, 8).map((nutrient, i) => (
+                          <div key={i} className="bg-white p-3 rounded-xl">
+                            <div className="text-xs text-gray-600 mb-1">{nutrient.name}</div>
+                            <div className="text-lg font-bold text-gray-900">
+                              {nutrient.amount.toFixed(1)}{nutrient.unit}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ingredients */}
+                  {selectedSearchRecipe.extendedIngredients && (
+                    <div className="mb-6">
+                      <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
+                        <span>📝</span> Ingredients ({selectedSearchRecipe.extendedIngredients.length})
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {selectedSearchRecipe.extendedIngredients.map((ing, i) => (
+                          <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                            <span className="text-gray-700">{ing.original}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Instructions */}
+                  {selectedSearchRecipe.analyzedInstructions?.[0]?.steps && (
+                    <div className="mb-6">
+                      <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
+                        <span>👨‍🍳</span> Instructions
+                      </h3>
+                      <div className="space-y-3">
+                        {selectedSearchRecipe.analyzedInstructions[0].steps.map((step, i) => (
+                          <div key={i} className="flex gap-4 p-4 bg-gray-50 rounded-xl">
+                            <div className="flex-shrink-0 w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">
+                              {step.number}
+                            </div>
+                            <p className="text-gray-700 flex-1">{step.step}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleAddApiRecipe(selectedSearchRecipe)}
+                      className="flex-1 bg-gradient-to-r from-green-500 to-blue-500 text-white py-4 rounded-2xl font-bold hover:from-green-600 hover:to-blue-600 transition-all shadow-lg flex items-center justify-center gap-2"
+                    >
+                      <FaPlus /> Add to My Recipes
+                    </button>
+                  </div>
+                </>
+              )}
             </motion.div>
           </motion.div>
         )}
