@@ -4,7 +4,14 @@
       "Bash(npm run build)",
       "Bash(rm:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(firebase apphosting:rollouts:create:*)",
+      "Bash(firebase apphosting:rollouts:list:*)",
+      "Bash(git push)",
+      "Bash(vercel --prod:*)",
+      "Bash(git push:*)",
+      "Bash(test:*)",
+      "Bash(firebase deploy:*)"
     ],
     "deny": [],
     "ask": []

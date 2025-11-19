@@ -13,10 +13,10 @@ import { FaCheckCircle, FaBroom, FaCalendarAlt, FaImages } from 'react-icons/fa'
 
 function StatsCard({ icon, title, value, color, href }) {
   return (
-    <Link href={href}>
+    <Link href={href} className="h-full">
       <motion.div
         whileHover={{ scale: 1.05, y: -5 }}
-        className={`${color} rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all cursor-pointer card-hover`}
+        className={`${color} rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all cursor-pointer card-hover flex flex-col h-full`}
       >
         <div className="flex items-center justify-between mb-4">
           <div className="text-4xl">{icon}</div>
@@ -87,7 +87,7 @@ function DashboardContent() {
       </motion.div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           icon={currentTheme === 'dark' ? '☑️' : '✅'}
           title={currentTheme === 'dark' ? 'Pending Tasks' : 'Pending To-Dos'}

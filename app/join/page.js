@@ -53,11 +53,14 @@ function JoinFamilyContent() {
       setLoading(true);
 
       // Verify family exists
-      const familyDoc = await getDoc(doc(db, 'families', familyCode));
+      const familyRef = doc(db, 'families', familyCode);
+      const familyDoc = await getDoc(familyRef);
       if (!familyDoc.exists()) {
         toast.error('Invalid family code!');
         return;
       }
+
+      const familyData = familyDoc.data();
 
       // Update user with family ID
       await setDoc(
@@ -68,7 +71,19 @@ function JoinFamilyContent() {
         { merge: true }
       );
 
-      toast.success(`Joined ${familyDoc.data().name}! 🎉`);
+      // Add user to family's members array
+      const currentMembers = familyData.members || [];
+      if (!currentMembers.includes(user.uid)) {
+        await setDoc(
+          familyRef,
+          {
+            members: [...currentMembers, user.uid],
+          },
+          { merge: true }
+        );
+      }
+
+      toast.success(`Joined ${familyData.name}! 🎉`);
       router.push('/dashboard');
     } catch (error) {
       console.error('Error joining family:', error);

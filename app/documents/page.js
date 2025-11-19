@@ -4,11 +4,11 @@ import { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useDocuments } from '@/hooks/useFirebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { motion } from 'framer-motion';
-import { FaFileAlt, FaFilePdf, FaFileImage, FaUpload, FaSearch, FaDownload } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaFileAlt, FaFilePdf, FaFileImage, FaUpload, FaSearch, FaEye, FaTrash } from 'react-icons/fa';
 import { storage, db } from '@/lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { addDoc, collection, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { useDropzone } from 'react-dropzone';
 
@@ -17,6 +17,8 @@ function DocumentsContent() {
   const { userData } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const onDrop = async (acceptedFiles) => {
     if (!userData?.familyId) return;
@@ -67,6 +69,37 @@ function DocumentsContent() {
     if (mimeType?.includes('pdf')) return <FaFilePdf className="text-red-500" />;
     if (mimeType?.includes('image')) return <FaFileImage className="text-blue-500" />;
     return <FaFileAlt className="text-gray-500" />;
+  };
+
+  const handleDeleteDocument = async (document) => {
+    if (!document || document.uploadedBy !== userData?.uid) {
+      toast.error('You can only delete your own documents');
+      return;
+    }
+
+    try {
+      setDeleting(true);
+
+      // Delete from Storage
+      const storageRef = ref(storage, document.storagePath);
+      await deleteObject(storageRef);
+
+      // Delete from Firestore
+      await deleteDoc(doc(db, 'families', userData.familyId, 'documents', document.id));
+
+      toast.success('Document deleted successfully');
+      setDeleteConfirm(null);
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error('Failed to delete document');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handlePreview = (document) => {
+    // Open in new tab for preview (browser will handle PDF/image preview)
+    window.open(document.downloadURL, '_blank', 'noopener,noreferrer');
   };
 
   const filteredDocs = documents.filter(doc =>
@@ -181,18 +214,83 @@ function DocumentsContent() {
                 </div>
               )}
 
-              <a
-                href={doc.downloadURL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all"
-              >
-                <FaDownload /> Download
-              </a>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handlePreview(doc)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all"
+                >
+                  <FaEye /> Preview
+                </button>
+
+                {doc.uploadedBy === userData?.uid && (
+                  <button
+                    onClick={() => setDeleteConfirm(doc)}
+                    className="px-4 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-all"
+                    title="Delete document"
+                  >
+                    <FaTrash />
+                  </button>
+                )}
+              </div>
             </motion.div>
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => !deleting && setDeleteConfirm(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl"
+            >
+              <div className="text-center mb-6">
+                <div className="text-6xl mb-4">🗑️</div>
+                <h2 className="text-2xl font-display font-bold mb-2">
+                  Delete Document?
+                </h2>
+                <p className="text-gray-600">
+                  Are you sure you want to delete{' '}
+                  <strong>{deleteConfirm.name}</strong>? This action cannot be undone.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  disabled={deleting}
+                  className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 transition-all disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteDocument(deleteConfirm)}
+                  disabled={deleting}
+                  className="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold hover:bg-red-600 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {deleting ? (
+                    <>Deleting...</>
+                  ) : (
+                    <>
+                      <FaTrash /> Delete
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

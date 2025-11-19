@@ -29,33 +29,33 @@ export default function RootLayout({ children }) {
               <NotificationProvider>
                 <ClientLayout>
                   {children}
+                  <Toaster
+                    position="top-right"
+                    toastOptions={{
+                      duration: 3000,
+                      style: {
+                        background: '#fff',
+                        color: '#363636',
+                        fontWeight: '600',
+                        borderRadius: '12px',
+                        padding: '16px',
+                      },
+                      success: {
+                        iconTheme: {
+                          primary: '#10b981',
+                          secondary: '#fff',
+                        },
+                      },
+                      error: {
+                        iconTheme: {
+                          primary: '#ef4444',
+                          secondary: '#fff',
+                        },
+                      },
+                    }}
+                  />
                 </ClientLayout>
               </NotificationProvider>
-              <Toaster
-                position="top-right"
-                toastOptions={{
-                  duration: 3000,
-                  style: {
-                    background: '#fff',
-                    color: '#363636',
-                    fontWeight: '600',
-                    borderRadius: '12px',
-                    padding: '16px',
-                  },
-                  success: {
-                    iconTheme: {
-                      primary: '#10b981',
-                      secondary: '#fff',
-                    },
-                  },
-                  error: {
-                    iconTheme: {
-                      primary: '#ef4444',
-                      secondary: '#fff',
-                    },
-                  },
-                }}
-              />
             </FamilyProvider>
           </AuthProvider>
         </ThemeProvider>

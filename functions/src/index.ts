@@ -736,3 +736,62 @@ export const sendCalendarReminders = onSchedule(
     }
   }
 );
+
+/**
+ * Delete a memory from Firestore and Storage
+ */
+export const deleteMemory = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be authenticated");
+  }
+
+  const {familyId, memoryId, storagePath} = request.data;
+  const userId = request.auth.uid;
+
+  if (!familyId || !memoryId || !storagePath) {
+    throw new HttpsError(
+      "invalid-argument",
+      "familyId, memoryId, and storagePath are required"
+    );
+  }
+
+  try {
+    const memoryRef = db
+      .collection("families")
+      .doc(familyId)
+      .collection("memories")
+      .doc(memoryId);
+
+    const memoryDoc = await memoryRef.get();
+
+    if (!memoryDoc.exists) {
+      throw new HttpsError("not-found", "Memory not found");
+    }
+
+    const memoryData = memoryDoc.data();
+    if (memoryData?.uploadedBy !== userId) {
+      throw new HttpsError(
+        "permission-denied",
+        "You can only delete your own memories"
+      );
+    }
+
+    // Delete from Firestore
+    await memoryRef.delete();
+    logger.info(`Deleted memory ${memoryId} from Firestore`);
+
+    // Delete from Storage
+    const bucket = admin.storage().bucket();
+    const file = bucket.file(storagePath);
+    await file.delete();
+    logger.info(`Deleted memory file ${storagePath} from Storage`);
+
+    return {success: true};
+  } catch (error) {
+    logger.error("Error deleting memory:", error);
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    throw new HttpsError("internal", "Failed to delete memory");
+  }
+});

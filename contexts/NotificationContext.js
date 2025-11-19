@@ -14,38 +14,107 @@ export const useNotifications = () => useContext(NotificationContext);
 export function NotificationProvider({ children }) {
   const [permission, setPermission] = useState('default');
   const [fcmToken, setFcmToken] = useState(null);
-  const { user } = useAuth();
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const { user, userData } = useAuth();
 
   // Request notification permission and get FCM token
   const requestPermission = async () => {
     try {
+      // First, ensure service worker is registered
+      if ('serviceWorker' in navigator) {
+        try {
+          await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Service Worker registered');
+          }
+        } catch (swError) {
+          console.error('Service Worker registration failed');
+          toast.error('Failed to register service worker');
+          return;
+        }
+      }
+
       const permissionResult = await Notification.requestPermission();
       setPermission(permissionResult);
 
       if (permissionResult === 'granted' && user) {
+        // Validate VAPID key exists
+        const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+        if (!vapidKey) {
+          console.error('VAPID key is missing');
+          toast.error('Notification configuration error. Please contact support.');
+          return;
+        }
+
+        console.log('VAPID key configured:', vapidKey.length === 87 ? 'Valid length' : 'Invalid length');
+
         // Get FCM token
         const messaging = getMessaging();
-        const token = await getToken(messaging, {
-          vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
-        });
 
-        if (token) {
-          setFcmToken(token);
-
-          // Save token to user document
-          const userRef = doc(db, 'users', user.uid);
-          await updateDoc(userRef, {
-            fcmToken: token,
-            notificationsEnabled: true,
-            updatedAt: new Date(),
+        try {
+          const token = await getToken(messaging, {
+            vapidKey: vapidKey,
           });
 
-          toast.success('Notifications enabled!');
+          if (token) {
+            console.log('FCM token obtained successfully');
+
+            // Save token to user document FIRST
+            const userRef = doc(db, 'users', user.uid);
+            await updateDoc(userRef, {
+              fcmToken: token,
+              notificationsEnabled: true,
+              updatedAt: new Date(),
+            });
+
+            // Only update state after successful save
+            setFcmToken(token);
+            setNotificationsEnabled(true);
+            toast.success('Notifications enabled!');
+          } else {
+            console.error('No token received from Firebase');
+            setNotificationsEnabled(false);
+            toast.error('Failed to get notification token');
+          }
+        } catch (tokenError) {
+          console.error('Error getting FCM token');
+
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Error details:', {
+              name: tokenError.name,
+              message: tokenError.message,
+              code: tokenError.code,
+            });
+            console.error('Debug info:', {
+              hasServiceWorker: 'serviceWorker' in navigator,
+              notificationPermission: Notification.permission,
+              vapidKeyValid: vapidKey?.length === 87,
+            });
+          }
+
+          // Reset state on error
+          setNotificationsEnabled(false);
+          setFcmToken(null);
+
+          if (tokenError.message.includes('applicationServerKey') || tokenError.message.includes('VAPID')) {
+            toast.error('Invalid VAPID key. Please check Firebase configuration.');
+          } else if (tokenError.message.includes('messaging/permission')) {
+            toast.error('Notification permission was denied.');
+          } else {
+            toast.error(`Notification setup failed: ${tokenError.message}`);
+          }
+
+          // Don't re-throw - we've handled the error
+          return;
         }
+      } else if (permissionResult === 'denied') {
+        toast.error('Notification permission denied. Please enable in browser settings.');
       }
     } catch (error) {
       console.error('Error requesting notification permission:', error);
-      toast.error('Failed to enable notifications');
+      if (!error.message.includes('VAPID')) {
+        toast.error('Failed to enable notifications');
+      }
     }
   };
 
@@ -61,6 +130,7 @@ export function NotificationProvider({ children }) {
         });
 
         setFcmToken(null);
+        setNotificationsEnabled(false);
         toast.success('Notifications disabled');
       } catch (error) {
         console.error('Error disabling notifications:', error);
@@ -68,6 +138,56 @@ export function NotificationProvider({ children }) {
       }
     }
   };
+
+  // Force reset notification state (for debugging)
+  const resetNotificationState = async () => {
+    if (user) {
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          fcmToken: null,
+          notificationsEnabled: false,
+          updatedAt: new Date(),
+        });
+
+        setFcmToken(null);
+        setNotificationsEnabled(false);
+        setPermission('default');
+
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Notification state reset successfully');
+        }
+        toast.success('Notification state reset - try enabling again');
+      } catch (error) {
+        console.error('Error resetting notification state:', error);
+        toast.error('Failed to reset notification state');
+      }
+    }
+  };
+
+  // Sync notification state from userData
+  useEffect(() => {
+    if (userData) {
+      setNotificationsEnabled(userData.notificationsEnabled || false);
+      setFcmToken(userData.fcmToken || null);
+    }
+  }, [userData]);
+
+  // Register service worker on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/firebase-messaging-sw.js')
+        .then((registration) => {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Service Worker registered successfully');
+          }
+        })
+        .catch((error) => {
+          console.error('Service Worker registration failed');
+        });
+    }
+  }, []);
 
   // Listen for foreground messages
   useEffect(() => {
@@ -127,8 +247,10 @@ export function NotificationProvider({ children }) {
   const value = {
     permission,
     fcmToken,
+    notificationsEnabled,
     requestPermission,
     disableNotifications,
+    resetNotificationState,
     notificationsSupported: typeof window !== 'undefined' && 'Notification' in window,
   };
 

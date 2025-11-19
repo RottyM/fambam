@@ -76,8 +76,8 @@ export default function DailyMeme() {
         </button>
       </div>
       
-      <div className="bg-white rounded-2xl p-4 shadow-lg">
-        <div className="relative w-full aspect-square max-h-[300px]">
+      <div className="bg-white rounded-2xl p-4 shadow-lg overflow-hidden">
+        <div className="relative w-full aspect-video">
           <Image
             src={meme.url}
             alt={meme.title || "Today's meme"}

@@ -7,10 +7,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
 import UserAvatar from '@/components/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaUpload, FaHeart, FaTimes, FaComment, FaLock, FaUnlock } from 'react-icons/fa';
-import { storage, db } from '@/lib/firebase';
+import { FaUpload, FaHeart, FaTimes, FaComment, FaLock, FaUnlock, FaTrash } from 'react-icons/fa';
+import { storage, db, functions } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { addDoc, collection, serverTimestamp, updateDoc, doc, arrayUnion, arrayRemove, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import toast from 'react-hot-toast';
 import { useDropzone } from 'react-dropzone';
 import Image from 'next/image';
@@ -21,6 +22,7 @@ function MemoriesContent() {
   const { user, userData } = useAuth();
   const { getMemberById } = useFamily();
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(null);
   const [selectedMemory, setSelectedMemory] = useState(null);
   const [caption, setCaption] = useState('');
   const [revealDate, setRevealDate] = useState('');
@@ -155,6 +157,24 @@ function MemoriesContent() {
       toast.error('Failed to add comment');
     }
   };
+
+  const handleDelete = async (memoryId, storagePath) => {
+    if (!window.confirm('Are you sure you want to delete this memory forever?')) return;
+    
+    setDeleting(memoryId);
+
+    try {
+      const deleteMemory = httpsCallable(functions, 'deleteMemory');
+      await deleteMemory({ familyId: userData.familyId, memoryId, storagePath });
+      toast.success('Memory deleted');
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error(`Failed to delete memory: ${error.message}`);
+    } finally {
+      setDeleting(null);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -347,6 +367,24 @@ function MemoriesContent() {
                       <FaComment />
                       <span className="text-sm font-bold">Comments</span>
                     </div>
+
+                    {/* Add Delete Button */}
+                    {memory.uploadedBy === user.uid && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(memory.id, memory.storagePath);
+                        }}
+                        disabled={deleting === memory.id}
+                        className="ml-auto text-gray-400 hover:text-red-500 transition-all disabled:opacity-50"
+                      >
+                        {deleting === memory.id ? (
+                          <span className="animate-spin text-sm">Deleting...</span>
+                        ) : (
+                          <FaTrash />
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               </motion.div>

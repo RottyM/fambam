@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
-import { FaGoogle } from 'react-icons/fa';
+import { FaGoogle, FaListUl, FaTasks, FaUsers, FaCameraRetro } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
@@ -157,47 +157,41 @@ export default function HomePage() {
           </button>
         </motion.div>
 
-        {/* Features */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-8 text-center text-gray-600"
-        >
-          <p className="font-semibold mb-4 text-lg">✨ Everything your family needs in one place:</p>
-          <div className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
-            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
-              🏠 Family Dashboard
-            </span>
-            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
-              💝 Daily Check-In
-            </span>
-            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
-              ✅ Shared To-Dos
-            </span>
-            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
-              🧹 Chore Tracker
-            </span>
-            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
-              📅 Family Calendar
-            </span>
-            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
-              🛒 Grocery Lists
-            </span>
-            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
-              🍳 Recipe Collection
-            </span>
-            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
-              📄 Document Storage
-            </span>
-            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
-              📸 Memory Vault
-            </span>
-            <span className="bg-white px-3 py-2 rounded-full shadow-md text-sm font-semibold hover:shadow-lg transition-shadow">
-              ⏰ Time Capsules
-            </span>
+        {/* Key Features */}
+        <div className="mt-8 grid grid-cols-3 gap-2">
+          <div className="p-3 rounded-lg shadow-md text-center bg-white">
+            <h3 className="text-md font-bold text-gray-800">📝 To-Dos</h3>
+            <p className="text-gray-600 text-sm">3 pending</p>
           </div>
-        </motion.div>
+          <div className="p-3 rounded-lg shadow-md text-center bg-white">
+            <h3 className="text-md font-bold text-gray-800">🧹 Chores</h3>
+            <p className="text-gray-600 text-sm">2 active</p>
+          </div>
+          <div className="p-3 rounded-lg shadow-md text-center bg-white">
+            <h3 className="text-md font-bold text-gray-800">🗓️ Events</h3>
+            <p className="text-gray-600 text-sm">Dinner Friday</p>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mt-4 flex flex-wrap justify-between gap-2">
+          <button className="w-[calc(50%-0.25rem)] p-3 rounded-lg shadow-md text-center bg-white text-gray-800 text-sm font-semibold flex items-center justify-center gap-2">
+            <FaListUl />
+            <span>To-Dos</span>
+          </button>
+          <button className="w-[calc(50%-0.25rem)] p-3 rounded-lg shadow-md text-center bg-white text-gray-800 text-sm font-semibold flex items-center justify-center gap-2">
+            <FaTasks />
+            <span>Chores</span>
+          </button>
+          <button className="w-[calc(50%-0.25rem)] p-3 rounded-lg shadow-md text-center bg-white text-gray-800 text-sm font-semibold flex items-center justify-center gap-2">
+            <FaUsers />
+            <span>Family</span>
+          </button>
+          <button className="w-[calc(50%-0.25rem)] p-3 rounded-lg shadow-md text-center bg-white text-gray-800 text-sm font-semibold flex items-center justify-center gap-2">
+            <FaCameraRetro />
+            <span>Memories</span>
+          </button>
+        </div>
       </motion.div>
     </div>
   );

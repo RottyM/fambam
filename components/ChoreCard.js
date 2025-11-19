@@ -90,7 +90,7 @@ export default function ChoreCard({ chore }) {
 
       {/* Action buttons */}
       <div className="flex gap-2">
-        {chore.status === 'pending' && !isParent() && (
+        {chore.status === 'pending' && chore.assignedTo === userData?.uid && (
           <button
             onClick={handleSubmit}
             className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2.5 rounded-xl font-bold hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg"

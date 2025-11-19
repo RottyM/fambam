@@ -45,7 +45,7 @@ export default function Sidebar() {
   const { user, userData, signOut } = useAuth();
   const { family, members } = useFamily();
   const { theme, toggleTheme, currentTheme } = useTheme();
-  const { permission, requestPermission, disableNotifications, notificationsSupported } = useNotifications();
+  const { permission, notificationsEnabled, requestPermission, disableNotifications, notificationsSupported } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
 
   const closeSidebar = () => setIsOpen(false);
@@ -168,11 +168,11 @@ export default function Sidebar() {
 
           {notificationsSupported && (
             <button
-              onClick={permission === 'granted' ? disableNotifications : requestPermission}
-              title={permission === 'granted' ? 'Disable Notifications' : 'Enable Notifications'}
-              className={`flex items-center justify-center p-3 ${permission === 'granted' ? (currentTheme === 'dark' ? 'text-green-400' : 'text-green-600') : theme.colors.sidebarText} ${currentTheme === 'dark' ? 'hover:bg-purple-900/30' : 'hover:bg-gray-100'} rounded-lg transition-all`}
+              onClick={notificationsEnabled ? disableNotifications : requestPermission}
+              title={notificationsEnabled ? 'Disable Notifications' : 'Enable Notifications'}
+              className={`flex items-center justify-center p-3 ${notificationsEnabled ? (currentTheme === 'dark' ? 'text-green-400' : 'text-green-600') : (currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-500')} ${currentTheme === 'dark' ? 'hover:bg-purple-900/30' : 'hover:bg-gray-100'} rounded-lg transition-all`}
             >
-              {permission === 'granted' ? <FaBell size={18} /> : <FaBellSlash size={18} />}
+              {notificationsEnabled ? <FaBell size={18} /> : <FaBellSlash size={18} />}
             </button>
           )}
 
