@@ -224,7 +224,7 @@ function CredentialsContent() {
                 {currentTheme === 'dark' ? 'Secret Vault' : 'Family Credentials'}
               </span>
             </h1>
-            <p className={currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-semibold>
+            <p className={`${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-semibold`}>
               {credentials.length} {currentTheme === 'dark' ? 'hidden' : 'saved'} {currentTheme === 'dark' ? 'secret' : 'credential'}{credentials.length !== 1 ? 's' : ''}
             </p>
           </div>

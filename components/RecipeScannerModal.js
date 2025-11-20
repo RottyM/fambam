@@ -217,8 +217,7 @@ const handleSave = async () => {
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
           onClick={handleClose}
         >
-          {/* Toaster ensures notifications render above the modal */}
-          <Toaster position="top-center" />
+
           
           <motion.div
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -394,7 +393,7 @@ const handleSave = async () => {
                   </div>
 
                   {/* Meta (Servings, Time) */}
-                  <div className="grid grid-cols-3 gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
                     <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1">Servings</label>
                       {editMode ? (

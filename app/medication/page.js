@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { db } from '../../lib/firebase';
+import { collection, query, orderBy, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFamily } from '../../contexts/FamilyContext';
 import { FaPlus, FaTrash, FaClock, FaPills, FaCalendar, FaUser, FaTimes } from 'react-icons/fa';
@@ -17,11 +19,35 @@ const FREQUENCIES = [
 ];
 
 const MedicationPage = () => {
-  const { user } = useAuth();
-  const { members, loading } = useFamily();
+  const { userData: user } = useAuth();
+  const { members } = useFamily();
   const [medications, setMedications] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingMed, setEditingMed] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user?.familyId) {
+      setLoading(false);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'families', user.familyId, 'medications'),
+      orderBy('name', 'asc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const medsList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setMedications(medsList);
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [user?.familyId]);
 
   const [newMedication, setNewMedication] = useState({
     name: '',
@@ -56,27 +82,51 @@ const MedicationPage = () => {
     }
   };
 
-  const handleAddMedication = (e) => {
+  const handleAddMedication = async (e) => {
     e.preventDefault();
-    setMedications([...medications, { ...newMedication, id: Date.now() }]);
-    setNewMedication({
-      name: '',
-      dosage: '',
-      frequency: 'daily',
-      times: ['09:00'],
-      assignedTo: '',
-      startDate: '',
-      endDate: '',
-      notes: '',
-    });
-    setShowAddModal(false);
-    toast.success('Medication added successfully! 💊');
+    if (!user?.familyId) {
+      toast.error('You must be in a family to add medications.');
+      return;
+    }
+    
+    try {
+      await addDoc(collection(db, 'families', user.familyId, 'medications'), {
+        ...newMedication,
+        createdBy: user.uid,
+        createdAt: serverTimestamp(),
+      });
+      
+      setNewMedication({
+        name: '',
+        dosage: '',
+        frequency: 'daily',
+        times: ['09:00'],
+        assignedTo: '',
+        startDate: '',
+        endDate: '',
+        notes: '',
+      });
+      setShowAddModal(false);
+      toast.success('Medication added successfully! 💊');
+    } catch (error) {
+      toast.error('Failed to add medication.');
+      console.error("Error adding medication: ", error);
+    }
   };
 
-  const handleDeleteMedication = (id, medName) => {
+  const handleDeleteMedication = async (id, medName) => {
     if (confirm(`Delete ${medName}?`)) {
-      setMedications(medications.filter(med => med.id !== id));
-      toast.success('Medication deleted');
+      if (!user?.familyId) {
+        toast.error('You must be in a family to delete medications.');
+        return;
+      }
+      try {
+        await deleteDoc(doc(db, 'families', user.familyId, 'medications', id));
+        toast.success('Medication deleted');
+      } catch (error) {
+        toast.error('Failed to delete medication.');
+        console.error("Error deleting medication: ", error);
+      }
     }
   };
 

@@ -316,7 +316,7 @@ function RecipesContent() {
                 {currentTheme === 'dark' ? 'Potion Recipes' : 'Family Recipes'}
               </span>
             </h1>
-            <p className={currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-semibold>
+            <p className={`${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-semibold`}>
               {recipes.length} {currentTheme === 'dark' ? 'potions' : 'saved recipes'}
             </p>
           </div>
@@ -632,7 +632,7 @@ function RecipesContent() {
               </h2>
 
               <form onSubmit={handleAddRecipe} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">
                       Recipe Name
@@ -659,7 +659,7 @@ function RecipesContent() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">
                       Servings

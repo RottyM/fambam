@@ -92,7 +92,7 @@ function TodosContent() {
                 {currentTheme === 'dark' ? 'Dark Deeds' : 'Family To-Dos'}
               </span>
             </h1>
-            <p className={currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-semibold>
+            <p className={`${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-semibold`}>
               {allActiveTodos.length} {currentTheme === 'dark' ? 'cursed' : 'active'} • {allCompletedTodos.length} {currentTheme === 'dark' ? 'vanquished' : 'completed'}
             </p>
           </div>
