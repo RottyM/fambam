@@ -219,12 +219,12 @@ function CredentialsContent() {
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-4xl font-display font-bold mb-2">
+            <h1 className="text-2xl md:text-4xl font-display font-bold mb-2">
               <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
                 {currentTheme === 'dark' ? 'Secret Vault' : 'Family Credentials'}
               </span>
             </h1>
-            <p className={`${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-semibold`}>
+            <p className={`text-sm md:text-base ${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-semibold`}>
               {credentials.length} {currentTheme === 'dark' ? 'hidden' : 'saved'} {currentTheme === 'dark' ? 'secret' : 'credential'}{credentials.length !== 1 ? 's' : ''}
             </p>
           </div>
@@ -232,9 +232,10 @@ function CredentialsContent() {
           {isParent() && (
             <button
               onClick={() => setShowModal(true)}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-blue-600 hover:to-purple-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold hover:from-blue-600 hover:to-purple-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+              aria-label={currentTheme === 'dark' ? 'Hide Secret' : 'Add Credential'}
             >
-              <FaPlus /> {currentTheme === 'dark' ? 'Hide Secret' : 'Add Credential'}
+              <FaPlus /> <span className="hidden sm:inline">{currentTheme === 'dark' ? 'Hide Secret' : 'Add Credential'}</span>
             </button>
           )}
         </div>

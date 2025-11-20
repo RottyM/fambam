@@ -175,12 +175,12 @@ function CalendarContent() {
   return (
     <>
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-4xl font-display font-bold mb-2">
+            <h1 className="text-2xl md:text-4xl font-display font-bold mb-2">
               <span className="gradient-text">Family Calendar</span>
             </h1>
-            <p className="text-gray-600 font-semibold">
+            <p className="text-sm md:text-base text-gray-600 font-semibold">
               {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
             </p>
           </div>
@@ -188,55 +188,58 @@ function CalendarContent() {
           {isParent() && (
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-blue-600 hover:to-purple-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold hover:from-blue-600 hover:to-purple-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+              aria-label="Add Event"
             >
-              <FaPlus /> Add Event
+              <FaPlus /> <span className="hidden sm:inline">Add Event</span>
             </button>
           )}
         </div>
 
         {/* View Mode & Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          {/* View Mode Selector */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setViewMode('month')}
-              className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 ${
-                viewMode === 'month'
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              <FaCalendarAlt /> Month
-            </button>
-            <button
-              onClick={() => setViewMode('week')}
-              className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 ${
-                viewMode === 'week'
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              <FaCalendarWeek /> Week
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 ${
-                viewMode === 'list'
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              <FaList /> List
-            </button>
+        <div className="flex flex-col gap-3 mb-6">
+          {/* View Mode Selector - Horizontal scroll on mobile */}
+          <div className="overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0">
+            <div className="flex gap-2 min-w-min">
+              <button
+                onClick={() => setViewMode('month')}
+                className={`px-3 md:px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 whitespace-nowrap text-sm md:text-base ${
+                  viewMode === 'month'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <FaCalendarAlt /> Month
+              </button>
+              <button
+                onClick={() => setViewMode('week')}
+                className={`px-3 md:px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 whitespace-nowrap text-sm md:text-base ${
+                  viewMode === 'week'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <FaCalendarWeek /> Week
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 md:px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 whitespace-nowrap text-sm md:text-base ${
+                  viewMode === 'list'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <FaList /> List
+              </button>
+            </div>
           </div>
 
           {/* Filters */}
-          <div className="flex gap-2 flex-1">
+          <div className="flex flex-col sm:flex-row gap-2 flex-1">
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="px-4 py-2 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold bg-white"
+              className="px-3 md:px-4 py-2 text-sm md:text-base rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold bg-white flex-1"
             >
               <option value="all">All Categories</option>
               {EVENT_CATEGORIES.map(cat => (
@@ -249,7 +252,7 @@ function CalendarContent() {
             <select
               value={filterMember}
               onChange={(e) => setFilterMember(e.target.value)}
-              className="px-4 py-2 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold bg-white"
+              className="px-3 md:px-4 py-2 text-sm md:text-base rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold bg-white flex-1"
             >
               <option value="all">All Members</option>
               {members.map(member => (

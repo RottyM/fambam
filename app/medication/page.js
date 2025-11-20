@@ -144,20 +144,21 @@ const MedicationPage = () => {
   return (
     <>
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-4xl font-display font-bold mb-2">
+            <h1 className="text-2xl md:text-4xl font-display font-bold mb-2">
               <span className="gradient-text">Medication Tracker</span>
             </h1>
-            <p className="text-gray-600 font-semibold">
+            <p className="text-sm md:text-base text-gray-600 font-semibold">
               {medications.length} active medication{medications.length !== 1 ? 's' : ''}
             </p>
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+            className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+            aria-label="Add Medication"
           >
-            <FaPlus /> Add Medication
+            <FaPlus /> <span className="hidden sm:inline">Add Medication</span>
           </button>
         </div>
       </div>

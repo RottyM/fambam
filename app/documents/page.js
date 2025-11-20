@@ -121,10 +121,10 @@ function DocumentsContent() {
   return (
     <>
       <div className="mb-8">
-        <h1 className="text-4xl font-display font-bold mb-2">
+        <h1 className="text-2xl md:text-4xl font-display font-bold mb-2">
           <span className="gradient-text">Family Documents</span>
         </h1>
-        <p className="text-gray-600 font-semibold">
+        <p className="text-sm md:text-base text-gray-600 font-semibold">
           {documents.length} documents stored securely
         </p>
       </div>

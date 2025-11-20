@@ -105,30 +105,32 @@ function ChoresContent() {
   return (
     <>
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <div>
-            <h1 className="text-4xl font-display font-bold mb-2">
+            <h1 className="text-2xl md:text-4xl font-display font-bold mb-2">
               <span className="gradient-text">Chore Tracker</span>
             </h1>
-            <p className="text-gray-600 font-semibold">
+            <p className="text-sm md:text-base text-gray-600 font-semibold">
               {pendingChores.length} pending • {submittedChores.length} submitted • {approvedChores.length} completed
             </p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-2 md:gap-3">
             {isParent() && (
               <>
                 <button
                   onClick={() => setShowResetModal(true)}
-                  className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-3 rounded-2xl font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+                  className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 md:px-4 py-3 rounded-2xl font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                  aria-label="Reset Points"
                 >
-                  <FaUndo /> Reset Points
+                  <FaUndo /> <span className="hidden sm:inline">Reset Points</span>
                 </button>
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-green-600 hover:to-blue-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+                  className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-3 md:px-6 py-3 rounded-2xl font-bold hover:from-green-600 hover:to-blue-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                  aria-label="Create Chore"
                 >
-                  <FaPlus /> Create Chore
+                  <FaPlus /> <span className="hidden sm:inline">Create Chore</span>
                 </button>
               </>
             )}
