@@ -5,6 +5,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { useMemories, useMemoriesFolders } from '@/hooks/useFirebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import UserAvatar from '@/components/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaUpload, FaHeart, FaTimes, FaComment, FaLock, FaUnlock, FaTrash, FaPlus, FaFolder } from 'react-icons/fa';
@@ -17,7 +18,7 @@ import { useDropzone } from 'react-dropzone';
 import Image from 'next/image';
 import FolderView from '@/components/FolderView';
 import { DndProvider } from 'react-dnd';
-import { MultiBackend } from 'react-dnd-multi-backend';
+import { MultiBackend } from 'dnd-multi-backend';
 import { HTML5toTouch } from '@/lib/dndBackend';
 import DraggableMemory from '@/components/DraggableMemory';
 import DroppableFolder from '@/components/DroppableFolder';
@@ -29,6 +30,7 @@ function MemoriesContent() {
   const { folders, loading: loadingFolders, addFolder, deleteFolder } = useMemoriesFolders();
   const { user, userData } = useAuth();
   const { getMemberById, isParent } = useFamily();
+  const { theme } = useTheme();
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [selectedMemory, setSelectedMemory] = useState(null);
@@ -468,12 +470,12 @@ function MemoriesContent() {
 
       {/* Memories Grid */}
       {displayMemories.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
+        <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg`}>
           <div className="text-6xl mb-4">{showTimeCapsules ? '🔒' : '📸'}</div>
-          <p className="text-xl font-bold text-gray-600">
+          <p className={`text-xl font-bold ${theme.colors.textMuted}`}>
             {showTimeCapsules ? 'No time capsules yet' : 'No memories yet'}
           </p>
-          <p className="text-gray-500">
+          <p className={theme.colors.textMuted}>
             {showTimeCapsules
               ? 'Create a time capsule to reveal memories on future dates'
               : 'Upload your first photo or video above!'}
@@ -491,7 +493,7 @@ function MemoriesContent() {
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer"
+                  className={`${theme.colors.bgCard} rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer`}
                   onClick={() => openFolderView(memory)}
                 >
                   <div className="relative h-64">
@@ -600,7 +602,7 @@ function MemoriesContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto"
+              className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-md w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto`}
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-3xl font-display font-bold gradient-text">
@@ -616,7 +618,7 @@ function MemoriesContent() {
 
               <form onSubmit={handleAddFolder} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Folder Name
                   </label>
                   <input
@@ -665,7 +667,7 @@ function MemoriesContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl max-w-4xl w-full shadow-2xl my-8"
+              className={`${theme.colors.bgCard} rounded-3xl max-w-4xl w-full shadow-2xl my-8`}
             >
               <div className="relative">
                 {/* Close button */}
@@ -725,14 +727,14 @@ function MemoriesContent() {
                   {/* Move to Folder */}
                   {isParent() && (
                     <div className="mb-6">
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
+                      <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                         <FaFolder className="inline-block mr-2" />
                         Move to Folder
                       </label>
                       <select
                         value={selectedMemory.folderId || ''}
                         onChange={(e) => handleMoveMemory(selectedMemory.id, e.target.value || null)}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold bg-gray-50"
+                        className={`w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold ${theme.colors.bgCard}`}
                       >
                         <option value="">All Memories (Root)</option>
                         {folders.map(folder => (

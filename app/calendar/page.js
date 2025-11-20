@@ -5,6 +5,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { useCalendarEvents } from '@/hooks/useFirebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, isSameMonth, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
 import { FaPlus, FaTrash, FaClock, FaMapMarkerAlt, FaUser, FaTimes, FaCalendarAlt, FaList, FaCalendarWeek, FaFilter } from 'react-icons/fa';
@@ -30,6 +31,7 @@ function CalendarContent() {
   const { events, loading } = useCalendarEvents();
   const { userData } = useAuth();
   const { members, isParent } = useFamily();
+  const { theme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
   const [viewMode, setViewMode] = useState('list');
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -175,12 +177,12 @@ function CalendarContent() {
   return (
     <>
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-4xl font-display font-bold mb-2">
+            <h1 className="text-2xl md:text-4xl font-display font-bold mb-2">
               <span className="gradient-text">Family Calendar</span>
             </h1>
-            <p className="text-gray-600 font-semibold">
+            <p className="text-sm md:text-base text-gray-600 font-semibold">
               {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
             </p>
           </div>
@@ -188,55 +190,58 @@ function CalendarContent() {
           {isParent() && (
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-blue-600 hover:to-purple-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold hover:from-blue-600 hover:to-purple-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+              aria-label="Add Event"
             >
-              <FaPlus /> Add Event
+              <FaPlus /> <span className="hidden sm:inline">Add Event</span>
             </button>
           )}
         </div>
 
         {/* View Mode & Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          {/* View Mode Selector */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setViewMode('month')}
-              className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 ${
-                viewMode === 'month'
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              <FaCalendarAlt /> Month
-            </button>
-            <button
-              onClick={() => setViewMode('week')}
-              className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 ${
-                viewMode === 'week'
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              <FaCalendarWeek /> Week
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 ${
-                viewMode === 'list'
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              <FaList /> List
-            </button>
+        <div className="flex flex-col gap-3 mb-6">
+          {/* View Mode Selector - Horizontal scroll on mobile */}
+          <div className="overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0">
+            <div className="flex gap-2 min-w-min">
+              <button
+                onClick={() => setViewMode('month')}
+                className={`px-3 md:px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 whitespace-nowrap text-sm md:text-base ${
+                  viewMode === 'month'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <FaCalendarAlt /> Month
+              </button>
+              <button
+                onClick={() => setViewMode('week')}
+                className={`px-3 md:px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 whitespace-nowrap text-sm md:text-base ${
+                  viewMode === 'week'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <FaCalendarWeek /> Week
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 md:px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 whitespace-nowrap text-sm md:text-base ${
+                  viewMode === 'list'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <FaList /> List
+              </button>
+            </div>
           </div>
 
           {/* Filters */}
-          <div className="flex gap-2 flex-1">
+          <div className="flex flex-col sm:flex-row gap-2 flex-1">
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="px-4 py-2 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold bg-white"
+              className={`px-3 md:px-4 py-2 text-sm md:text-base rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold ${theme.colors.bgCard} flex-1`}
             >
               <option value="all">All Categories</option>
               {EVENT_CATEGORIES.map(cat => (
@@ -249,7 +254,7 @@ function CalendarContent() {
             <select
               value={filterMember}
               onChange={(e) => setFilterMember(e.target.value)}
-              className="px-4 py-2 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold bg-white"
+              className={`px-3 md:px-4 py-2 text-sm md:text-base rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold ${theme.colors.bgCard} flex-1`}
             >
               <option value="all">All Members</option>
               {members.map(member => (
@@ -264,7 +269,7 @@ function CalendarContent() {
 
       {/* Month Navigation (for month/week view) */}
       {(viewMode === 'month' || viewMode === 'week') && (
-        <div className="bg-white rounded-2xl p-4 shadow-lg mb-6 flex items-center justify-between">
+        <div className={`${theme.colors.bgCard} rounded-2xl p-4 shadow-lg mb-6 flex items-center justify-between`}>
           <button
             onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
             className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-xl font-bold transition-all"
@@ -285,7 +290,7 @@ function CalendarContent() {
 
       {/* Month View */}
       {viewMode === 'month' && (
-        <div className="bg-white rounded-2xl p-6 shadow-lg">
+        <div className={`${theme.colors.bgCard} rounded-2xl p-6 shadow-lg`}>
           <div className="grid grid-cols-7 gap-2 mb-2">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
               <div key={day} className="text-center font-bold text-gray-600 py-2">
@@ -306,7 +311,7 @@ function CalendarContent() {
                     isCurrentDay
                       ? 'border-purple-500 bg-purple-50'
                       : isCurrentMonth
-                      ? 'border-gray-200 hover:border-purple-300 bg-white'
+                      ? `border-gray-200 hover:border-purple-300 ${theme.colors.bgCard}`
                       : 'border-gray-100 bg-gray-50'
                   }`}
                 >
@@ -341,7 +346,7 @@ function CalendarContent() {
 
       {/* Week View */}
       {viewMode === 'week' && (
-        <div className="bg-white rounded-2xl p-6 shadow-lg">
+        <div className={`${theme.colors.bgCard} rounded-2xl p-6 shadow-lg`}>
           <div className="grid grid-cols-7 gap-4">
             {eachDayOfInterval({
               start: startOfWeek(currentMonth),
@@ -383,10 +388,10 @@ function CalendarContent() {
       {viewMode === 'list' && (
         <>
           {filteredEvents.length === 0 ? (
-            <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
+            <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg`}>
               <div className="text-6xl mb-4">📅</div>
-              <p className="text-xl font-bold text-gray-600">No events yet</p>
-              <p className="text-gray-500">
+              <p className={`text-xl font-bold ${theme.colors.textMuted}`}>No events yet</p>
+              <p className={theme.colors.textMuted}>
                 {isParent()
                   ? 'Click "Add Event" to create your first family event'
                   : 'Events will appear here when parents add them'}
@@ -403,7 +408,7 @@ function CalendarContent() {
                     key={event.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all"
+                    className={`${theme.colors.bgCard} rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all`}
                   >
                     <div className={`bg-gradient-to-r ${category?.color || 'from-gray-400 to-gray-500'} p-4`}>
                       <div className="flex items-center justify-between">
@@ -427,11 +432,11 @@ function CalendarContent() {
 
                     <div className="p-6">
                       {event.description && (
-                        <p className="text-gray-600 mb-4">{event.description}</p>
+                        <p className={`${theme.colors.textMuted} mb-4`}>{event.description}</p>
                       )}
 
                       <div className="space-y-3 mb-4">
-                        <div className="flex items-center gap-3 text-gray-700">
+                        <div className={`flex items-center gap-3 ${theme.colors.text}`}>
                           <FaClock className="text-blue-500" />
                           <span className="font-semibold">
                             {format(event.start?.toDate ? event.start.toDate() : new Date(event.start), 'h:mm a')}
@@ -441,7 +446,7 @@ function CalendarContent() {
                         </div>
 
                         {event.location && (
-                          <div className="flex items-center gap-3 text-gray-700">
+                          <div className={`flex items-center gap-3 ${theme.colors.text}`}>
                             <FaMapMarkerAlt className="text-red-500" />
                             <span>{event.location}</span>
                           </div>
@@ -462,7 +467,7 @@ function CalendarContent() {
                         )}
 
                         {event.recurring && event.recurring !== 'none' && (
-                          <div className="flex items-center gap-3 text-gray-700">
+                          <div className={`flex items-center gap-3 ${theme.colors.text}`}>
                             <span className="text-lg">🔄</span>
                             <span className="text-sm capitalize">{event.recurring}</span>
                           </div>
@@ -511,7 +516,7 @@ function CalendarContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl p-6 max-w-2xl w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto"
+              className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-2xl w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto`}
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-3xl font-display font-bold gradient-text">
@@ -528,7 +533,7 @@ function CalendarContent() {
               <form onSubmit={handleAddEvent} className="space-y-6">
                 {/* Event Title */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Event Title
                   </label>
                   <input
@@ -543,7 +548,7 @@ function CalendarContent() {
 
                 {/* Category Selection */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Category
                   </label>
                   <div className="grid grid-cols-4 gap-2">
@@ -559,7 +564,7 @@ function CalendarContent() {
                         }`}
                       >
                         <div className="text-2xl mb-1">{cat.icon}</div>
-                        <div className="text-xs font-bold text-gray-700">{cat.label}</div>
+                        <div className={`text-xs font-bold ${theme.colors.text}`}>{cat.label}</div>
                       </button>
                     ))}
                   </div>
@@ -568,7 +573,7 @@ function CalendarContent() {
                 {/* Date & Time */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                       Start Date & Time
                     </label>
                     <input
@@ -581,7 +586,7 @@ function CalendarContent() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                       End Date & Time
                     </label>
                     <input
@@ -603,14 +608,14 @@ function CalendarContent() {
                     onChange={(e) => setNewEvent({ ...newEvent, allDay: e.target.checked })}
                     className="w-5 h-5 rounded border-gray-300 text-purple-500 focus:ring-purple-500"
                   />
-                  <label htmlFor="allDay" className="font-semibold text-gray-700">
+                  <label htmlFor="allDay" className={`font-semibold ${theme.colors.text}`}>
                     All-day event
                   </label>
                 </div>
 
                 {/* Location */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Location (optional)
                   </label>
                   <input
@@ -624,7 +629,7 @@ function CalendarContent() {
 
                 {/* Assign To */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Assign To (optional)
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -648,13 +653,13 @@ function CalendarContent() {
 
                 {/* Recurring */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Repeat
                   </label>
                   <select
                     value={newEvent.recurring}
                     onChange={(e) => setNewEvent({ ...newEvent, recurring: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold bg-white"
+                    className={`w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold ${theme.colors.bgCard}`}
                   >
                     <option value="none">Does not repeat</option>
                     <option value="daily">Daily</option>
@@ -666,7 +671,7 @@ function CalendarContent() {
 
                 {/* Description */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Description (optional)
                   </label>
                   <textarea

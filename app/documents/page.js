@@ -4,6 +4,7 @@ import { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useDocuments } from '@/hooks/useFirebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaFileAlt, FaFilePdf, FaFileImage, FaUpload, FaSearch, FaEye, FaTrash } from 'react-icons/fa';
 import { storage, db } from '@/lib/firebase';
@@ -15,6 +16,7 @@ import { useDropzone } from 'react-dropzone';
 function DocumentsContent() {
   const { documents, loading } = useDocuments();
   const { userData } = useAuth();
+  const { theme } = useTheme();
   const [uploading, setUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -121,10 +123,10 @@ function DocumentsContent() {
   return (
     <>
       <div className="mb-8">
-        <h1 className="text-4xl font-display font-bold mb-2">
+        <h1 className="text-2xl md:text-4xl font-display font-bold mb-2">
           <span className="gradient-text">Family Documents</span>
         </h1>
-        <p className="text-gray-600 font-semibold">
+        <p className="text-sm md:text-base text-gray-600 font-semibold">
           {documents.length} documents stored securely
         </p>
       </div>
@@ -137,7 +139,7 @@ function DocumentsContent() {
         className={`border-4 border-dashed rounded-3xl p-12 mb-8 text-center cursor-pointer transition-all ${
           isDragActive
             ? 'border-purple-500 bg-purple-50'
-            : 'border-gray-300 hover:border-purple-400 bg-white'
+            : `border-gray-300 hover:border-purple-400 ${theme.colors.bgCard}`
         }`}
       >
         <input {...getInputProps()} />
@@ -169,12 +171,12 @@ function DocumentsContent() {
 
       {/* Documents grid */}
       {filteredDocs.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
+        <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg`}>
           <div className="text-6xl mb-4">📁</div>
-          <p className="text-xl font-bold text-gray-600">
+          <p className={`text-xl font-bold ${theme.colors.textMuted}`}>
             {searchTerm ? 'No documents found' : 'No documents yet'}
           </p>
-          <p className="text-gray-500">
+          <p className={theme.colors.textMuted}>
             {searchTerm ? 'Try a different search term' : 'Upload your first document above'}
           </p>
         </div>
@@ -186,7 +188,7 @@ function DocumentsContent() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               whileHover={{ scale: 1.02 }}
-              className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all"
+              className={`${theme.colors.bgCard} rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all`}
             >
               <div className="flex items-start gap-4 mb-4">
                 <div className="text-4xl">
@@ -252,14 +254,14 @@ function DocumentsContent() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl"
+              className={`${theme.colors.bgCard} rounded-3xl p-8 max-w-md w-full shadow-2xl`}
             >
               <div className="text-center mb-6">
                 <div className="text-6xl mb-4">🗑️</div>
-                <h2 className="text-2xl font-display font-bold mb-2">
+                <h2 className={`text-2xl font-display font-bold mb-2 ${theme.colors.text}`}>
                   Delete Document?
                 </h2>
-                <p className="text-gray-600">
+                <p className={theme.colors.textMuted}>
                   Are you sure you want to delete{' '}
                   <strong>{deleteConfirm.name}</strong>? This action cannot be undone.
                 </p>

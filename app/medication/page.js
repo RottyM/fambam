@@ -5,6 +5,7 @@ import { db } from '../../lib/firebase';
 import { collection, query, orderBy, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFamily } from '../../contexts/FamilyContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { FaPlus, FaTrash, FaClock, FaPills, FaCalendar, FaUser, FaTimes } from 'react-icons/fa';
 import DashboardLayout from '../../components/DashboardLayout';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -21,6 +22,7 @@ const FREQUENCIES = [
 const MedicationPage = () => {
   const { userData: user } = useAuth();
   const { members } = useFamily();
+  const { theme } = useTheme();
   const [medications, setMedications] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingMed, setEditingMed] = useState(null);
@@ -144,29 +146,30 @@ const MedicationPage = () => {
   return (
     <>
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-4xl font-display font-bold mb-2">
+            <h1 className="text-2xl md:text-4xl font-display font-bold mb-2">
               <span className="gradient-text">Medication Tracker</span>
             </h1>
-            <p className="text-gray-600 font-semibold">
+            <p className="text-sm md:text-base text-gray-600 font-semibold">
               {medications.length} active medication{medications.length !== 1 ? 's' : ''}
             </p>
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+            className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+            aria-label="Add Medication"
           >
-            <FaPlus /> Add Medication
+            <FaPlus /> <span className="hidden sm:inline">Add Medication</span>
           </button>
         </div>
       </div>
 
       {medications.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
+        <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg`}>
           <div className="text-6xl mb-4">💊</div>
-          <p className="text-xl font-bold text-gray-600">No medications yet</p>
-          <p className="text-gray-500">Add your family's medications to track schedules</p>
+          <p className={`text-xl font-bold ${theme.colors.textMuted}`}>No medications yet</p>
+          <p className={theme.colors.textMuted}>Add your family's medications to track schedules</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -179,7 +182,7 @@ const MedicationPage = () => {
                 key={med.id}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all"
+                className={`${theme.colors.bgCard} rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all`}
               >
                 <div className="bg-gradient-to-r from-purple-400 to-pink-400 p-4">
                   <div className="flex items-center justify-between">
@@ -277,7 +280,7 @@ const MedicationPage = () => {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl p-6 max-w-2xl w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto"
+              className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-2xl w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto`}
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-3xl font-display font-bold gradient-text">
@@ -295,7 +298,7 @@ const MedicationPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Medication Name */}
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                       Medication Name
                     </label>
                     <input
@@ -311,7 +314,7 @@ const MedicationPage = () => {
 
                   {/* Dosage */}
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                       Dosage
                     </label>
                     <input
@@ -327,14 +330,14 @@ const MedicationPage = () => {
 
                   {/* Assign To */}
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                       Assign To
                     </label>
                     <select
                       name="assignedTo"
                       value={newMedication.assignedTo}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold appearance-none bg-white"
+                      className={`w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold appearance-none ${theme.colors.bgCard}`}
                       required
                     >
                       <option value="">Select family member...</option>
@@ -348,7 +351,7 @@ const MedicationPage = () => {
 
                   {/* Frequency */}
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                       Frequency
                     </label>
                     <div className="grid grid-cols-2 gap-2">
@@ -364,7 +367,7 @@ const MedicationPage = () => {
                           }`}
                         >
                           <div className="text-xl mb-1">{freq.icon}</div>
-                          <div className="text-xs font-bold text-gray-700">{freq.label}</div>
+                          <div className={`text-xs font-bold ${theme.colors.text}`}>{freq.label}</div>
                         </button>
                       ))}
                     </div>
@@ -373,7 +376,7 @@ const MedicationPage = () => {
 
                 {/* Reminder Times */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Reminder Times
                   </label>
                   <div className="space-y-3">
@@ -411,7 +414,7 @@ const MedicationPage = () => {
                 {/* Dates */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                       Start Date (optional)
                     </label>
                     <input
@@ -424,7 +427,7 @@ const MedicationPage = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                       End Date (optional)
                     </label>
                     <input
@@ -439,7 +442,7 @@ const MedicationPage = () => {
 
                 {/* Notes */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Notes (optional)
                   </label>
                   <textarea

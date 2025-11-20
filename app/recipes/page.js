@@ -323,66 +323,72 @@ function RecipesContent() {
           <div className="flex gap-3">
             <button
               onClick={() => setShowScanModal(true)}
-              className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-blue-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+              className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-blue-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+              aria-label="Scan Recipe"
             >
-              <FaCamera /> Scan Recipe
+              <FaCamera /> <span className="hidden md:inline">Scan Recipe</span>
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-orange-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+              className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold hover:from-orange-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+              aria-label={currentTheme === 'dark' ? 'Add Potion' : 'Add Recipe'}
             >
-              <FaPlus /> {currentTheme === 'dark' ? 'Add Potion' : 'Add Recipe'}
+              <FaPlus /> <span className="hidden md:inline">{currentTheme === 'dark' ? 'Add Potion' : 'Add Recipe'}</span>
             </button>
           </div>
         </div>
 
         {/* Search Bar */}
         <form onSubmit={handleSearch} className="mb-6">
-          <div className="flex gap-3">
+          <div className="flex gap-2 md:gap-3">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="🔍 Search for recipes (e.g., chicken pasta, healthy salad)..."
-              className="flex-1 px-6 py-4 rounded-2xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold text-lg shadow-lg"
+              placeholder="🔍 Search recipes..."
+              className="flex-1 px-4 md:px-6 py-3 md:py-4 rounded-2xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold text-base md:text-lg shadow-lg"
               required
             />
             <button
               type="submit"
               disabled={searching}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-8 py-4 rounded-2xl font-bold transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center gap-2"
+              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center gap-2"
+              aria-label="Search"
             >
-              {searching ? 'Searching...' : <><FaSearch /> Search</>}
+              {searching ? <span className="md:hidden">...</span> : <FaSearch />}
+              <span className="hidden md:inline">{searching ? 'Searching...' : 'Search'}</span>
             </button>
           </div>
-          <p className="mt-2 text-sm text-gray-600 font-semibold">
-            🍳 Search thousands of recipes with photos and instructions. Click "Enhance with USDA" for accurate nutrition data.
+          <p className="mt-2 text-xs md:text-sm text-gray-600 font-semibold">
+            🍳 Search thousands of recipes with photos and instructions.
           </p>
         </form>
 
         {/* Tabs */}
         {searchResults.length > 0 && (
-          <div className="flex gap-2 mb-6">
-            <button
-              onClick={() => setActiveTab('my-recipes')}
-              className={`px-6 py-3 rounded-xl font-bold transition-all ${
-                activeTab === 'my-recipes'
-                  ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              My Recipes ({recipes.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('search-results')}
-              className={`px-6 py-3 rounded-xl font-bold transition-all ${
-                activeTab === 'search-results'
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Search Results ({searchResults.length})
-            </button>
+          <div className="overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 mb-6">
+            <div className="flex gap-2 min-w-min">
+              <button
+                onClick={() => setActiveTab('my-recipes')}
+                className={`px-4 md:px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap text-sm md:text-base ${
+                  activeTab === 'my-recipes'
+                    ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                My Recipes ({recipes.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('search-results')}
+                className={`px-4 md:px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap text-sm md:text-base ${
+                  activeTab === 'search-results'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Search Results ({searchResults.length})
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -391,10 +397,10 @@ function RecipesContent() {
       {activeTab === 'my-recipes' && (
         <>
           {recipes.length === 0 ? (
-            <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
+            <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg`}>
               <div className="text-6xl mb-4">🍳</div>
-              <p className="text-xl font-bold text-gray-600">No recipes yet</p>
-              <p className="text-gray-500">Add your family's favorite recipes or search for new ones!</p>
+              <p className={`text-xl font-bold ${theme.colors.textMuted}`}>No recipes yet</p>
+              <p className={theme.colors.textMuted}>Add your family's favorite recipes or search for new ones!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -403,7 +409,7 @@ function RecipesContent() {
                   key={recipe.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer"
+                  className={`${theme.colors.bgCard} rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer`}
                   onClick={() => setSelectedRecipe(recipe)}
                 >
                   {recipe.imageUrl ? (
@@ -472,7 +478,7 @@ function RecipesContent() {
               key={recipe.id}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white border-2 border-blue-200 rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl hover:border-purple-400 transition-all cursor-pointer"
+              className={`${theme.colors.bgCard} border-2 border-blue-200 rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl hover:border-purple-400 transition-all cursor-pointer`}
               onClick={() => handleViewRecipeDetails(recipe.id)}
             >
               {recipe.image ? (
@@ -524,7 +530,7 @@ function RecipesContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto"
+              className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl max-w-2xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto`}
             >
               {selectedRecipe.imageUrl && (
                 <div className="relative h-64">
@@ -538,7 +544,7 @@ function RecipesContent() {
                 </div>
               )}
 
-              <div className="p-8">
+              <div className="p-4 md:p-8">
                 <div className="flex items-start justify-between mb-4">
                   <h2 className="text-3xl font-display font-bold gradient-text">
                     {selectedRecipe.name}
@@ -625,16 +631,16 @@ function RecipesContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl p-6 max-w-2xl w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto"
+              className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 max-w-2xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto`}
             >
-              <h2 className="text-3xl font-display font-bold mb-6 gradient-text">
+              <h2 className="text-2xl md:text-3xl font-display font-bold mb-4 md:mb-6 gradient-text">
                 🍳 Add Recipe
               </h2>
 
               <form onSubmit={handleAddRecipe} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                       Recipe Name
                     </label>
                     <input
@@ -647,7 +653,7 @@ function RecipesContent() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                       Photo
                     </label>
                     <input
@@ -661,7 +667,7 @@ function RecipesContent() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                       Servings
                     </label>
                     <input
@@ -673,7 +679,7 @@ function RecipesContent() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                       Prep Time
                     </label>
                     <input
@@ -687,7 +693,7 @@ function RecipesContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Ingredients
                   </label>
                   {newRecipe.ingredients.map((ing, index) => (
@@ -725,7 +731,7 @@ function RecipesContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Instructions
                   </label>
                   <textarea
@@ -774,7 +780,7 @@ function RecipesContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl p-6 max-w-5xl w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto"
+              className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 max-w-5xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto`}
             >
               {loadingRecipeDetails ? (
                 <div className="flex items-center justify-center py-20">
@@ -793,7 +799,7 @@ function RecipesContent() {
                   </button>
 
                   {selectedSearchRecipe.image && (
-                    <div className="relative h-64 rounded-2xl overflow-hidden mb-6">
+                    <div className="relative h-48 md:h-64 rounded-2xl overflow-hidden mb-4 md:mb-6">
                       <Image
                         src={selectedSearchRecipe.image}
                         alt={selectedSearchRecipe.title}
@@ -804,43 +810,43 @@ function RecipesContent() {
                     </div>
                   )}
 
-                  <h2 className="text-3xl font-display font-bold mb-4 gradient-text">
+                  <h2 className="text-2xl md:text-3xl font-display font-bold mb-4 gradient-text">
                     {selectedSearchRecipe.title}
                   </h2>
 
                   {/* Recipe Info Cards */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4 md:mb-6">
                     {selectedSearchRecipe.readyInMinutes && (
-                      <div className="bg-blue-50 p-4 rounded-xl text-center">
-                        <div className="text-2xl mb-1">⏱️</div>
-                        <div className="text-sm font-bold text-blue-900">{selectedSearchRecipe.readyInMinutes} mins</div>
+                      <div className="bg-blue-50 p-3 md:p-4 rounded-xl text-center">
+                        <div className="text-xl md:text-2xl mb-1">⏱️</div>
+                        <div className="text-xs md:text-sm font-bold text-blue-900">{selectedSearchRecipe.readyInMinutes} mins</div>
                       </div>
                     )}
                     {selectedSearchRecipe.servings && (
-                      <div className="bg-purple-50 p-4 rounded-xl text-center">
-                        <div className="text-2xl mb-1">👥</div>
-                        <div className="text-sm font-bold text-purple-900">{selectedSearchRecipe.servings} servings</div>
+                      <div className="bg-purple-50 p-3 md:p-4 rounded-xl text-center">
+                        <div className="text-xl md:text-2xl mb-1">👥</div>
+                        <div className="text-xs md:text-sm font-bold text-purple-900">{selectedSearchRecipe.servings} servings</div>
                       </div>
                     )}
                     {selectedSearchRecipe.healthScore && (
-                      <div className="bg-green-50 p-4 rounded-xl text-center">
-                        <div className="text-2xl mb-1">💚</div>
-                        <div className="text-sm font-bold text-green-900">Health: {selectedSearchRecipe.healthScore}/100</div>
+                      <div className="bg-green-50 p-3 md:p-4 rounded-xl text-center">
+                        <div className="text-xl md:text-2xl mb-1">💚</div>
+                        <div className="text-xs md:text-sm font-bold text-green-900">Health: {selectedSearchRecipe.healthScore}/100</div>
                       </div>
                     )}
                     {selectedSearchRecipe.pricePerServing && (
-                      <div className="bg-orange-50 p-4 rounded-xl text-center">
-                        <div className="text-2xl mb-1">💰</div>
-                        <div className="text-sm font-bold text-orange-900">${(selectedSearchRecipe.pricePerServing / 100).toFixed(2)}/serving</div>
+                      <div className="bg-orange-50 p-3 md:p-4 rounded-xl text-center">
+                        <div className="text-xl md:text-2xl mb-1">💰</div>
+                        <div className="text-xs md:text-sm font-bold text-orange-900">${(selectedSearchRecipe.pricePerServing / 100).toFixed(2)}/serving</div>
                       </div>
                     )}
                   </div>
 
                   {/* Nutrition Info */}
                   {selectedSearchRecipe.nutrition && (
-                    <div className="bg-gradient-to-br from-green-50 to-blue-50 p-6 rounded-2xl mb-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xl font-bold flex items-center gap-2">
+                    <div className="bg-gradient-to-br from-green-50 to-blue-50 p-4 md:p-6 rounded-2xl mb-4 md:mb-6">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+                        <h3 className="text-lg md:text-xl font-bold flex items-center gap-2">
                           <span>📊</span> Nutrition Facts
                           {usdaNutrition && (
                             <span className="text-sm font-normal text-green-600">
@@ -853,9 +859,9 @@ function RecipesContent() {
                         {!isEnriching && !usdaNutrition && selectedSearchRecipe.extendedIngredients?.length > 0 && (
                           <button
                             onClick={() => handleEnrichWithUSDA(selectedSearchRecipe)}
-                            className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-xl font-bold hover:from-green-600 hover:to-emerald-600 transition-all shadow-lg text-sm flex items-center gap-2"
+                            className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 md:px-4 py-2 rounded-xl font-bold hover:from-green-600 hover:to-emerald-600 transition-all shadow-lg text-xs md:text-sm flex items-center justify-center gap-2 w-full md:w-auto"
                           >
-                            🥗 Enhance with USDA
+                            🥗 <span className="hidden sm:inline">Enhance with</span> USDA
                           </button>
                         )}
 
@@ -910,16 +916,16 @@ function RecipesContent() {
                       )}
 
                       {/* Display nutrition data */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
                         {(nutritionSource === 'usda' && usdaNutrition
                           ? usdaNutrition.totalNutrition.nutrients
                           : selectedSearchRecipe.nutrition.nutrients
                         )?.slice(0, 12).map((nutrient, i) => (
-                          <div key={i} className="bg-white p-3 rounded-xl">
-                            <div className="text-xs text-gray-600 mb-1">
+                          <div key={i} className="bg-white p-2 md:p-3 rounded-xl">
+                            <div className="text-xs text-gray-600 mb-1 line-clamp-2">
                               {nutritionSource === 'usda' ? formatNutrientName(nutrient.name) : nutrient.name}
                             </div>
-                            <div className="text-lg font-bold text-gray-900">
+                            <div className="text-base md:text-lg font-bold text-gray-900">
                               {(nutrient.amount ? nutrient.amount.toFixed(1) : 'N/A')}{nutrient.unit}
                             </div>
                           </div>
@@ -944,8 +950,8 @@ function RecipesContent() {
 
                   {/* Ingredients */}
                   {selectedSearchRecipe.extendedIngredients && (
-                    <div className="mb-6">
-                      <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
+                    <div className="mb-4 md:mb-6">
+                      <h3 className="text-lg md:text-xl font-bold mb-3 flex items-center gap-2">
                         <span>📝</span> Ingredients ({selectedSearchRecipe.extendedIngredients.length})
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -960,8 +966,8 @@ function RecipesContent() {
 
                   {/* Instructions */}
                   {selectedSearchRecipe.analyzedInstructions?.[0]?.steps && (
-                    <div className="mb-6">
-                      <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
+                    <div className="mb-4 md:mb-6">
+                      <h3 className="text-lg md:text-xl font-bold mb-3 flex items-center gap-2">
                         <span>👨‍🍳</span> Instructions
                       </h3>
                       <div className="space-y-3">
@@ -981,7 +987,7 @@ function RecipesContent() {
                   <div className="flex gap-3">
                     <button
                       onClick={() => handleAddApiRecipe(selectedSearchRecipe)}
-                      className="flex-1 bg-gradient-to-r from-green-500 to-blue-500 text-white py-4 rounded-2xl font-bold hover:from-green-600 hover:to-blue-600 transition-all shadow-lg flex items-center justify-center gap-2"
+                      className="flex-1 bg-gradient-to-r from-green-500 to-blue-500 text-white py-3 md:py-4 rounded-2xl font-bold hover:from-green-600 hover:to-blue-600 transition-all shadow-lg flex items-center justify-center gap-2 text-sm md:text-base"
                     >
                       <FaPlus /> Add to My Recipes
                     </button>
