@@ -278,7 +278,78 @@ export function useMemories() {
     return unsubscribe;
   }, [userData?.familyId]);
 
-  return { memories, loading };
+  const updateMemory = async (memoryId, updates) => {
+    try {
+      await updateDoc(
+        doc(db, 'families', userData.familyId, 'memories', memoryId),
+        updates
+      );
+      toast.success('Memory updated!');
+    } catch (error) {
+      toast.error('Failed to update memory');
+      console.error(error);
+    }
+  };
+
+  return { memories, loading, updateMemory };
+}
+
+// Hook for Memories Folders
+export function useMemoriesFolders() {
+  const { userData } = useAuth();
+  const [folders, setFolders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userData?.familyId) {
+      setLoading(false);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'families', userData.familyId, 'folders'),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const foldersList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setFolders(foldersList);
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [userData?.familyId]);
+
+  const addFolder = async (folderData) => {
+    try {
+      await addDoc(collection(db, 'families', userData.familyId, 'folders'), {
+        ...folderData,
+        createdBy: userData.uid,
+        createdAt: serverTimestamp(),
+      });
+      toast.success('Folder created!');
+    } catch (error) {
+      toast.error('Failed to create folder');
+      console.error(error);
+    }
+  };
+
+  const deleteFolder = async (folderId) => {
+    try {
+      await deleteDoc(
+        doc(db, 'families', userData.familyId, 'folders', folderId)
+      );
+      toast.success('Folder deleted!');
+    } catch (error) {
+      toast.error('Failed to delete folder');
+      console.error(error);
+    }
+  };
+
+  return { folders, loading, addFolder, deleteFolder };
 }
 
 // Hook for Daily Meme
