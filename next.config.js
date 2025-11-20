@@ -1,9 +1,9 @@
 const withPWA = require('next-pwa')({
   dest: 'public',
-  register: false, // We'll manually register firebase-messaging-sw.js which includes PWA
+  register: false, // We'll manually register in NotificationContext
   skipWaiting: true,
-  disable: false, // Enable PWA in development for testing
-  sw: 'firebase-messaging-sw.js', // Use Firebase SW as the main service worker
+  disable: process.env.NODE_ENV === 'development', // Disable in dev to avoid conflicts
+  sw: 'sw.js', // Separate PWA service worker
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,

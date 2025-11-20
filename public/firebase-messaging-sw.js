@@ -1,1 +1,82 @@
-if(!self.define){let e,a={};const s=(s,c)=>(s=new URL(s+".js",c).href,a[s]||new Promise(a=>{if("document"in self){const e=document.createElement("script");e.src=s,e.onload=a,document.head.appendChild(e)}else e=s,importScripts(s),a()}).then(()=>{let e=a[s];if(!e)throw new Error(`Module ${s} didn’t register its module`);return e}));self.define=(c,r)=>{const i=e||("document"in self?document.currentScript.src:"")||location.href;if(a[i])return;let n={};const t=e=>s(e,i),u={module:{uri:i},exports:n,require:t};a[i]=Promise.all(c.map(e=>u[e]||t(e))).then(e=>(r(...e),n))}}define(["./workbox-00a24876"],function(e){"use strict";importScripts(),self.skipWaiting(),e.clientsClaim(),e.precacheAndRoute([{url:"/_next/app-build-manifest.json",revision:"2e01856fd3ad1845c59d2294b6eb7395"},{url:"/_next/static/chunks/113-a76b367ecdbb8b20.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/117-3a9078a0b3433bb0.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/145-51493d014a47bdc2.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/51-4558b155deb487bf.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/521-a9417fd675953c48.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/594-fb05bbb086bd5867.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/598-6f1d386cc7c41b06.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/69806262-2590d86cd99eec6d.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/780-89bb2487a7a398ce.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/805-61728fe7b1c0ea06.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/818-cb91b2d6d61d2dd2.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/8e1d74a4-afd403d9470e4163.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/951-043727779cd15288.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/app/_not-found/page-2eeb002c8e5a70a4.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/app/calendar/page-257ee0c09834dea5.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/app/chores/page-51bc4d4aefc9ca2f.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/app/credentials/page-e6af0daac77609b5.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/app/daily-checkin/page-42526c081b8b15a7.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/app/dashboard/page-d121b03f74139576.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/app/documents/page-aa1b9d2012b7da9d.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/app/groceries/page-9d071824c67c19d9.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/app/join/page-2e2a5870a1c1dc1a.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/app/layout-23a1c868115117c7.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/app/medication/page-a7ecd501e97fbbe8.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/app/memories/page-5870bf513abc24fb.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/app/page-caf518bed8051900.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/app/recipes/page-d1612aecc9d1a831.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/app/settings/page-ef0ada24877d5d49.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/app/setup/page-b91815b086e84578.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/app/todos/page-3d068cdae52ce4a2.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/bc9e92e6-ed48a5253f3a3c4e.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/fd9d1056-b8c67a073707bac9.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/framework-f66176bb897dc684.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/main-97b82f50e2d4b2a2.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/main-app-cc8883206a1c22c6.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/pages/_app-72b849fbd24ac258.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/pages/_error-7ba65e1336b92748.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/chunks/polyfills-42372ed130431b0a.js",revision:"846118c33b2c0e922d7b3a7676f81f6f"},{url:"/_next/static/chunks/webpack-03f7c6bc932ce1e3.js",revision:"uNc270hGrruaHaXegbNFz"},{url:"/_next/static/css/04cfe7d4727a6cc1.css",revision:"04cfe7d4727a6cc1"},{url:"/_next/static/uNc270hGrruaHaXegbNFz/_buildManifest.js",revision:"c155cce658e53418dec34664328b51ac"},{url:"/_next/static/uNc270hGrruaHaXegbNFz/_ssgManifest.js",revision:"b6652df95db52feb4daf4eca35380933"},{url:"/apple-touch-icon.png",revision:"3d9b04f86cf2054d6fc98c132b266788"},{url:"/generate-icons.html",revision:"ffde509f6be08ab421163df3885be686"},{url:"/icon-192x192.png",revision:"a6f90da497fb506751fcffe9762a2d0b"},{url:"/icon-192x192.png.txt",revision:"9ffcd3f6e7603d17447308618cda74eb"},{url:"/icon-512x512.png",revision:"f0a040e102d0a75eb66067d70b5ba2a3"},{url:"/icon.svg",revision:"c442b7d196707271a9736e8898bae634"},{url:"/manifest.json",revision:"4562d5880345c930e703f9ea2ede1152"}],{ignoreURLParametersMatching:[]}),e.cleanupOutdatedCaches(),e.registerRoute("/",new e.NetworkFirst({cacheName:"start-url",plugins:[{cacheWillUpdate:async({request:e,response:a,event:s,state:c})=>a&&"opaqueredirect"===a.type?new Response(a.body,{status:200,statusText:"OK",headers:a.headers}):a}]}),"GET"),e.registerRoute(/^https:\/\/firebasestorage\.googleapis\.com\/.*/i,new e.CacheFirst({cacheName:"firebase-storage-cache",plugins:[new e.ExpirationPlugin({maxEntries:200,maxAgeSeconds:2592e3})]}),"GET"),e.registerRoute(/^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,new e.CacheFirst({cacheName:"google-fonts-cache",plugins:[new e.ExpirationPlugin({maxEntries:10,maxAgeSeconds:31536e3})]}),"GET"),e.registerRoute(/\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,new e.CacheFirst({cacheName:"image-cache",plugins:[new e.ExpirationPlugin({maxEntries:100,maxAgeSeconds:604800})]}),"GET"),e.registerRoute(/^https:\/\/api\.dicebear\.com\/.*/i,new e.StaleWhileRevalidate({cacheName:"avatar-cache",plugins:[new e.ExpirationPlugin({maxEntries:50,maxAgeSeconds:604800})]}),"GET")});
+// Firebase Cloud Messaging Service Worker
+// This file handles background push notifications
+
+// Import Firebase scripts
+importScripts('https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.4/firebase-messaging-compat.js');
+
+// Initialize Firebase in the service worker
+// Note: These values will be replaced at build time or should match your Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyAKLZYNF6sxQSp8i3iLY_KvCc3bVPXEuZo",
+  authDomain: "family-os-ae80f.firebaseapp.com",
+  projectId: "family-os-ae80f",
+  storageBucket: "family-os-ae80f.firebasestorage.app",
+  messagingSenderId: "913782982866",
+  appId: "1:913782982866:web:6e6c5e464e6fb46b0b98e6"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+
+// Get Firebase Messaging instance
+const messaging = firebase.messaging();
+
+// Handle background messages
+messaging.onBackgroundMessage((payload) => {
+  console.log('[firebase-messaging-sw.js] Received background message:', payload);
+
+  const notificationTitle = payload.notification?.title || 'Family OS Notification';
+  const notificationOptions = {
+    body: payload.notification?.body || 'You have a new notification',
+    icon: '/icon-192x192.png',
+    badge: '/icon-192x192.png',
+    tag: payload.data?.type || 'notification',
+    data: {
+      url: payload.data?.url || payload.fcmOptions?.link || '/dashboard',
+      ...payload.data,
+    },
+    requireInteraction: false,
+    vibrate: [200, 100, 200],
+  };
+
+  return self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// Handle notification clicks
+self.addEventListener('notificationclick', (event) => {
+  console.log('[firebase-messaging-sw.js] Notification clicked:', event);
+
+  event.notification.close();
+
+  // Navigate to the URL specified in the notification data
+  const urlToOpen = event.notification.data?.url || '/dashboard';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Check if there's already a window open
+        for (const client of clientList) {
+          if (client.url === urlToOpen && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // If no window is open, open a new one
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
+  );
+});
+
+// Service worker activation
+self.addEventListener('activate', (event) => {
+  console.log('[firebase-messaging-sw.js] Service Worker activated');
+  event.waitUntil(clients.claim());
+});
+
+// Service worker installation
+self.addEventListener('install', (event) => {
+  console.log('[firebase-messaging-sw.js] Service Worker installed');
+  self.skipWaiting();
+});
