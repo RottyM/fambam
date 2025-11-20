@@ -452,7 +452,7 @@ function MemoriesContent() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-4 md:hidden bg-gradient-to-r from-blue-500 to-teal-500 text-white rounded-2xl p-4 text-center"
         >
-          <p className="text-sm font-bold">💡 Tip: Long-press and drag memories to organize them into folders!</p>
+          <p className="text-sm font-bold">💡 Tip: Press and hold (0.5s) a memory, then drag it to a folder to organize!</p>
         </motion.div>
       )}
 

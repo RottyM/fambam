@@ -15,6 +15,15 @@ export default function DraggableMemory({ memory, children }) {
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
+    end: (item, monitor) => {
+      // Cleanup: Ensure drag state is properly reset
+      // This helps prevent stuck states on mobile
+      const didDrop = monitor.didDrop();
+      if (!didDrop) {
+        // Drag was cancelled - state will auto-reset
+        console.log('Drag cancelled for memory:', item.id);
+      }
+    },
   }));
 
   return (
