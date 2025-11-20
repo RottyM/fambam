@@ -17,10 +17,12 @@ import { useDropzone } from 'react-dropzone';
 import Image from 'next/image';
 import FolderView from '@/components/FolderView';
 import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+import { MultiBackend } from 'react-dnd-multi-backend';
+import { HTML5toTouch } from '@/lib/dndBackend';
 import DraggableMemory from '@/components/DraggableMemory';
 import DroppableFolder from '@/components/DroppableFolder';
 import { format } from 'date-fns';
+import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
 
 function MemoriesContent() {
   const { memories, loading: loadingMemories, updateMemory } = useMemories();
@@ -40,6 +42,7 @@ function MemoriesContent() {
   const [newFolderName, setNewFolderName] = useState('');
   const [currentFolder, setCurrentFolder] = useState(null); // null for root/all memories
   const [folderView, setFolderView] = useState({ isOpen: false, memories: [], initialIndex: 0 });
+  const [uploadAreaExpanded, setUploadAreaExpanded] = useState(false);
 
   // Combine loading states
   const loading = loadingMemories || loadingFolders;
@@ -314,103 +317,137 @@ function MemoriesContent() {
         </motion.div>
       )}
 
-      {/* Folders List */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+      {/* Folders List - Horizontal Scrollable */}
+      <div className="mb-6">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-3 flex items-center gap-2">
           <FaFolder /> Folders ({folders.length})
         </h2>
         {folders.length === 0 ? (
-          <p className="text-gray-500 italic">No folders yet. Create one above!</p>
+          <p className="text-gray-500 italic text-sm">No folders yet. Create one above!</p>
         ) : (
-          <div className="flex flex-wrap gap-3">
-            <DroppableFolder folder={null} onDrop={handleMoveMemory}>
-              <motion.button
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                whileHover={{ scale: 1.05 }}
-                onClick={() => setCurrentFolder(null)}
-                className={`flex items-center gap-2 px-5 py-3 rounded-full border-2 transition-all shadow-sm
-                  ${!currentFolder ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300'}`}
-              >
-                <FaFolder /> All Memories
-              </motion.button>
-            </DroppableFolder>
-            {folders.map(folder => (
-              <DroppableFolder key={folder.id} folder={folder} onDrop={handleMoveMemory}>
-                <motion.div
-                  className={`relative group flex items-center gap-2 px-5 py-3 rounded-full border-2 transition-all shadow-sm cursor-pointer
-                    ${currentFolder?.id === folder.id ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300'}`}
-                  onClick={() => setCurrentFolder(folder)}
+          <div className="overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 scroll-smooth">
+            <div className="flex gap-3 min-w-min" style={{ scrollbarWidth: 'thin' }}>
+              <DroppableFolder folder={null} onDrop={handleMoveMemory}>
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  whileHover={{ scale: 1.05 }}
+                  onClick={() => setCurrentFolder(null)}
+                  className={`flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-sm md:text-base
+                    ${!currentFolder ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300'}`}
                 >
-                  <FaFolder /> {folder.name} ({memories.filter(m => m.folderId === folder.id).length})
-                  {isParent() && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteFolder(folder.id, folder.name);
-                      }}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Delete Folder"
-                    >
-                      <FaTimes />
-                    </button>
-                  )}
-                </motion.div>
+                  <FaFolder /> All Memories
+                </motion.button>
               </DroppableFolder>
-            ))}
+              {folders.map(folder => (
+                <DroppableFolder key={folder.id} folder={folder} onDrop={handleMoveMemory}>
+                  <motion.div
+                    className={`relative group flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm cursor-pointer whitespace-nowrap text-sm md:text-base
+                      ${currentFolder?.id === folder.id ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300'}`}
+                    onClick={() => setCurrentFolder(folder)}
+                  >
+                    <FaFolder /> {folder.name} ({memories.filter(m => m.folderId === folder.id).length})
+                    {isParent() && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteFolder(folder.id, folder.name);
+                        }}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Delete Folder"
+                      >
+                        <FaTimes />
+                      </button>
+                    )}
+                  </motion.div>
+                </DroppableFolder>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Upload Area */}
+      {/* Upload Area - Collapsible on Mobile */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        {...getRootProps()}
-        className={`mb-8 p-12 border-4 border-dashed rounded-3xl text-center cursor-pointer transition-all ${
-          isDragActive
-            ? 'border-purple-500 bg-purple-50'
-            : 'border-gray-300 hover:border-purple-400 hover:bg-purple-50'
-        }`}
+        className="mb-6"
       >
-        <input {...getInputProps()} />
-        <FaUpload className="text-6xl text-purple-400 mx-auto mb-4" />
-        <p className="text-xl font-bold text-gray-700 mb-2">
-          {uploading ? 'Uploading...' : isDragActive ? 'Drop it here!' : 'Drop photos/videos or click to upload'}
-        </p>
-        <p className="text-gray-500">Share your family moments 📸</p>
-
-        {/* Time Capsule Option */}
-        <div className="mt-6 space-y-4">
-          <div className="flex items-center justify-center gap-3">
-            <input
-              type="checkbox"
-              id="timecapsule"
-              checked={isTimeCapsule}
-              onChange={(e) => {
-                e.stopPropagation();
-                setIsTimeCapsule(e.target.checked);
-              }}
-              className="w-5 h-5 rounded"
-            />
-            <label htmlFor="timecapsule" className="font-bold text-purple-600 cursor-pointer">
-              🔒 Create Time Capsule (reveal on future date)
-            </label>
-          </div>
-
-          {isTimeCapsule && (
-            <div onClick={(e) => e.stopPropagation()}>
-              <input
-                type="date"
-                value={revealDate}
-                onChange={(e) => setRevealDate(e.target.value)}
-                min={format(new Date(), 'yyyy-MM-dd')}
-                className="px-4 py-2 rounded-xl border-2 border-purple-300 focus:border-purple-500 focus:outline-none font-semibold"
-              />
+        {/* Mobile: Compact Header with Expand Button */}
+        <div className="md:hidden">
+          <button
+            onClick={() => setUploadAreaExpanded(!uploadAreaExpanded)}
+            className="w-full flex items-center justify-between bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-2xl shadow-lg mb-2"
+          >
+            <div className="flex items-center gap-2">
+              <FaUpload className="text-2xl" />
+              <span className="font-bold">Upload Photos/Videos</span>
             </div>
-          )}
+            {uploadAreaExpanded ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+        </div>
+
+        {/* Upload Area - Always visible on desktop, collapsible on mobile */}
+        <div className={`${uploadAreaExpanded ? 'block' : 'hidden'} md:block overflow-hidden transition-all duration-300`}>
+          <div
+            {...getRootProps()}
+            className={`p-4 md:p-8 lg:p-12 border-4 border-dashed rounded-3xl text-center cursor-pointer transition-all ${
+              isDragActive
+                ? 'border-purple-500 bg-purple-50'
+                : 'border-gray-300 hover:border-purple-400 hover:bg-purple-50'
+            }`}
+          >
+            <input {...getInputProps()} />
+            <FaUpload className="text-4xl md:text-6xl text-purple-400 mx-auto mb-2 md:mb-4" />
+            <p className="text-lg md:text-xl font-bold text-gray-700 mb-1 md:mb-2">
+              {uploading ? 'Uploading...' : isDragActive ? 'Drop it here!' : 'Drop photos/videos or click to upload'}
+            </p>
+            <p className="text-sm md:text-base text-gray-500">Share your family moments 📸</p>
+
+            {/* Time Capsule Option */}
+            <div className="mt-4 md:mt-6 space-y-3 md:space-y-4">
+              <div className="flex items-center justify-center gap-2 md:gap-3">
+                <input
+                  type="checkbox"
+                  id="timecapsule"
+                  checked={isTimeCapsule}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setIsTimeCapsule(e.target.checked);
+                  }}
+                  className="w-4 h-4 md:w-5 md:h-5 rounded"
+                />
+                <label htmlFor="timecapsule" className="font-bold text-purple-600 cursor-pointer text-sm md:text-base">
+                  🔒 Create Time Capsule (reveal on future date)
+                </label>
+              </div>
+
+              {isTimeCapsule && (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="date"
+                    value={revealDate}
+                    onChange={(e) => setRevealDate(e.target.value)}
+                    min={format(new Date(), 'yyyy-MM-dd')}
+                    className="px-3 py-2 md:px-4 md:py-2 rounded-xl border-2 border-purple-300 focus:border-purple-500 focus:outline-none font-semibold text-sm md:text-base"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </motion.div>
+
+      {/* Mobile Drag & Drop Instructions */}
+      {displayMemories.length > 0 && folders.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 md:hidden bg-gradient-to-r from-blue-500 to-teal-500 text-white rounded-2xl p-4 text-center"
+        >
+          <p className="text-sm font-bold">💡 Tip: Long-press and drag memories to organize them into folders!</p>
+        </motion.div>
+      )}
 
       {/* Time Capsule View Banner */}
       {showTimeCapsules && (
@@ -784,7 +821,7 @@ function MemoriesContent() {
 export default function MemoriesPage() {
   return (
     <DashboardLayout>
-      <DndProvider backend={HTML5Backend}>
+      <DndProvider backend={MultiBackend} options={HTML5toTouch}>
         <MemoriesContent />
       </DndProvider>
     </DashboardLayout>
