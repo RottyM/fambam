@@ -51,54 +51,36 @@ function validateRecipeData(recipeData) {
   return cleaned;
 }
 
-// Mock Data (Fallback if API fails or isn't deployed yet)
-const MOCK_RECIPE = {
-  name: "Grandma's Chocolate Chip Cookies",
-  ingredients: [
-    { name: "Butter", amount: "1 cup", category: "dairy" },
-    { name: "White Sugar", amount: "1 cup", category: "pantry" },
-    { name: "Brown Sugar", amount: "1 cup", category: "pantry" },
-    { name: "Eggs", amount: "2", category: "dairy" },
-    { name: "Vanilla Extract", amount: "2 tsp", category: "pantry" },
-    { name: "All-purpose Flour", amount: "3 cups", category: "pantry" },
-    { name: "Baking Soda", amount: "1 tsp", category: "pantry" },
-    { name: "Salt", amount: "1/2 tsp", category: "pantry" },
-    { name: "Semisweet Chocolate Chips", amount: "2 cups", category: "pantry" },
-  ],
-  instructions: "1. Preheat oven to 350°F.\n2. Cream butter and sugars.\n3. Beat in eggs and vanilla.\n4. Mix in dry ingredients.\n5. Stir in chocolate chips.\n6. Bake 10 mins.",
-  servings: "24 cookies",
-  prepTime: "20 mins",
-  cookTime: "10 mins",
-  notes: "Don't overbake!",
-  sourceType: "mixed",
-  confidence: "high"
-};
-
 async function scanRecipe(imageFile) {
   try {
     const base64Image = await fileToBase64(imageFile);
     const mimeType = imageFile.type || 'image/jpeg';
 
-    // Attempt real API call
     const response = await fetch('/api/scan-recipe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ base64Image, mimeType }),
     });
 
-    const contentType = response.headers.get("content-type");
-    if (!response.ok || (contentType && contentType.indexOf("application/json") === -1)) {
-       throw new Error("API unavailable");
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(errorData.error || `Server error: ${response.status}`);
     }
 
     const data = await response.json();
+
+    if (!data.recipe) {
+      throw new Error('Invalid response from server');
+    }
+
     return { success: true, recipe: data.recipe };
 
   } catch (error) {
-    console.warn('API Connection failed (likely missing backend), falling back to simulation.');
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    return { success: true, recipe: MOCK_RECIPE };
+    console.error('Recipe scanning error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to scan recipe. Please try again.',
+    };
   }
 }
 
@@ -116,20 +98,21 @@ export default function RecipeScannerModal({ isOpen = false, onClose = () => {},
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
-  // Reset state when modal closes fully
-  const resetState = () => {
-    setStep('upload');
-    setImageFile(null);
-    setImagePreview(null);
-    setScannedRecipe(null);
-    setIsScanning(false);
-    setEditMode(false);
-  };
+  // Reset state when modal opens or closes
+  useEffect(() => {
+    if (isOpen) {
+      // Always reset when opening to prevent showing old data
+      setStep('upload');
+      setImageFile(null);
+      setImagePreview(null);
+      setScannedRecipe(null);
+      setIsScanning(false);
+      setEditMode(false);
+    }
+  }, [isOpen]);
 
   const handleClose = () => {
     onClose();
-    // Wait for animation to finish before resetting state
-    setTimeout(resetState, 500);
   };
 
   const handleImageSelect = (file) => {
@@ -153,23 +136,31 @@ export default function RecipeScannerModal({ isOpen = false, onClose = () => {},
     try {
       const result = await scanRecipe(imageFile);
 
-      if (result.success) {
+      if (result.success && result.recipe) {
         const cleanedRecipe = validateRecipeData(result.recipe);
         setScannedRecipe(cleanedRecipe);
         setStep('preview');
-        
+
         if (result.recipe.confidence === 'low') {
-          toast.success('Scan complete. Please review text.');
+          toast.success('Scan complete. Please review text carefully.', { duration: 4000 });
         } else {
           toast.success('Recipe scanned successfully!');
         }
       } else {
-        toast.error('Failed to scan. Please try again.');
-        setStep('upload'); 
+        // Show the actual error message from the API
+        const errorMessage = result.error || 'Failed to scan recipe. Please try again.';
+        toast.error(errorMessage, { duration: 5000 });
+        setStep('upload');
+        // Clear the image so user can try again
+        setImageFile(null);
+        setImagePreview(null);
       }
     } catch (error) {
-      toast.error('Failed to scan recipe.');
+      console.error('Scan error:', error);
+      toast.error('An unexpected error occurred. Please try again.');
       setStep('upload');
+      setImageFile(null);
+      setImagePreview(null);
     } finally {
       setIsScanning(false);
     }

@@ -8,7 +8,9 @@ export async function POST(req) {
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-      return NextResponse.json({ error: 'API Key missing' }, { status: 500 });
+      return NextResponse.json({
+        error: 'Recipe scanner is not configured. Please add GEMINI_API_KEY to your environment variables.'
+      }, { status: 500 });
     }
     
     const prompt = `
@@ -47,14 +49,26 @@ export async function POST(req) {
       })
     });
 
-    if (!response.ok) throw new Error('Gemini API Error');
-    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Gemini API Error:', errorData);
+      throw new Error('Failed to process image with Gemini API');
+    }
+
     const data = await response.json();
+
+    if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
+      throw new Error('Invalid response from Gemini API');
+    }
+
     const recipeText = data.candidates[0].content.parts[0].text;
-    return NextResponse.json({ recipe: JSON.parse(recipeText) });
+    const recipe = JSON.parse(recipeText);
+
+    return NextResponse.json({ recipe });
 
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Scan failed' }, { status: 500 });
+    console.error('Recipe scan error:', error);
+    const errorMessage = error.message || 'Failed to scan recipe';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

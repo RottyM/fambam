@@ -10,7 +10,8 @@ A fun, colorful, and comprehensive family management app built with Next.js and 
 - 🧹 **Chore Tracker** - Gamified chore system with points and rewards
 - 📅 **Google Calendar Sync** - See all family events in one place
 - 📄 **Document Vault** - Secure storage with OCR text extraction
-- 📸 **Memory Vault** - Photo and video gallery with likes
+- 📸 **Memory Vault** - Photo and video gallery with likes and folders
+- 🍳 **Recipe Scanner** - AI-powered recipe extraction from photos (requires Gemini API)
 - 😂 **Daily Meme** - Family-friendly meme updates every day
 - 🏆 **Leaderboard** - Track points and motivate kids
 - 🎭 **Fun Avatars** - Customizable avatars for each family member
@@ -68,6 +69,7 @@ cp .env.local.example .env.local
 
 2. Get your Firebase config from Project Settings > General > Your apps
 3. Fill in your `.env.local` file with your Firebase credentials
+4. **(Optional)** For Recipe Scanner feature: Get a [Gemini API Key](https://aistudio.google.com/app/apikey) and add it as `GEMINI_API_KEY` in `.env.local`
 
 ### 4. Deploy Security Rules
 
@@ -246,6 +248,12 @@ firebase deploy --only hosting
 - Check that DiceBear domain is in `next.config.js`
 - Verify internet connection
 - Try refreshing the page
+
+### Recipe Scanner not working
+- Ensure `GEMINI_API_KEY` is set in `.env.local` (or deployment environment variables)
+- Get a free API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+- Restart the development server after adding the key
+- Check browser console and server logs for specific error messages
 
 ## 🎯 Roadmap
 
