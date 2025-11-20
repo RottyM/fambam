@@ -21,7 +21,7 @@ function TodosContent() {
   const { todos, loading, addTodo } = useTodos();
   const { members } = useFamily();
   const { userData } = useAuth();
-  const { currentTheme } = useTheme();
+  const { currentTheme, theme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filterMember, setFilterMember] = useState('all');
@@ -108,14 +108,14 @@ function TodosContent() {
         </div>
 
         {/* Filters and Sort - Collapsible on Mobile */}
-        <div className="bg-white rounded-2xl shadow-lg mb-6 overflow-hidden">
+        <div className={`${theme.colors.bgCard} rounded-2xl shadow-lg mb-6 overflow-hidden`}>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-all"
+            className={`w-full flex items-center justify-between p-4 ${currentTheme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} transition-all`}
           >
             <div className="flex items-center gap-2">
               <FaFilter className="text-purple-500" />
-              <h3 className="font-bold text-gray-800">Filter & Sort</h3>
+              <h3 className={`font-bold ${theme.colors.text}`}>Filter & Sort</h3>
               {(filterMember !== 'all' || filterPriority !== 'all') && (
                 <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-full">
                   Active
@@ -142,7 +142,7 @@ function TodosContent() {
                 <div className="p-4 pt-0 border-t border-gray-100">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-xs md:text-sm font-semibold text-gray-700 mb-1">
+                      <label className={`block text-xs md:text-sm font-semibold ${theme.colors.text} mb-1`}>
                         Assigned To
                       </label>
                       <select
@@ -160,7 +160,7 @@ function TodosContent() {
                     </div>
 
                     <div>
-                      <label className="block text-xs md:text-sm font-semibold text-gray-700 mb-1">
+                      <label className={`block text-xs md:text-sm font-semibold ${theme.colors.text} mb-1`}>
                         Priority
                       </label>
                       <select
@@ -176,7 +176,7 @@ function TodosContent() {
                     </div>
 
                     <div>
-                      <label className="block text-xs md:text-sm font-semibold text-gray-700 mb-1">
+                      <label className={`block text-xs md:text-sm font-semibold ${theme.colors.text} mb-1`}>
                         Sort By
                       </label>
                       <select
@@ -208,9 +208,9 @@ function TodosContent() {
         </h2>
 
         {activeTodos.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
+          <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg`}>
             <div className="text-6xl mb-4">🎉</div>
-            <p className="text-xl font-bold text-gray-600">
+            <p className={`text-xl font-bold ${theme.colors.textMuted}`}>
               {filterMember !== 'all' || filterPriority !== 'all'
                 ? 'No todos match your filters'
                 : 'All done!'}
@@ -269,7 +269,7 @@ function TodosContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 max-w-2xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto"
+              className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 max-w-2xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto`}
             >
               <div className="flex items-center justify-between mb-4 md:mb-6">
                 <h2 className="text-2xl md:text-3xl font-display font-bold gradient-text">
@@ -285,7 +285,7 @@ function TodosContent() {
 
               <form onSubmit={handleAddTodo} className="space-y-4 md:space-y-6">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     What needs to be done?
                   </label>
                   <input
@@ -299,13 +299,13 @@ function TodosContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Assign to
                   </label>
                   <select
                     value={newTodo.assignedTo}
                     onChange={(e) => setNewTodo({ ...newTodo, assignedTo: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold bg-white"
+                    className={`w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold ${theme.colors.bgCard}`}
                     required
                   >
                     <option value="">Select a family member...</option>
@@ -319,7 +319,7 @@ function TodosContent() {
 
                 {/* Priority Selection */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Priority Level
                   </label>
                   <div className="grid grid-cols-3 gap-2 md:gap-3">
@@ -335,14 +335,14 @@ function TodosContent() {
                         }`}
                       >
                         <div className="text-xl md:text-2xl mb-1">{priority.icon}</div>
-                        <div className="text-xs md:text-sm font-bold text-gray-700">{priority.label}</div>
+                        <div className={`text-xs md:text-sm font-bold ${theme.colors.text}`}>{priority.label}</div>
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Choose an icon
                   </label>
                   <div className="grid grid-cols-6 gap-2">
@@ -364,7 +364,7 @@ function TodosContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Due date (optional)
                   </label>
                   <input

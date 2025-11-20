@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useGroceries } from '@/hooks/useFirebase';
+import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaPlus, FaTrash, FaCheckCircle } from 'react-icons/fa';
 
@@ -28,6 +29,7 @@ function GroceriesContent() {
     clearCheckedItems,
     clearAllItems,
   } = useGroceries();
+  const { theme } = useTheme();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newItem, setNewItem] = useState({
@@ -112,10 +114,10 @@ function GroceriesContent() {
       </div>
 
       {groceries.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
+        <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg`}>
           <div className="text-6xl mb-4">🛒</div>
-          <p className="text-xl font-bold text-gray-600">No items yet</p>
-          <p className="text-gray-500">Click "Add Item" to start your grocery list</p>
+          <p className={`text-xl font-bold ${theme.colors.textMuted}`}>No items yet</p>
+          <p className={theme.colors.textMuted}>Click "Add Item" to start your grocery list</p>
         </div>
       ) : (
         <div className="space-y-6">
@@ -128,7 +130,7 @@ function GroceriesContent() {
                 key={categoryKey}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-3xl p-6 shadow-lg"
+                className={`${theme.colors.bgCard} rounded-3xl p-6 shadow-lg`}
               >
                 <div className={`inline-flex items-center gap-2 bg-gradient-to-r ${categoryInfo.color} text-white px-4 py-2 rounded-full mb-4 font-bold shadow-md`}>
                   <span className="text-2xl">{categoryInfo.icon}</span>
@@ -145,10 +147,10 @@ function GroceriesContent() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
-                      className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
+                      className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${theme.colors.bgCard} ${
                         item.checked
-                          ? 'bg-gray-50 border-gray-200'
-                          : 'bg-white border-gray-300 hover:border-purple-400'
+                          ? 'opacity-50 border-gray-200'
+                          : 'border-gray-300 hover:border-purple-400'
                       }`}
                     >
                       <button
@@ -201,7 +203,7 @@ function GroceriesContent() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl"
+              className={`${theme.colors.bgCard} rounded-3xl p-8 max-w-md w-full shadow-2xl`}
             >
               <h2 className="text-3xl font-display font-bold mb-6 gradient-text">
                 🛒 Add Item
@@ -209,7 +211,7 @@ function GroceriesContent() {
 
               <form onSubmit={handleAddItem} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Item Name
                   </label>
                   <input
@@ -223,7 +225,7 @@ function GroceriesContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Quantity (optional)
                   </label>
                   <input
@@ -236,7 +238,7 @@ function GroceriesContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Category
                   </label>
                   <div className="grid grid-cols-3 gap-2">

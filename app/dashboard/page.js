@@ -163,7 +163,7 @@ function DashboardContent() {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl"
+            className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl`}
           >
             <div className="flex items-center justify-between mb-4 md:mb-6">
               <h2 className="text-lg md:text-2xl font-display font-bold flex items-center gap-2">
@@ -258,7 +258,7 @@ function DashboardContent() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl"
+            className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl`}
           >
             <h2 className="text-lg md:text-2xl font-display font-bold mb-3 md:mb-4 flex items-center gap-2">
               <span className="text-xl md:text-2xl">⚡</span>
@@ -339,7 +339,7 @@ function DashboardContent() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl"
+            className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl`}
           >
             <h2 className="text-lg md:text-2xl font-display font-bold mb-3 md:mb-4 flex items-center gap-2">
               <span className="text-xl md:text-2xl">🔥</span>
@@ -403,7 +403,7 @@ function DashboardContent() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl"
+        className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl`}
       >
         <h2 className="text-lg md:text-2xl font-display font-bold mb-4 md:mb-6 flex items-center gap-2">
           <span className="text-xl md:text-2xl">👨‍👩‍👧‍👦</span>
@@ -457,7 +457,7 @@ function DashboardContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto"
+              className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-md w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto`}
             >
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">

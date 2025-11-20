@@ -150,7 +150,7 @@ function CredentialCard({ credential, onEdit, onDelete, isParent }) {
 function CredentialsContent() {
   const { credentials, loading, addCredential, updateCredential, deleteCredential } = useCredentials();
   const { isParent } = useFamily();
-  const { currentTheme } = useTheme();
+  const { currentTheme, theme } = useTheme();
   const [showModal, setShowModal] = useState(false);
   const [editingCredential, setEditingCredential] = useState(null);
   const [filterCategory, setFilterCategory] = useState('all');
@@ -255,8 +255,8 @@ function CredentialsContent() {
         </div>
 
         {/* Category Filter */}
-        <div className="bg-white rounded-2xl p-4 shadow-lg mb-6">
-          <h3 className="font-bold text-gray-800 mb-3">Filter by Category</h3>
+        <div className={`${theme.colors.bgCard} rounded-2xl p-4 shadow-lg mb-6`}>
+          <h3 className={`font-bold ${theme.colors.text} mb-3`}>Filter by Category</h3>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setFilterCategory('all')}
@@ -290,12 +290,12 @@ function CredentialsContent() {
 
       {/* Credentials Grid */}
       {filteredCredentials.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
+        <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg`}>
           <div className="text-6xl mb-4">🔐</div>
-          <p className="text-xl font-bold text-gray-600">
+          <p className={`text-xl font-bold ${theme.colors.textMuted}`}>
             {filterCategory === 'all' ? 'No credentials yet' : 'No credentials in this category'}
           </p>
-          <p className="text-gray-500">
+          <p className={theme.colors.textMuted}>
             {isParent()
               ? 'Add your family\'s website credentials to keep them organized and accessible'
               : 'Parents can add credentials for family accounts'}
@@ -332,7 +332,7 @@ function CredentialsContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl p-6 max-w-2xl w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto"
+              className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-2xl w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto`}
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-3xl font-display font-bold gradient-text">
@@ -348,7 +348,7 @@ function CredentialsContent() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Account Name *
                   </label>
                   <input
@@ -362,7 +362,7 @@ function CredentialsContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Category *
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -378,14 +378,14 @@ function CredentialsContent() {
                         }`}
                       >
                         <div className="text-2xl mb-1">{cat.icon}</div>
-                        <div className="text-xs font-bold text-gray-700">{cat.label}</div>
+                        <div className={`text-xs font-bold ${theme.colors.text}`}>{cat.label}</div>
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Website URL
                   </label>
                   <input
@@ -398,7 +398,7 @@ function CredentialsContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Username / Email
                   </label>
                   <input
@@ -411,7 +411,7 @@ function CredentialsContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Password
                   </label>
                   <input
@@ -424,7 +424,7 @@ function CredentialsContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Notes (optional)
                   </label>
                   <textarea

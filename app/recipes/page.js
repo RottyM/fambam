@@ -397,10 +397,10 @@ function RecipesContent() {
       {activeTab === 'my-recipes' && (
         <>
           {recipes.length === 0 ? (
-            <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
+            <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg`}>
               <div className="text-6xl mb-4">🍳</div>
-              <p className="text-xl font-bold text-gray-600">No recipes yet</p>
-              <p className="text-gray-500">Add your family's favorite recipes or search for new ones!</p>
+              <p className={`text-xl font-bold ${theme.colors.textMuted}`}>No recipes yet</p>
+              <p className={theme.colors.textMuted}>Add your family's favorite recipes or search for new ones!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -409,7 +409,7 @@ function RecipesContent() {
                   key={recipe.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer"
+                  className={`${theme.colors.bgCard} rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer`}
                   onClick={() => setSelectedRecipe(recipe)}
                 >
                   {recipe.imageUrl ? (
@@ -478,7 +478,7 @@ function RecipesContent() {
               key={recipe.id}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white border-2 border-blue-200 rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl hover:border-purple-400 transition-all cursor-pointer"
+              className={`${theme.colors.bgCard} border-2 border-blue-200 rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl hover:border-purple-400 transition-all cursor-pointer`}
               onClick={() => handleViewRecipeDetails(recipe.id)}
             >
               {recipe.image ? (
@@ -530,7 +530,7 @@ function RecipesContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl md:rounded-3xl max-w-2xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto"
+              className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl max-w-2xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto`}
             >
               {selectedRecipe.imageUrl && (
                 <div className="relative h-64">
@@ -631,7 +631,7 @@ function RecipesContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 max-w-2xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto"
+              className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 max-w-2xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto`}
             >
               <h2 className="text-2xl md:text-3xl font-display font-bold mb-4 md:mb-6 gradient-text">
                 🍳 Add Recipe
@@ -640,7 +640,7 @@ function RecipesContent() {
               <form onSubmit={handleAddRecipe} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                       Recipe Name
                     </label>
                     <input
@@ -653,7 +653,7 @@ function RecipesContent() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                       Photo
                     </label>
                     <input
@@ -667,7 +667,7 @@ function RecipesContent() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                       Servings
                     </label>
                     <input
@@ -679,7 +679,7 @@ function RecipesContent() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                       Prep Time
                     </label>
                     <input
@@ -693,7 +693,7 @@ function RecipesContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Ingredients
                   </label>
                   {newRecipe.ingredients.map((ing, index) => (
@@ -731,7 +731,7 @@ function RecipesContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Instructions
                   </label>
                   <textarea
@@ -780,7 +780,7 @@ function RecipesContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 max-w-5xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto"
+              className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 max-w-5xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto`}
             >
               {loadingRecipeDetails ? (
                 <div className="flex items-center justify-center py-20">
