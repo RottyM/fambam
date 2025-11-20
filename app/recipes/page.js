@@ -19,7 +19,7 @@ function RecipesContent() {
   const { recipes, loading, addRecipe, deleteRecipe } = useRecipes();
   const { addGroceryItem } = useGroceries();
   const { userData } = useAuth();
-  const { currentTheme } = useTheme();
+  const { theme, currentTheme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showScanModal, setShowScanModal] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
