@@ -82,19 +82,19 @@ function DashboardContent() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`${theme.colors.bgCard} rounded-xl md:rounded-3xl p-3 md:p-8 shadow-xl border-2 md:border-4 ${theme.colors.border}`}
+        className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-xl border-2 md:border-4 ${theme.colors.border}`}
       >
-        <div className="flex items-center justify-between gap-2 md:gap-3">
+        <div className="flex items-center justify-between gap-3 md:gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-base md:text-4xl font-display font-bold mb-0.5 md:mb-2">
+            <h1 className="text-xl md:text-4xl font-display font-bold mb-1 md:mb-2">
               <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
                 {theme.messages.welcome}, {userData?.displayName}!
               </span>
             </h1>
-            <div className={`text-[10px] md:text-xl ${theme.colors.textMuted} font-semibold`}>
+            <div className={`text-sm md:text-xl ${theme.colors.textMuted} font-semibold`}>
               <span className="block sm:inline">{family?.name || (currentTheme === 'dark' ? 'Your Coven' : 'Your Family')}</span>
               <span className="hidden sm:inline"> • </span>
-              <span className="block sm:inline text-[9px] md:text-lg">
+              <span className="block sm:inline text-xs md:text-lg">
                 {new Date().toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric'
@@ -102,7 +102,7 @@ function DashboardContent() {
               </span>
             </div>
           </div>
-          <div className="text-2xl md:text-6xl animate-wiggle flex-shrink-0">
+          <div className="text-4xl md:text-6xl animate-wiggle flex-shrink-0">
             {currentTheme === 'dark' ? '🦇' : '👋'}
           </div>
         </div>
@@ -113,10 +113,10 @@ function DashboardContent() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.3, type: 'spring' }}
-            className="mt-2 md:mt-6 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-lg md:rounded-2xl p-2 md:p-6 text-center"
+            className="mt-3 md:mt-6 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-xl md:rounded-2xl p-3 md:p-6 text-center"
           >
-            <p className="text-white font-semibold mb-0.5 md:mb-2 text-xs md:text-base">Your Points</p>
-            <p className="text-2xl md:text-5xl font-display font-bold text-white">
+            <p className="text-white font-semibold mb-1 md:mb-2 text-sm md:text-base">Your Points</p>
+            <p className="text-3xl md:text-5xl font-display font-bold text-white">
               ⭐ {userData?.points || 0}
             </p>
           </motion.div>
