@@ -6,6 +6,7 @@ import ChoreCard from '@/components/ChoreCard';
 import { useChores } from '@/hooks/useFirebase';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaPlus, FaTrophy, FaUndo, FaTrash, FaTimes } from 'react-icons/fa';
 import { ICON_CATEGORIES, getIcon } from '@/lib/icons';
@@ -17,6 +18,7 @@ function ChoresContent() {
   const { chores, loading, addChore } = useChores();
   const { members, isParent } = useFamily();
   const { userData } = useAuth();
+  const { theme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [newChore, setNewChore] = useState({
@@ -105,30 +107,32 @@ function ChoresContent() {
   return (
     <>
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <div>
-            <h1 className="text-4xl font-display font-bold mb-2">
+            <h1 className="text-2xl md:text-4xl font-display font-bold mb-2">
               <span className="gradient-text">Chore Tracker</span>
             </h1>
-            <p className="text-gray-600 font-semibold">
+            <p className="text-sm md:text-base text-gray-600 font-semibold">
               {pendingChores.length} pending • {submittedChores.length} submitted • {approvedChores.length} completed
             </p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-2 md:gap-3">
             {isParent() && (
               <>
                 <button
                   onClick={() => setShowResetModal(true)}
-                  className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-3 rounded-2xl font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+                  className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 md:px-4 py-3 rounded-2xl font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                  aria-label="Reset Points"
                 >
-                  <FaUndo /> Reset Points
+                  <FaUndo /> <span className="hidden sm:inline">Reset Points</span>
                 </button>
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-green-600 hover:to-blue-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+                  className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-3 md:px-6 py-3 rounded-2xl font-bold hover:from-green-600 hover:to-blue-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                  aria-label="Create Chore"
                 >
-                  <FaPlus /> Create Chore
+                  <FaPlus /> <span className="hidden sm:inline">Create Chore</span>
                 </button>
               </>
             )}
@@ -257,12 +261,12 @@ function ChoresContent() {
         </h2>
 
         {(isParent() ? pendingChores : myChores.filter(c => c.status !== 'approved')).length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
+          <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg`}>
             <div className="text-6xl mb-4">🎉</div>
-            <p className="text-xl font-bold text-gray-600">
+            <p className={`text-xl font-bold ${theme.colors.textMuted}`}>
               {isParent() ? 'No active chores!' : 'All caught up!'}
             </p>
-            <p className="text-gray-500">
+            <p className={theme.colors.textMuted}>
               {isParent() ? 'Create some chores to get started' : 'No chores assigned to you right now'}
             </p>
           </div>
@@ -312,7 +316,7 @@ function ChoresContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto"
+              className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-md w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto`}
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-3xl font-display font-bold gradient-text">
@@ -386,7 +390,7 @@ function ChoresContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto"
+              className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-md w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto`}
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-3xl font-display font-bold gradient-text">
@@ -402,7 +406,7 @@ function ChoresContent() {
 
               <form onSubmit={handleAddChore} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Chore Title
                   </label>
                   <input
@@ -416,7 +420,7 @@ function ChoresContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Description (optional)
                   </label>
                   <textarea
@@ -429,13 +433,13 @@ function ChoresContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Assign to
                   </label>
                   <select
                     value={newChore.assignedTo}
                     onChange={(e) => setNewChore({...newChore, assignedTo: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold bg-white"
+                    className={`w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold ${theme.colors.bgCard}`}
                     required
                   >
                     <option value="">Select a family member...</option>
@@ -448,7 +452,7 @@ function ChoresContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Point Value ⭐
                   </label>
                   <input
@@ -463,7 +467,7 @@ function ChoresContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Choose an icon
                   </label>
                   <div className="grid grid-cols-6 gap-2">
