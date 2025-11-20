@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Camera, Upload, Edit, Check, AlertCircle } from 'lucide-react';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 // --- Helper Logic (Self-Contained) ---
 
@@ -103,7 +103,8 @@ async function scanRecipe(imageFile) {
 
 // --- Main Component ---
 
-export default function RecipeScannerModal({ isOpen = false, onClose = () => {}, onSaveRecipe = () => {} }) {
+export default function RecipeScannerModal({ isOpen = false, onClose = () => {}, onSaveRecipe = async () => {}
+}) {
   const [step, setStep] = useState('upload');
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -172,21 +173,13 @@ export default function RecipeScannerModal({ isOpen = false, onClose = () => {},
     }
   };
 
-  const handleSave = async () => {
+const handleSave = async () => {
     try {
-      // 1. Call parent save function
+      // 1. Call parent save function (Your main app handles the success Toast)
       await onSaveRecipe(scannedRecipe, imageFile);
       
-      // 2. Show explicit confirmation
-      toast.success("Recipe saved & added to Grocery List!", {
-        duration: 3000,
-        icon: '🛒'
-      });
-
-      // 3. Delay close slightly so user sees the message
-      setTimeout(() => {
-        handleClose();
-      }, 1500);
+      // 2. Close the modal immediately
+      handleClose(); 
       
     } catch (error) {
       console.error('Save error:', error);
