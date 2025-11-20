@@ -1,4 +1,4 @@
-import { Inter, Poppins } from 'next/font/google';
+// import { Inter, Poppins } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { FamilyProvider } from '@/contexts/FamilyContext';
@@ -7,12 +7,13 @@ import { NotificationProvider } from '@/contexts/NotificationContext';
 import { Toaster } from 'react-hot-toast';
 import ClientLayout from '@/components/ClientLayout';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const poppins = Poppins({ 
-  weight: ['400', '600', '700', '800'],
-  subsets: ['latin'],
-  variable: '--font-poppins'
-});
+// Temporarily disabled Google Fonts due to network constraints during build
+// const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+// const poppins = Poppins({
+//   weight: ['400', '600', '700', '800'],
+//   subsets: ['latin'],
+//   variable: '--font-poppins'
+// });
 
 export const metadata = {
   title: 'Family OS - Your Family Operating System',
@@ -55,7 +56,7 @@ export default function RootLayout({ children }) {
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#ed3f8e" />
       </head>
-      <body className={`${inter.variable} ${poppins.variable} font-sans`}>
+      <body className="font-sans">
         <ThemeProvider>
           <AuthProvider>
             <FamilyProvider>
