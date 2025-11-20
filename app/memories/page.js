@@ -17,7 +17,7 @@ import { useDropzone } from 'react-dropzone';
 import Image from 'next/image';
 import FolderView from '@/components/FolderView';
 import { DndProvider } from 'react-dnd';
-import { MultiBackend } from 'react-dnd-multi-backend';
+import { MultiBackend } from 'dnd-multi-backend';
 import { HTML5toTouch } from '@/lib/dndBackend';
 import DraggableMemory from '@/components/DraggableMemory';
 import DroppableFolder from '@/components/DroppableFolder';
