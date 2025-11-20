@@ -1,0 +1,36 @@
+## Review of Recipes Page and Hooks
+
+I've reviewed the current recipes functionality. Here's what exists:
+
+### **Recipes Page (`app/recipes/page.js`)**
+- **Main View**: Grid layout of recipe cards showing image, name, description, servings, and prep time
+- **Recipe Cards**: Click to open detailed modal view
+- **Add Recipe**: Modal form with fields for name, description, servings, prep time, ingredients, instructions, and image upload
+- **Recipe Details Modal**: Full view with ingredients list, instructions, delete option, and "Add All to Grocery List" button
+- **Grocery Integration**: Can add individual ingredients or entire recipe ingredients to the grocery list
+- **Image Handling**: Uploads to Firebase Storage with family-specific paths
+
+### **useRecipes Hook (`hooks/useFirebase.js`)**
+- **Data Fetching**: Real-time subscription to `families/{familyId}/recipes` collection, ordered by creation date
+- **addRecipe**: Creates new recipe document with metadata (createdBy, createdAt)
+- **deleteRecipe**: Removes recipe from Firestore
+- **Loading States**: Handles loading and empty states gracefully
+
+### **Key Features Implemented**
+- ✅ CRUD operations (Create, Read, Delete - no Update yet)
+- ✅ Image upload/storage integration
+- ✅ Dynamic ingredient management
+- ✅ Grocery list integration
+- ✅ Real-time updates
+- ✅ Responsive design with animations
+- ✅ Family-specific data isolation
+
+### **Notable Gaps/Missing Features**
+- No recipe editing (only add/delete)
+- No search/filter functionality
+- No recipe categories/tags
+- No meal planning integration (though there's a separate useMealPlan hook)
+- No recipe ratings/favorites
+- No ingredient scaling for different serving sizes
+
+The current implementation is solid for basic recipe management but could benefit from editing capabilities and more advanced features like search or meal planning integration. What specific functionality would you like me to add or modify?

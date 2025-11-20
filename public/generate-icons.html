@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generate PWA Icons</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #ed3f8e;
+      margin-bottom: 10px;
+    }
+    .preview {
+      margin: 30px 0;
+      text-align: center;
+    }
+    img {
+      max-width: 200px;
+      border-radius: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    button {
+      background: #ed3f8e;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #dd1f6d;
+    }
+    .info {
+      background: #fff3e0;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border-left: 4px solid #ff9800;
+    }
+    canvas {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Family OS PWA Icon Generator</h1>
+    <p>Generate PNG icons for your Progressive Web App installation.</p>
+
+    <div class="info">
+      <strong>Quick Option:</strong> Use <a href="https://realfavicongenerator.net" target="_blank">RealFaviconGenerator.net</a>
+      or <a href="https://www.pwabuilder.com/imageGenerator" target="_blank">PWA Builder</a> for professional icons.
+    </div>
+
+    <div class="preview">
+      <h3>Current Icon Preview</h3>
+      <img id="preview" src="/icon.svg" alt="Family OS Icon">
+    </div>
+
+    <div style="text-align: center;">
+      <button onclick="downloadIcon(192)">Download 192x192 PNG</button>
+      <button onclick="downloadIcon(512)">Download 512x512 PNG</button>
+      <button onclick="downloadIcon(180, 'apple-touch-icon')">Download Apple Touch Icon</button>
+    </div>
+
+    <div class="info" style="margin-top: 30px;">
+      <h3>Instructions:</h3>
+      <ol>
+        <li>Click the download buttons above to get each icon size</li>
+        <li>Save them to the <code>/public</code> folder with these names:
+          <ul>
+            <li><code>icon-192x192.png</code></li>
+            <li><code>icon-512x512.png</code></li>
+            <li><code>apple-touch-icon.png</code></li>
+          </ul>
+        </li>
+        <li>Refresh your app and test PWA installation</li>
+      </ol>
+    </div>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <script>
+    async function downloadIcon(size, filename = null) {
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = size;
+      canvas.height = size;
+
+      const img = new Image();
+      img.src = '/icon.svg';
+
+      img.onload = function() {
+        ctx.drawImage(img, 0, 0, size, size);
+
+        canvas.toBlob(function(blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename || `icon-${size}x${size}.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 'image/png');
+      };
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="256" fill="#ed3f8e"/>
+
+  <!-- Family Icon (Three figures) -->
+  <!-- Parent 1 (Left) -->
+  <circle cx="180" cy="200" r="35" fill="white"/>
+  <path d="M 180 240 Q 180 255 165 270 L 165 340 Q 165 350 175 350 L 185 350 Q 195 350 195 340 L 195 270 Q 180 255 180 240 Z" fill="white"/>
+
+  <!-- Parent 2 (Right) -->
+  <circle cx="332" cy="200" r="35" fill="white"/>
+  <path d="M 332 240 Q 332 255 317 270 L 317 340 Q 317 350 327 350 L 337 350 Q 347 350 347 340 L 347 270 Q 332 255 332 240 Z" fill="white"/>
+
+  <!-- Child (Middle, smaller) -->
+  <circle cx="256" cy="230" r="28" fill="white"/>
+  <path d="M 256 265 Q 256 278 243 290 L 243 350 Q 243 358 251 358 L 261 358 Q 269 358 269 350 L 269 290 Q 256 278 256 265 Z" fill="white"/>
+
+  <!-- Heart (Bottom) -->
+  <path d="M 256 410 L 220 375 Q 210 365 210 352 Q 210 335 225 335 Q 235 335 245 345 L 256 355 L 267 345 Q 277 335 287 335 Q 302 335 302 352 Q 302 365 292 375 L 256 410 Z" fill="white" opacity="0.9"/>
+</svg>

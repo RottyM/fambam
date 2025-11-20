@@ -1,0 +1,8 @@
+This is a placeholder file. Replace with actual PNG icon generated from icon.svg.
+
+Use one of these methods:
+1. Visit http://localhost:3000/generate-icons.html
+2. Use https://realfavicongenerator.net
+3. Run generate-icons.bat (requires ImageMagick)
+
+Required size: 192x192 pixels
