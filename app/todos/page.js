@@ -23,6 +23,7 @@ function TodosContent() {
   const { userData } = useAuth();
   const { currentTheme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [filterMember, setFilterMember] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
   const [sortBy, setSortBy] = useState('date');
@@ -99,67 +100,99 @@ function TodosContent() {
 
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+            className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+            aria-label={currentTheme === 'dark' ? 'Cast Curse' : 'Add Todo'}
           >
-            <FaPlus /> {currentTheme === 'dark' ? 'Cast Curse' : 'Add Todo'}
+            <FaPlus /> <span className="hidden sm:inline">{currentTheme === 'dark' ? 'Cast Curse' : 'Add Todo'}</span>
           </button>
         </div>
 
-        {/* Filters and Sort */}
-        <div className="bg-white rounded-2xl p-4 shadow-lg mb-6">
-          <div className="flex items-center gap-2 mb-3">
-            <FaFilter className="text-purple-500" />
-            <h3 className="font-bold text-gray-800">Filter & Sort</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Assigned To
-              </label>
-              <select
-                value={filterMember}
-                onChange={(e) => setFilterMember(e.target.value)}
-                className="w-full px-4 py-2 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
-              >
-                <option value="all">All Members</option>
-                {members.map(member => (
-                  <option key={member.id} value={member.id}>
-                    {member.displayName}
-                  </option>
-                ))}
-              </select>
+        {/* Filters and Sort - Collapsible on Mobile */}
+        <div className="bg-white rounded-2xl shadow-lg mb-6 overflow-hidden">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-all"
+          >
+            <div className="flex items-center gap-2">
+              <FaFilter className="text-purple-500" />
+              <h3 className="font-bold text-gray-800">Filter & Sort</h3>
+              {(filterMember !== 'all' || filterPriority !== 'all') && (
+                <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-full">
+                  Active
+                </span>
+              )}
             </div>
+            <motion.div
+              animate={{ rotate: showFilters ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <FaFilter className="text-gray-400" />
+            </motion.div>
+          </button>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Priority
-              </label>
-              <select
-                value={filterPriority}
-                onChange={(e) => setFilterPriority(e.target.value)}
-                className="w-full px-4 py-2 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+          <AnimatePresence>
+            {showFilters && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
               >
-                <option value="all">All Priorities</option>
-                <option value="high">🔴 High</option>
-                <option value="medium">🟡 Medium</option>
-                <option value="low">🔵 Low</option>
-              </select>
-            </div>
+                <div className="p-4 pt-0 border-t border-gray-100">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs md:text-sm font-semibold text-gray-700 mb-1">
+                        Assigned To
+                      </label>
+                      <select
+                        value={filterMember}
+                        onChange={(e) => setFilterMember(e.target.value)}
+                        className="w-full px-3 md:px-4 py-2 text-sm md:text-base rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                      >
+                        <option value="all">All Members</option>
+                        {members.map(member => (
+                          <option key={member.id} value={member.id}>
+                            {member.displayName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Sort By
-              </label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="w-full px-4 py-2 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
-              >
-                <option value="date">Date Created</option>
-                <option value="priority">Priority</option>
-              </select>
-            </div>
-          </div>
+                    <div>
+                      <label className="block text-xs md:text-sm font-semibold text-gray-700 mb-1">
+                        Priority
+                      </label>
+                      <select
+                        value={filterPriority}
+                        onChange={(e) => setFilterPriority(e.target.value)}
+                        className="w-full px-3 md:px-4 py-2 text-sm md:text-base rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                      >
+                        <option value="all">All Priorities</option>
+                        <option value="high">🔴 High</option>
+                        <option value="medium">🟡 Medium</option>
+                        <option value="low">🔵 Low</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs md:text-sm font-semibold text-gray-700 mb-1">
+                        Sort By
+                      </label>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="w-full px-3 md:px-4 py-2 text-sm md:text-base rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                      >
+                        <option value="date">Date Created</option>
+                        <option value="priority">Priority</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -236,10 +269,10 @@ function TodosContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl p-6 max-w-2xl w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto"
+              className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 max-w-2xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-3xl font-display font-bold gradient-text">
+              <div className="flex items-center justify-between mb-4 md:mb-6">
+                <h2 className="text-2xl md:text-3xl font-display font-bold gradient-text">
                   ✨ Add New Todo
                 </h2>
                 <button
@@ -250,7 +283,7 @@ function TodosContent() {
                 </button>
               </div>
 
-              <form onSubmit={handleAddTodo} className="space-y-6">
+              <form onSubmit={handleAddTodo} className="space-y-4 md:space-y-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     What needs to be done?
@@ -289,20 +322,20 @@ function TodosContent() {
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     Priority Level
                   </label>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 gap-2 md:gap-3">
                     {PRIORITY_OPTIONS.map(priority => (
                       <button
                         key={priority.value}
                         type="button"
                         onClick={() => setNewTodo({ ...newTodo, priority: priority.value })}
-                        className={`p-4 rounded-xl border-2 transition-all text-center ${
+                        className={`p-3 md:p-4 rounded-xl border-2 transition-all text-center ${
                           newTodo.priority === priority.value
                             ? 'border-purple-500 bg-purple-50 scale-105'
                             : 'border-gray-200 hover:border-purple-300'
                         }`}
                       >
-                        <div className="text-2xl mb-1">{priority.icon}</div>
-                        <div className="text-sm font-bold text-gray-700">{priority.label}</div>
+                        <div className="text-xl md:text-2xl mb-1">{priority.icon}</div>
+                        <div className="text-xs md:text-sm font-bold text-gray-700">{priority.label}</div>
                       </button>
                     ))}
                   </div>
@@ -318,7 +351,7 @@ function TodosContent() {
                         key={icon.id}
                         type="button"
                         onClick={() => setNewTodo({ ...newTodo, iconId: icon.id })}
-                        className={`p-3 text-2xl rounded-xl border-2 transition-all ${
+                        className={`p-2 md:p-3 text-xl md:text-2xl rounded-xl border-2 transition-all ${
                           newTodo.iconId === icon.id
                             ? 'border-purple-500 bg-purple-50 scale-110'
                             : 'border-gray-200 hover:border-purple-300'
