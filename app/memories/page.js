@@ -276,18 +276,22 @@ function MemoriesContent() {
           {isParent() && (
             <button
               onClick={() => setShowAddFolderModal(true)}
-              className="bg-gradient-to-r from-blue-500 to-teal-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-blue-600 hover:to-teal-600 transition-all shadow-lg flex items-center gap-2"
+              className="bg-gradient-to-r from-blue-500 to-teal-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold hover:from-blue-600 hover:to-teal-600 transition-all shadow-lg flex items-center gap-2"
+              aria-label="Add Folder"
             >
-              <FaPlus /> Add Folder
+              <FaPlus /> <span className="hidden md:inline">Add Folder</span>
             </button>
           )}
           {lockedMemories.length > 0 && (
             <button
               onClick={() => setShowTimeCapsules(!showTimeCapsules)}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg flex items-center gap-2"
+              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg flex items-center gap-2"
+              aria-label={showTimeCapsules ? 'Show Memories' : 'View Time Capsules'}
             >
               {showTimeCapsules ? <FaUnlock /> : <FaLock />}
-              {showTimeCapsules ? 'Show Memories' : 'View Time Capsules'}
+              <span className="hidden md:inline">
+                {showTimeCapsules ? 'Show Memories' : 'View Time Capsules'}
+              </span>
             </button>
           )}
         </div>
@@ -307,9 +311,10 @@ function MemoriesContent() {
           </div>
           <button
             onClick={() => setCurrentFolder(null)}
-            className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-full text-sm font-bold"
+            className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-2"
+            aria-label="Exit Folder"
           >
-            Exit Folder
+            <FaTimes /> <span className="hidden md:inline">Exit Folder</span>
           </button>
         </motion.div>
       )}
@@ -329,20 +334,23 @@ function MemoriesContent() {
                 animate={{ opacity: 1, scale: 1 }}
                 whileHover={{ scale: 1.05 }}
                 onClick={() => setCurrentFolder(null)}
-                className={`flex items-center gap-2 px-5 py-3 rounded-full border-2 transition-all shadow-sm
+                className={`flex items-center gap-2 px-3 md:px-5 py-3 rounded-full border-2 transition-all shadow-sm
                   ${!currentFolder ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300'}`}
+                aria-label="All Memories"
               >
-                <FaFolder /> All Memories
+                <FaFolder /> <span className="hidden md:inline">All Memories</span>
               </motion.button>
             </DroppableFolder>
             {folders.map(folder => (
               <DroppableFolder key={folder.id} folder={folder} onDrop={handleMoveMemory}>
                 <motion.div
-                  className={`relative group flex items-center gap-2 px-5 py-3 rounded-full border-2 transition-all shadow-sm cursor-pointer
+                  className={`relative group flex items-center gap-2 px-3 md:px-5 py-3 rounded-full border-2 transition-all shadow-sm cursor-pointer
                     ${currentFolder?.id === folder.id ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300'}`}
                   onClick={() => setCurrentFolder(folder)}
                 >
-                  <FaFolder /> {folder.name} ({memories.filter(m => m.folderId === folder.id).length})
+                  <FaFolder />
+                  <span className="truncate max-w-[120px] md:max-w-none">{folder.name}</span>
+                  <span className="hidden sm:inline">({memories.filter(m => m.folderId === folder.id).length})</span>
                   {isParent() && (
                     <button
                       onClick={(e) => {
