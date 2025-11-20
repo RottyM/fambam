@@ -18,15 +18,15 @@ function StatsCard({ icon, title, value, color, href }) {
     <Link href={href} className="h-full">
       <motion.div
         whileHover={{ scale: 1.05, y: -5 }}
-        className={`${color} rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all cursor-pointer card-hover flex flex-col h-full`}
+        className={`${color} rounded-2xl p-3 md:p-6 shadow-lg hover:shadow-2xl transition-all cursor-pointer card-hover flex flex-col h-full`}
       >
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-4xl">{icon}</div>
-          <div className="text-3xl font-display font-bold text-white">
+        <div className="flex items-center justify-between mb-2 md:mb-4">
+          <div className="text-2xl md:text-4xl">{icon}</div>
+          <div className="text-2xl md:text-3xl font-display font-bold text-white">
             {value}
           </div>
         </div>
-        <h3 className="text-white font-bold text-lg">{title}</h3>
+        <h3 className="text-white font-bold text-sm md:text-lg">{title}</h3>
       </motion.div>
     </Link>
   );
@@ -77,29 +77,32 @@ function DashboardContent() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 md:space-y-6">
       {/* Welcome header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`${theme.colors.bgCard} rounded-3xl p-8 shadow-xl border-4 ${theme.colors.border}`}
+        className={`${theme.colors.bgCard} rounded-xl md:rounded-3xl p-3 md:p-8 shadow-xl border-2 md:border-4 ${theme.colors.border}`}
       >
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-2 md:gap-3">
           <div className="flex-1 min-w-0">
-            <h1 className="text-4xl font-display font-bold mb-2">
+            <h1 className="text-base md:text-4xl font-display font-bold mb-0.5 md:mb-2">
               <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
                 {theme.messages.welcome}, {userData?.displayName}!
               </span>
             </h1>
-            <p className={`text-xl ${theme.colors.textMuted} font-semibold`}>
-              {family?.name || (currentTheme === 'dark' ? 'Your Coven' : 'Your Family')} • {new Date().toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric'
-              })}
-            </p>
+            <div className={`text-[10px] md:text-xl ${theme.colors.textMuted} font-semibold`}>
+              <span className="block sm:inline">{family?.name || (currentTheme === 'dark' ? 'Your Coven' : 'Your Family')}</span>
+              <span className="hidden sm:inline"> • </span>
+              <span className="block sm:inline text-[9px] md:text-lg">
+                {new Date().toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric'
+                })}
+              </span>
+            </div>
           </div>
-          <div className="text-6xl animate-wiggle flex-shrink-0">
+          <div className="text-2xl md:text-6xl animate-wiggle flex-shrink-0">
             {currentTheme === 'dark' ? '🦇' : '👋'}
           </div>
         </div>
@@ -110,10 +113,10 @@ function DashboardContent() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.3, type: 'spring' }}
-            className="mt-6 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-2xl p-6 text-center"
+            className="mt-2 md:mt-6 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-lg md:rounded-2xl p-2 md:p-6 text-center"
           >
-            <p className="text-white font-semibold mb-2">Your Points</p>
-            <p className="text-5xl font-display font-bold text-white">
+            <p className="text-white font-semibold mb-0.5 md:mb-2 text-xs md:text-base">Your Points</p>
+            <p className="text-2xl md:text-5xl font-display font-bold text-white">
               ⭐ {userData?.points || 0}
             </p>
           </motion.div>
@@ -121,7 +124,7 @@ function DashboardContent() {
       </motion.div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
         <StatsCard
           icon={currentTheme === 'dark' ? '☑️' : '✅'}
           title={currentTheme === 'dark' ? 'Pending Tasks' : 'To-Dos'}
@@ -153,19 +156,20 @@ function DashboardContent() {
       </div>
 
       {/* Main content grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6">
         {/* Left column - Calendar Events */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-3 md:space-y-6">
           {/* Upcoming Events */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-white rounded-3xl p-6 shadow-xl"
+            className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl"
           >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-display font-bold flex items-center gap-2">
-                <span>📅</span>
-                Upcoming Events
+            <div className="flex items-center justify-between mb-4 md:mb-6">
+              <h2 className="text-lg md:text-2xl font-display font-bold flex items-center gap-2">
+                <span className="text-xl md:text-2xl">📅</span>
+                <span className="hidden sm:inline">Upcoming Events</span>
+                <span className="sm:hidden">Events</span>
               </h2>
               <Link
                 href="/calendar"
@@ -182,7 +186,7 @@ function DashboardContent() {
                 <p className="text-sm">Your calendar is clear!</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 md:space-y-3">
                 {upcomingEvents.map(event => {
                   const category = EVENT_CATEGORIES[event.category] || EVENT_CATEGORIES.other;
                   const assignedMembers = members.filter(m => event.assignedTo?.includes(m.id));
@@ -191,27 +195,27 @@ function DashboardContent() {
                     <motion.div
                       key={event.id}
                       whileHover={{ scale: 1.02 }}
-                      className={`${category.color} p-4 rounded-2xl transition-all cursor-pointer`}
+                      className={`${category.color} p-3 md:p-4 rounded-xl md:rounded-2xl transition-all cursor-pointer`}
                     >
-                      <div className="flex items-start gap-4">
+                      <div className="flex items-start gap-2 md:gap-4">
                         <div className="flex-shrink-0">
-                          <div className={`${category.textColor} text-3xl`}>
+                          <div className={`${category.textColor} text-2xl md:text-3xl`}>
                             {category.icon}
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <h3 className={`font-bold ${category.textColor} text-lg`}>
+                          <div className="flex items-start justify-between gap-2 mb-1 md:mb-2">
+                            <h3 className={`font-bold ${category.textColor} text-sm md:text-lg`}>
                               {event.title}
                             </h3>
-                            <span className={`${category.textColor} text-sm font-bold whitespace-nowrap`}>
+                            <span className={`${category.textColor} text-xs md:text-sm font-bold whitespace-nowrap`}>
                               {getEventDateLabel(event)}
                             </span>
                           </div>
 
-                          <div className="flex flex-wrap items-center gap-3 text-sm">
+                          <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs md:text-sm">
                             <div className={`flex items-center gap-1 ${category.textColor}`}>
-                              <FaClock />
+                              <FaClock className="text-xs md:text-sm" />
                               <span className="font-semibold">
                                 {format(
                                   event.start?.toDate ? event.start.toDate() : new Date(event.start),
@@ -222,7 +226,7 @@ function DashboardContent() {
 
                             {event.location && (
                               <div className={`flex items-center gap-1 ${category.textColor}`}>
-                                <FaMapMarkerAlt />
+                                <FaMapMarkerAlt className="text-xs md:text-sm" />
                                 <span className="font-semibold truncate">{event.location}</span>
                               </div>
                             )}
@@ -230,7 +234,7 @@ function DashboardContent() {
                             {assignedMembers.length > 0 && (
                               <div className="flex items-center gap-1">
                                 {assignedMembers.slice(0, 3).map(member => (
-                                  <UserAvatar key={member.id} user={member} size={24} />
+                                  <UserAvatar key={member.id} user={member} size={20} />
                                 ))}
                                 {assignedMembers.length > 3 && (
                                   <span className={`${category.textColor} text-xs font-bold`}>
@@ -254,74 +258,74 @@ function DashboardContent() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-white rounded-3xl p-6 shadow-xl"
+            className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl"
           >
-            <h2 className="text-2xl font-display font-bold mb-4 flex items-center gap-2">
-              <span>⚡</span>
+            <h2 className="text-lg md:text-2xl font-display font-bold mb-3 md:mb-4 flex items-center gap-2">
+              <span className="text-xl md:text-2xl">⚡</span>
               Quick Actions
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
               <Link href="/recipes">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  className="bg-gradient-to-br from-orange-400 to-pink-400 p-4 rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-br from-orange-400 to-pink-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
                 >
-                  <FaUtensils className="text-3xl mx-auto mb-2" />
-                  <p className="font-bold">Recipes</p>
+                  <FaUtensils className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
+                  <p className="font-bold text-xs md:text-base">Recipes</p>
                 </motion.div>
               </Link>
               <Link href="/groceries">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  className="bg-gradient-to-br from-green-400 to-blue-400 p-4 rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-br from-green-400 to-blue-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
                 >
-                  <FaShoppingCart className="text-3xl mx-auto mb-2" />
-                  <p className="font-bold">Groceries</p>
+                  <FaShoppingCart className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
+                  <p className="font-bold text-xs md:text-base">Groceries</p>
                 </motion.div>
               </Link>
               <Link href="/calendar">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  className="bg-gradient-to-br from-blue-400 to-purple-400 p-4 rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-br from-blue-400 to-purple-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
                 >
-                  <FaCalendarAlt className="text-3xl mx-auto mb-2" />
-                  <p className="font-bold">Calendar</p>
+                  <FaCalendarAlt className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
+                  <p className="font-bold text-xs md:text-base">Calendar</p>
                 </motion.div>
               </Link>
               <Link href="/documents">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  className="bg-gradient-to-br from-indigo-400 to-cyan-400 p-4 rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-br from-indigo-400 to-cyan-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
                 >
-                  <FaFileAlt className="text-3xl mx-auto mb-2" />
-                  <p className="font-bold">Documents</p>
+                  <FaFileAlt className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
+                  <p className="font-bold text-xs md:text-base">Documents</p>
                 </motion.div>
               </Link>
               <Link href="/medication">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  className="bg-gradient-to-br from-purple-400 to-pink-400 p-4 rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-br from-purple-400 to-pink-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
                 >
-                  <FaPills className="text-3xl mx-auto mb-2" />
-                  <p className="font-bold">Medication</p>
+                  <FaPills className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
+                  <p className="font-bold text-xs md:text-base">Medication</p>
                 </motion.div>
               </Link>
               <Link href="/memories">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  className="bg-gradient-to-br from-rose-400 to-orange-400 p-4 rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-br from-rose-400 to-orange-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
                 >
-                  <FaImages className="text-3xl mx-auto mb-2" />
-                  <p className="font-bold">Memories</p>
+                  <FaImages className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
+                  <p className="font-bold text-xs md:text-base">Memories</p>
                 </motion.div>
               </Link>
               <Link href="/credentials">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  className="bg-gradient-to-br from-blue-500 to-indigo-500 p-4 rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-br from-blue-500 to-indigo-500 p-3 md:p-4 rounded-xl md:rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
                 >
-                  <FaKey className="text-3xl mx-auto mb-2" />
-                  <p className="font-bold">Credentials</p>
+                  <FaKey className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
+                  <p className="font-bold text-xs md:text-base">Credentials</p>
                 </motion.div>
               </Link>
             </div>
@@ -329,29 +333,30 @@ function DashboardContent() {
         </div>
 
         {/* Right column - Recent Activity & Meme */}
-        <div className="space-y-6">
+        <div className="space-y-3 md:space-y-6">
           {/* Recent Activity */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white rounded-3xl p-6 shadow-xl"
+            className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl"
           >
-            <h2 className="text-2xl font-display font-bold mb-4 flex items-center gap-2">
-              <span>🔥</span>
-              Recent Activity
+            <h2 className="text-lg md:text-2xl font-display font-bold mb-3 md:mb-4 flex items-center gap-2">
+              <span className="text-xl md:text-2xl">🔥</span>
+              <span className="hidden sm:inline">Recent Activity</span>
+              <span className="sm:hidden">Activity</span>
             </h2>
 
-            <div className="space-y-3">
+            <div className="space-y-2 md:space-y-3">
               {/* Show recent completed todos */}
               {todos.filter(t => t.completed).slice(0, 2).map((todo) => {
                 const member = members.find(m => m.id === todo.assignedTo);
                 return (
-                  <div key={todo.id} className="flex items-center gap-3 p-3 bg-green-50 rounded-xl">
-                    <div className="text-2xl">✅</div>
-                    {member && <UserAvatar user={member} size={32} />}
+                  <div key={todo.id} className="flex items-center gap-2 md:gap-3 p-2 md:p-3 bg-green-50 rounded-lg md:rounded-xl">
+                    <div className="text-xl md:text-2xl">✅</div>
+                    {member && <UserAvatar user={member} size={28} />}
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-800 text-sm truncate">
+                      <p className="font-semibold text-gray-800 text-xs md:text-sm truncate">
                         {member?.displayName} completed
                       </p>
                       <p className="text-xs text-gray-600 truncate">{todo.title}</p>
@@ -364,11 +369,11 @@ function DashboardContent() {
               {chores.filter(c => c.status === 'approved').slice(0, 2).map((chore) => {
                 const member = members.find(m => m.id === chore.assignedTo);
                 return (
-                  <div key={chore.id} className="flex items-center gap-3 p-3 bg-yellow-50 rounded-xl">
-                    <div className="text-2xl">🏆</div>
-                    {member && <UserAvatar user={member} size={32} />}
+                  <div key={chore.id} className="flex items-center gap-2 md:gap-3 p-2 md:p-3 bg-yellow-50 rounded-lg md:rounded-xl">
+                    <div className="text-xl md:text-2xl">🏆</div>
+                    {member && <UserAvatar user={member} size={28} />}
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-800 text-sm truncate">
+                      <p className="font-semibold text-gray-800 text-xs md:text-sm truncate">
                         {member?.displayName} +{chore.pointValue}pts
                       </p>
                       <p className="text-xs text-gray-600 truncate">{chore.title}</p>
@@ -398,37 +403,37 @@ function DashboardContent() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="bg-white rounded-3xl p-6 shadow-xl"
+        className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl"
       >
-        <h2 className="text-2xl font-display font-bold mb-6 flex items-center gap-2">
-          <span>👨‍👩‍👧‍👦</span>
+        <h2 className="text-lg md:text-2xl font-display font-bold mb-4 md:mb-6 flex items-center gap-2">
+          <span className="text-xl md:text-2xl">👨‍👩‍👧‍👦</span>
           Family Members
         </h2>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 md:gap-4">
           {members.map((member) => (
             <motion.div
               key={member.id}
               whileHover={{ scale: 1.05 }}
               onClick={() => setSelectedMember(member)}
-              className="text-center p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl cursor-pointer hover:shadow-lg transition-all"
+              className="text-center p-3 md:p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl md:rounded-2xl cursor-pointer hover:shadow-lg transition-all"
             >
-              <div className="flex justify-center mb-2 relative">
-                <UserAvatar user={member} size={56} />
+              <div className="flex justify-center mb-1 md:mb-2 relative">
+                <UserAvatar user={member} size={48} />
                 {medications[member.id]?.length > 0 && (
                   <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
                     {medications[member.id].length}
                   </div>
                 )}
               </div>
-              <p className="font-bold text-gray-800 text-sm truncate">
+              <p className="font-bold text-gray-800 text-xs md:text-sm truncate">
                 {member.displayName}
               </p>
-              <p className="text-xs text-gray-600">
+              <p className="text-[10px] md:text-xs text-gray-600">
                 {member.role === 'parent' ? '👑 Parent' : '🎮 Kid'}
               </p>
               {member.role !== 'parent' && (
-                <p className="text-xs font-bold text-yellow-600 mt-1">
+                <p className="text-[10px] md:text-xs font-bold text-yellow-600 mt-0.5 md:mt-1">
                   ⭐ {member.points || 0}
                 </p>
               )}
