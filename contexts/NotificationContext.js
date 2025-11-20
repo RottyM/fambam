@@ -23,13 +23,29 @@ export function NotificationProvider({ children }) {
       // First, ensure service worker is registered
       if ('serviceWorker' in navigator) {
         try {
-          await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          // Unregister any existing service workers first to avoid conflicts
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) {
+            if (registration.active && !registration.active.scriptURL.includes('firebase-messaging-sw.js')) {
+              await registration.unregister();
+              console.log('Unregistered old service worker:', registration.active.scriptURL);
+            }
+          }
+
+          // Register Firebase messaging service worker
+          const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+            scope: '/',
+          });
+
+          // Wait for the service worker to be ready
+          await navigator.serviceWorker.ready;
+
           if (process.env.NODE_ENV === 'development') {
-            console.log('Service Worker registered');
+            console.log('Firebase Messaging Service Worker registered successfully');
           }
         } catch (swError) {
-          console.error('Service Worker registration failed');
-          toast.error('Failed to register service worker');
+          console.error('Service Worker registration failed:', swError);
+          toast.error('Failed to register service worker for notifications');
           return;
         }
       }
@@ -46,14 +62,18 @@ export function NotificationProvider({ children }) {
           return;
         }
 
-        console.log('VAPID key configured:', vapidKey.length === 87 ? 'Valid length' : 'Invalid length');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('VAPID key configured:', vapidKey.length === 87 ? 'Valid length' : 'Invalid length');
+        }
 
-        // Get FCM token
+        // Get FCM token with service worker registration
         const messaging = getMessaging();
+        const swRegistration = await navigator.serviceWorker.ready;
 
         try {
           const token = await getToken(messaging, {
             vapidKey: vapidKey,
+            serviceWorkerRegistration: swRegistration,
           });
 
           if (token) {
@@ -70,14 +90,14 @@ export function NotificationProvider({ children }) {
             // Only update state after successful save
             setFcmToken(token);
             setNotificationsEnabled(true);
-            toast.success('Notifications enabled!');
+            toast.success('Notifications enabled! 🔔');
           } else {
             console.error('No token received from Firebase');
             setNotificationsEnabled(false);
             toast.error('Failed to get notification token');
           }
         } catch (tokenError) {
-          console.error('Error getting FCM token');
+          console.error('Error getting FCM token:', tokenError);
 
           if (process.env.NODE_ENV === 'development') {
             console.error('Error details:', {
@@ -175,19 +195,24 @@ export function NotificationProvider({ children }) {
 
   // Register service worker on mount
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/firebase-messaging-sw.js')
-        .then((registration) => {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Service Worker registered successfully');
-          }
-        })
-        .catch((error) => {
-          console.error('Service Worker registration failed');
-        });
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && !notificationsEnabled) {
+      // Only register if notifications are not already enabled (to avoid duplicate registrations)
+      navigator.serviceWorker.getRegistration('/').then((registration) => {
+        if (!registration) {
+          navigator.serviceWorker
+            .register('/firebase-messaging-sw.js', { scope: '/' })
+            .then((registration) => {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Service Worker pre-registered for faster notification setup');
+              }
+            })
+            .catch((error) => {
+              console.error('Service Worker pre-registration failed:', error);
+            });
+        }
+      });
     }
-  }, []);
+  }, [notificationsEnabled]);
 
   // Listen for foreground messages
   useEffect(() => {

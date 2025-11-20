@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,6 +27,7 @@ import {
   FaBell,
   FaBellSlash,
   FaCapsules,
+  FaSpinner,
 } from 'react-icons/fa';
 
 const navItems = [
@@ -47,8 +48,22 @@ export default function Sidebar() {
   const { theme, toggleTheme, currentTheme } = useTheme();
   const { permission, notificationsEnabled, requestPermission, disableNotifications, notificationsSupported } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
+  const [isTogglingNotifications, setIsTogglingNotifications] = useState(false);
 
   const closeSidebar = () => setIsOpen(false);
+
+  const handleNotificationToggle = useCallback(async () => {
+    setIsTogglingNotifications(true);
+    try {
+      if (notificationsEnabled) {
+        await disableNotifications();
+      } else {
+        await requestPermission();
+      }
+    } finally {
+      setIsTogglingNotifications(false);
+    }
+  }, [notificationsEnabled, disableNotifications, requestPermission]);
 
   return (
     <>
@@ -168,11 +183,40 @@ export default function Sidebar() {
 
           {notificationsSupported && (
             <button
-              onClick={notificationsEnabled ? disableNotifications : requestPermission}
+              onClick={handleNotificationToggle}
+              disabled={isTogglingNotifications}
               title={notificationsEnabled ? 'Disable Notifications' : 'Enable Notifications'}
-              className={`flex items-center justify-center p-3 ${notificationsEnabled ? (currentTheme === 'dark' ? 'text-green-400' : 'text-green-600') : (currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-500')} ${currentTheme === 'dark' ? 'hover:bg-purple-900/30' : 'hover:bg-gray-100'} rounded-lg transition-all`}
+              className={`flex items-center justify-center p-3 ${
+                isTogglingNotifications
+                  ? 'opacity-50 cursor-not-allowed'
+                  : ''
+              } ${
+                notificationsEnabled
+                  ? (currentTheme === 'dark' ? 'text-green-400' : 'text-green-600')
+                  : (currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-500')
+              } ${
+                currentTheme === 'dark' ? 'hover:bg-purple-900/30' : 'hover:bg-gray-100'
+              } rounded-lg transition-all relative group`}
             >
-              {notificationsEnabled ? <FaBell size={18} /> : <FaBellSlash size={18} />}
+              {isTogglingNotifications ? (
+                <FaSpinner size={18} className="animate-spin" />
+              ) : notificationsEnabled ? (
+                <motion.div
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 300 }}
+                >
+                  <FaBell size={18} />
+                </motion.div>
+              ) : (
+                <FaBellSlash size={18} />
+              )}
+              {/* Tooltip on hover */}
+              <span className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs rounded ${
+                currentTheme === 'dark' ? 'bg-gray-800 text-gray-200' : 'bg-gray-700 text-white'
+              } whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none`}>
+                {notificationsEnabled ? '🔔 Enabled' : '🔕 Disabled'}
+              </span>
             </button>
           )}
 
