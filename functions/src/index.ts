@@ -155,8 +155,10 @@ export const fetchDailyMeme = onSchedule(
     try {
       logger.info("Fetching daily meme...");
 
-      // Use meme-api.com which is a proxy for Reddit memes
-      const response = await fetch("https://meme-api.com/gimme/memes");
+      // Use meme-api.com with family-friendly subreddits
+      // Includes food, pets, wholesome, and general memes
+      const subreddits = "wholesomememes+memes+foodmemes+aww+rarepuppers+AnimalsBeingDerps";
+      const response = await fetch(`https://meme-api.com/gimme/${subreddits}`);
 
       if (!response.ok) {
         throw new Error(`Meme API error: ${response.statusText}`);
@@ -167,7 +169,7 @@ export const fetchDailyMeme = onSchedule(
       // Verify it's SFW
       if (memeData.nsfw) {
         logger.warn("Got NSFW meme, fetching another...");
-        const retryResponse = await fetch("https://meme-api.com/gimme/memes");
+        const retryResponse = await fetch(`https://meme-api.com/gimme/${subreddits}`);
         const retryData = await retryResponse.json();
         if (!retryData.nsfw) {
           Object.assign(memeData, retryData);
@@ -205,9 +207,10 @@ export const fetchDailyMemeManual = onCall(async (request) => {
   try {
     logger.info("Manually fetching daily meme...");
 
-    // Use meme-api.com which is a proxy for Reddit memes
-    // This avoids being blocked by Reddit
-    const response = await fetch("https://meme-api.com/gimme/memes");
+    // Use meme-api.com with family-friendly subreddits
+    // Includes food, pets, wholesome, and general memes
+    const subreddits = "wholesomememes+memes+foodmemes+aww+rarepuppers+AnimalsBeingDerps";
+    const response = await fetch(`https://meme-api.com/gimme/${subreddits}`);
 
     logger.info("Meme API response status:", response.status);
 
@@ -224,7 +227,7 @@ export const fetchDailyMemeManual = onCall(async (request) => {
     if (memeData.nsfw) {
       // Try one more time if we got NSFW
       logger.warn("Got NSFW meme, fetching another...");
-      const retryResponse = await fetch("https://meme-api.com/gimme/memes");
+      const retryResponse = await fetch(`https://meme-api.com/gimme/${subreddits}`);
       const retryData = await retryResponse.json();
       if (retryData.nsfw) {
         throw new HttpsError("not-found", "No SFW memes found");
