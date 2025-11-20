@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Camera, Upload, Edit, Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // --- Helper Logic (Self-Contained) ---
 
@@ -105,6 +106,7 @@ async function scanRecipe(imageFile) {
 
 export default function RecipeScannerModal({ isOpen = false, onClose = () => {}, onSaveRecipe = async () => {}
 }) {
+  const { theme, currentTheme } = useTheme();
   const [step, setStep] = useState('upload');
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -224,16 +226,16 @@ const handleSave = async () => {
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-3xl max-w-4xl w-full shadow-2xl max-h-[90vh] overflow-y-auto flex flex-col"
+            className={`${theme.colors.bgCard} rounded-3xl max-w-4xl w-full shadow-2xl max-h-[90vh] overflow-y-auto flex flex-col border-2 ${theme.colors.border}`}
           >
             {/* Header */}
-            <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-gray-100 px-6 py-4 rounded-t-3xl flex items-center justify-between z-10">
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent flex items-center gap-2">
-                <Camera className="text-purple-600" /> Scan Recipe
+            <div className={`sticky top-0 ${theme.colors.bgCard} backdrop-blur ${theme.colors.borderLight} border-b px-6 py-4 rounded-t-3xl flex items-center justify-between z-10`}>
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent flex items-center gap-2">
+                <Camera className="text-purple-500" /> Scan Recipe
               </h2>
               <button
                 onClick={handleClose}
-                className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                className={`${theme.colors.textMuted} hover:${theme.colors.text} p-2 rounded-full hover:bg-gray-700/50 transition-colors`}
               >
                 <X size={24} />
               </button>
@@ -244,19 +246,19 @@ const handleSave = async () => {
               {step === 'upload' && (
                 <div className="space-y-8 py-4">
                   <div className="text-center space-y-2">
-                     <p className="text-gray-600 max-w-md mx-auto">
+                     <p className={`${theme.colors.textMuted} max-w-md mx-auto`}>
                     Take a photo or upload an image of a recipe to automatically extract the ingredients and instructions.
                   </p>
                   </div>
-                 
+
                   {imagePreview ? (
-                    <div className="relative w-full h-64 rounded-2xl overflow-hidden bg-gray-50 border-2 border-gray-100">
+                    <div className={`relative w-full h-64 rounded-2xl overflow-hidden ${currentTheme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} border-2 ${theme.colors.borderLight}`}>
                       <img
                         src={imagePreview}
                         alt="Recipe preview"
                         className="object-contain w-full h-full"
                       />
-                      <button 
+                      <button
                         onClick={() => {setImagePreview(null); setImageFile(null);}}
                         className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full hover:bg-black/70"
                       >
@@ -264,11 +266,11 @@ const handleSave = async () => {
                       </button>
                     </div>
                   ) : (
-                     <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center bg-gray-50/50 hover:bg-gray-50 transition-colors">
-                        <div className="mx-auto w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 text-blue-500">
+                     <div className={`border-2 border-dashed ${theme.colors.borderLight} rounded-2xl p-8 text-center ${currentTheme === 'dark' ? 'bg-gray-900/50 hover:bg-gray-900' : 'bg-gray-50/50 hover:bg-gray-50'} transition-colors`}>
+                        <div className={`mx-auto w-16 h-16 ${currentTheme === 'dark' ? 'bg-purple-900/30' : 'bg-blue-50'} rounded-full flex items-center justify-center mb-4 ${currentTheme === 'dark' ? 'text-purple-400' : 'text-blue-500'}`}>
                           <Upload size={32} />
                         </div>
-                        <p className="text-gray-400 text-sm">No image selected yet</p>
+                        <p className={`${theme.colors.textMuted} text-sm`}>No image selected yet</p>
                      </div>
                   )}
 
@@ -321,13 +323,13 @@ const handleSave = async () => {
                 <div className="flex flex-col items-center justify-center py-20">
                   <div className="relative mb-6">
                      <div className="absolute inset-0 bg-purple-500 blur-xl opacity-20 animate-pulse rounded-full"></div>
-                     <div className="relative bg-white p-4 rounded-full shadow-xl animate-bounce">
-                        <Camera size={48} className="text-purple-600" />
+                     <div className={`relative ${currentTheme === 'dark' ? 'bg-gray-900' : 'bg-white'} p-4 rounded-full shadow-xl animate-bounce`}>
+                        <Camera size={48} className="text-purple-500" />
                      </div>
                   </div>
-                  <p className="text-xl font-bold text-gray-800 mb-2">Reading Recipe...</p>
-                  <p className="text-gray-500 text-sm max-w-xs text-center">Analyzing ingredients, instructions, and notes.</p>
-                  <div className="mt-8 w-64 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <p className={`text-xl font-bold ${theme.colors.text} mb-2`}>Reading Recipe...</p>
+                  <p className={`${theme.colors.textMuted} text-sm max-w-xs text-center`}>Analyzing ingredients, instructions, and notes.</p>
+                  <div className={`mt-8 w-64 h-2 ${currentTheme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'} rounded-full overflow-hidden`}>
                     <div className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 animate-progress w-full origin-left"></div>
                   </div>
                   <style>{`
@@ -346,11 +348,11 @@ const handleSave = async () => {
               {/* Step 3: Preview/Edit */}
               {step === 'preview' && scannedRecipe && (
                 <div className="space-y-8">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-6">
+                  <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 border-b ${theme.colors.borderLight} pb-6`}>
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-3 flex-wrap">
-                        <h3 className="text-xl font-bold text-gray-800">Review Scanned Recipe</h3>
-                        
+                        <h3 className={`text-xl font-bold ${theme.colors.text}`}>Review Scanned Recipe</h3>
+
                         {scannedRecipe.sourceType === 'handwritten' && (
                           <span className="bg-amber-100 text-amber-800 text-xs px-3 py-1 rounded-full border border-amber-200 font-semibold flex items-center gap-1">
                             <Edit size={12} /> Handwritten
@@ -362,15 +364,15 @@ const handleSave = async () => {
                           </span>
                         )}
                         </div>
-                        <p className="text-sm text-gray-500">Check details carefully before adding to your list.</p>
+                        <p className={`text-sm ${theme.colors.textMuted}`}>Check details carefully before adding to your list.</p>
                     </div>
-                    
+
                     <button
                       onClick={() => setEditMode(!editMode)}
                       className={`px-5 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 ${
                         editMode
                           ? 'bg-green-500 text-white shadow-lg shadow-green-200'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          : `${currentTheme === 'dark' ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`
                       }`}
                     >
                       {editMode ? <><Check size={18} /> Done Editing</> : <><Edit size={18} /> Edit Details</>}
@@ -379,65 +381,65 @@ const handleSave = async () => {
 
                   {/* Name */}
                   <div>
-                    <label className="block text-xs uppercase tracking-wider font-bold text-gray-500 mb-2">Recipe Name</label>
+                    <label className={`block text-xs uppercase tracking-wider font-bold ${theme.colors.textMuted} mb-2`}>Recipe Name</label>
                     {editMode ? (
                       <input
                         type="text"
                         value={scannedRecipe.name}
                         onChange={(e) => setScannedRecipe({ ...scannedRecipe, name: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none font-bold text-xl text-gray-800"
+                        className={`w-full px-4 py-3 rounded-xl border-2 ${theme.colors.borderLight} ${currentTheme === 'dark' ? 'bg-gray-900' : 'bg-white'} ${theme.colors.text} focus:border-purple-500 focus:outline-none font-bold text-xl`}
                       />
                     ) : (
-                      <p className="text-2xl font-bold text-gray-900">{scannedRecipe.name}</p>
+                      <p className={`text-2xl font-bold ${theme.colors.text}`}>{scannedRecipe.name}</p>
                     )}
                   </div>
 
                   {/* Meta (Servings, Time) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                  <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 ${currentTheme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} p-4 rounded-2xl border ${theme.colors.borderLight}`}>
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 mb-1">Servings</label>
+                      <label className={`block text-xs font-bold ${theme.colors.textMuted} mb-1`}>Servings</label>
                       {editMode ? (
                         <input
                           type="text"
                           value={scannedRecipe.servings}
                           onChange={(e) => setScannedRecipe({ ...scannedRecipe, servings: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-purple-500 focus:outline-none text-sm"
+                          className={`w-full px-3 py-2 rounded-lg border ${theme.colors.borderLight} ${currentTheme === 'dark' ? 'bg-gray-800' : 'bg-white'} ${theme.colors.text} focus:border-purple-500 focus:outline-none text-sm`}
                         />
                       ) : (
-                        <p className="text-gray-800 font-medium">{scannedRecipe.servings}</p>
+                        <p className={`${theme.colors.text} font-medium`}>{scannedRecipe.servings}</p>
                       )}
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 mb-1">Prep Time</label>
+                      <label className={`block text-xs font-bold ${theme.colors.textMuted} mb-1`}>Prep Time</label>
                       {editMode ? (
                         <input
                           type="text"
                           value={scannedRecipe.prepTime}
                           onChange={(e) => setScannedRecipe({ ...scannedRecipe, prepTime: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-purple-500 focus:outline-none text-sm"
+                          className={`w-full px-3 py-2 rounded-lg border ${theme.colors.borderLight} ${currentTheme === 'dark' ? 'bg-gray-800' : 'bg-white'} ${theme.colors.text} focus:border-purple-500 focus:outline-none text-sm`}
                         />
                       ) : (
-                        <p className="text-gray-800 font-medium">{scannedRecipe.prepTime || '-'}</p>
+                        <p className={`${theme.colors.text} font-medium`}>{scannedRecipe.prepTime || '-'}</p>
                       )}
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 mb-1">Cook Time</label>
+                      <label className={`block text-xs font-bold ${theme.colors.textMuted} mb-1`}>Cook Time</label>
                       {editMode ? (
                         <input
                           type="text"
                           value={scannedRecipe.cookTime}
                           onChange={(e) => setScannedRecipe({ ...scannedRecipe, cookTime: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-purple-500 focus:outline-none text-sm"
+                          className={`w-full px-3 py-2 rounded-lg border ${theme.colors.borderLight} ${currentTheme === 'dark' ? 'bg-gray-800' : 'bg-white'} ${theme.colors.text} focus:border-purple-500 focus:outline-none text-sm`}
                         />
                       ) : (
-                        <p className="text-gray-800 font-medium">{scannedRecipe.cookTime || '-'}</p>
+                        <p className={`${theme.colors.text} font-medium`}>{scannedRecipe.cookTime || '-'}</p>
                       )}
                     </div>
                   </div>
 
                   {/* Ingredients */}
                   <div>
-                    <label className="block text-xs uppercase tracking-wider font-bold text-gray-500 mb-3">
+                    <label className={`block text-xs uppercase tracking-wider font-bold ${theme.colors.textMuted} mb-3`}>
                       Ingredients ({scannedRecipe.ingredients.length})
                     </label>
                     <div className="space-y-2">
@@ -450,27 +452,27 @@ const handleSave = async () => {
                                 value={ing.name}
                                 onChange={(e) => handleIngredientChange(index, 'name', e.target.value)}
                                 placeholder="Ingredient"
-                                className="flex-1 px-3 py-2 rounded-lg border border-gray-300 focus:border-purple-500 focus:outline-none text-sm"
+                                className={`flex-1 px-3 py-2 rounded-lg border ${theme.colors.borderLight} ${currentTheme === 'dark' ? 'bg-gray-800' : 'bg-white'} ${theme.colors.text} focus:border-purple-500 focus:outline-none text-sm`}
                               />
                               <input
                                 type="text"
                                 value={ing.amount}
                                 onChange={(e) => handleIngredientChange(index, 'amount', e.target.value)}
                                 placeholder="Amount"
-                                className="w-24 px-3 py-2 rounded-lg border border-gray-300 focus:border-purple-500 focus:outline-none text-sm"
+                                className={`w-24 px-3 py-2 rounded-lg border ${theme.colors.borderLight} ${currentTheme === 'dark' ? 'bg-gray-800' : 'bg-white'} ${theme.colors.text} focus:border-purple-500 focus:outline-none text-sm`}
                               />
                               <button
                                 onClick={() => handleRemoveIngredient(index)}
-                                className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                className={`p-2 text-red-400 hover:text-red-600 ${currentTheme === 'dark' ? 'hover:bg-red-900/20' : 'hover:bg-red-50'} rounded-lg transition-colors`}
                               >
                                 <X size={16} />
                               </button>
                             </>
                           ) : (
-                            <div className="flex-1 p-3 bg-white border border-gray-100 rounded-xl flex justify-between items-center shadow-sm hover:shadow-md transition-shadow">
-                              <span className="font-medium text-gray-700">{ing.name}</span>
+                            <div className={`flex-1 p-3 ${currentTheme === 'dark' ? 'bg-gray-900' : 'bg-white'} border ${theme.colors.borderLight} rounded-xl flex justify-between items-center shadow-sm hover:shadow-md transition-shadow`}>
+                              <span className={`font-medium ${theme.colors.text}`}>{ing.name}</span>
                               {ing.amount && (
-                                <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
+                                <span className={`text-xs font-bold ${theme.colors.textMuted} ${currentTheme === 'dark' ? 'bg-purple-900/30' : 'bg-gray-100'} px-2 py-1 rounded-lg`}>
                                   {ing.amount}
                                 </span>
                               )}
@@ -482,7 +484,7 @@ const handleSave = async () => {
                     {editMode && (
                       <button
                         onClick={handleAddIngredient}
-                        className="mt-3 text-sm text-purple-600 font-bold hover:text-purple-700 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-purple-50 transition-colors w-fit"
+                        className={`mt-3 text-sm text-purple-500 font-bold hover:text-purple-600 flex items-center gap-1 px-2 py-1 rounded-lg ${currentTheme === 'dark' ? 'hover:bg-purple-900/20' : 'hover:bg-purple-50'} transition-colors w-fit`}
                       >
                          + Add Ingredient
                       </button>
@@ -491,16 +493,16 @@ const handleSave = async () => {
 
                   {/* Instructions */}
                   <div>
-                    <label className="block text-xs uppercase tracking-wider font-bold text-gray-500 mb-3">Instructions</label>
+                    <label className={`block text-xs uppercase tracking-wider font-bold ${theme.colors.textMuted} mb-3`}>Instructions</label>
                     {editMode ? (
                       <textarea
                         value={scannedRecipe.instructions}
                         onChange={(e) => setScannedRecipe({ ...scannedRecipe, instructions: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none font-medium text-gray-700 leading-relaxed"
+                        className={`w-full px-4 py-3 rounded-xl border-2 ${theme.colors.borderLight} ${currentTheme === 'dark' ? 'bg-gray-900' : 'bg-white'} ${theme.colors.text} focus:border-purple-500 focus:outline-none font-medium leading-relaxed`}
                         rows={10}
                       />
                     ) : (
-                      <div className="p-5 bg-white border border-gray-100 rounded-2xl whitespace-pre-line leading-relaxed text-gray-700 shadow-sm">
+                      <div className={`p-5 ${currentTheme === 'dark' ? 'bg-gray-900' : 'bg-white'} border ${theme.colors.borderLight} rounded-2xl whitespace-pre-line leading-relaxed ${theme.colors.text} shadow-sm`}>
                         {scannedRecipe.instructions}
                       </div>
                     )}
@@ -528,10 +530,10 @@ const handleSave = async () => {
                   )}
 
                   {/* Footer Buttons */}
-                  <div className="flex gap-3 pt-6 border-t border-gray-100">
+                  <div className={`flex gap-3 pt-6 border-t ${theme.colors.borderLight}`}>
                     <button
                       onClick={() => setStep('upload')}
-                      className="flex-1 bg-white border-2 border-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-50 hover:border-gray-300 transition-all"
+                      className={`flex-1 ${currentTheme === 'dark' ? 'bg-gray-900 border-2 border-gray-700 text-gray-300 hover:bg-gray-800' : 'bg-white border-2 border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300'} py-3 rounded-xl font-bold transition-all`}
                     >
                       Scan Another
                     </button>

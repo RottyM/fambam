@@ -416,7 +416,7 @@ function DashboardContent() {
               key={member.id}
               whileHover={{ scale: 1.05 }}
               onClick={() => setSelectedMember(member)}
-              className="text-center p-3 md:p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl md:rounded-2xl cursor-pointer hover:shadow-lg transition-all"
+              className={`text-center p-3 md:p-4 ${currentTheme === 'dark' ? 'bg-gradient-to-br from-purple-900/40 to-gray-900 border-2 border-purple-900/50' : 'bg-gradient-to-br from-purple-50 to-pink-50'} rounded-xl md:rounded-2xl cursor-pointer hover:shadow-lg transition-all`}
             >
               <div className="flex justify-center mb-1 md:mb-2 relative">
                 <UserAvatar user={member} size={48} />
@@ -426,10 +426,10 @@ function DashboardContent() {
                   </div>
                 )}
               </div>
-              <p className="font-bold text-gray-800 text-xs md:text-sm truncate">
+              <p className={`font-bold ${theme.colors.text} text-xs md:text-sm truncate`}>
                 {member.displayName}
               </p>
-              <p className="text-[10px] md:text-xs text-gray-600">
+              <p className={`text-[10px] md:text-xs ${theme.colors.textMuted}`}>
                 {member.role === 'parent' ? '👑 Parent' : '🎮 Kid'}
               </p>
               {member.role !== 'parent' && (
