@@ -795,3 +795,63 @@ export const deleteMemory = onCall(async (request) => {
     throw new HttpsError("internal", "Failed to delete memory");
   }
 });
+
+/**
+ * Send medication reminders
+ * Runs every minute to check for due medications
+ */
+export const sendMedicationReminders = onSchedule(
+  {
+    schedule: "* * * * *", // Run every minute
+    timeZone: "America/New_York",
+  },
+  async () => {
+    try {
+      logger.info("Checking for medication reminders...");
+
+      const now = new Date();
+      const currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+      // Query all medications
+      const medicationsSnapshot = await db.collectionGroup("medications").get();
+
+      for (const medDoc of medicationsSnapshot.docs) {
+        const medData = medDoc.data();
+        const userId = medData.user.id;
+
+        // Check if any reminder time matches the current time
+        if (medData.reminderTimes.includes(currentTime)) {
+          // Check if a notification was sent recently to avoid duplicates
+          const lastNotified = medData.lastNotifiedAt?.toDate();
+          if (lastNotified) {
+            const minutesSinceLast = (now.getTime() - lastNotified.getTime()) / 60000;
+            if (minutesSinceLast < 1) {
+              continue; // Skip if notified in the last minute
+            }
+          }
+
+          logger.info(`Sending reminder for medication: ${medData.medicationName} to user ${userId}`);
+
+          await sendNotificationToUser(
+            userId,
+            "💊 Medication Reminder",
+            `Time to take your ${medData.medicationName} (${medData.dosage})`,
+            {
+              type: "medication_reminder",
+              medicationId: medDoc.id,
+              url: "/medication",
+            }
+          );
+
+          // Mark reminder as sent
+          await medDoc.ref.update({
+            lastNotifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+      }
+    } catch (error) {
+      logger.error("Error sending medication reminders:", error);
+      // We don't throw here to prevent the function from being disabled
+    }
+  }
+);

@@ -6,8 +6,10 @@ import { useRecipes, useGroceries } from '@/hooks/useFirebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { searchRecipes, getRecipeInformation } from '@/lib/spoonacular';
-import { FaPlus, FaTrash, FaShoppingCart, FaCalendar, FaSearch } from 'react-icons/fa';
+import { searchRecipes, getRecipeInformation, getRecipeNutrition } from '@/lib/spoonacular';
+import { enrichRecipeWithUSDA, formatNutrientName } from '@/lib/usdaEnrichment';
+import { FaPlus, FaTrash, FaShoppingCart, FaCalendar, FaSearch, FaCamera } from 'react-icons/fa';
+import RecipeScannerModal from '@/components/RecipeScannerModal';
 import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import toast from 'react-hot-toast';
@@ -19,6 +21,7 @@ function RecipesContent() {
   const { userData } = useAuth();
   const { currentTheme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showScanModal, setShowScanModal] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,6 +30,10 @@ function RecipesContent() {
   const [selectedSearchRecipe, setSelectedSearchRecipe] = useState(null);
   const [loadingRecipeDetails, setLoadingRecipeDetails] = useState(false);
   const [activeTab, setActiveTab] = useState('my-recipes');
+  const [usdaNutrition, setUsdaNutrition] = useState(null);
+  const [isEnriching, setIsEnriching] = useState(false);
+  const [enrichmentProgress, setEnrichmentProgress] = useState(null);
+  const [nutritionSource, setNutritionSource] = useState('spoonacular'); // 'spoonacular' or 'usda'
   const [newRecipe, setNewRecipe] = useState({
     name: '',
     description: '',
@@ -57,13 +64,61 @@ function RecipesContent() {
   const handleViewRecipeDetails = async (recipeId) => {
     setLoadingRecipeDetails(true);
     try {
+      // Fetch Spoonacular recipe information
       const fullRecipe = await getRecipeInformation(recipeId);
+
+      // Fetch nutrition separately as it might not be included
+      try {
+        const nutritionData = await getRecipeNutrition(recipeId);
+        fullRecipe.nutrition = nutritionData;
+      } catch (nutritionError) {
+        console.warn('Failed to fetch nutrition data:', nutritionError);
+      }
+
       setSelectedSearchRecipe(fullRecipe);
+      // Reset USDA nutrition state when loading new recipe
+      setUsdaNutrition(null);
+      setNutritionSource('spoonacular');
     } catch (error) {
       console.error('Failed to get recipe details:', error);
       toast.error('Failed to load recipe details');
     } finally {
       setLoadingRecipeDetails(false);
+    }
+  };
+
+  const handleEnrichWithUSDA = async (recipe) => {
+    setIsEnriching(true);
+    setEnrichmentProgress({ current: 0, total: recipe.extendedIngredients?.length || 0 });
+
+    try {
+      const result = await enrichRecipeWithUSDA(recipe, (progress) => {
+        setEnrichmentProgress(progress);
+      });
+
+      if (result.success) {
+        setUsdaNutrition(result);
+        setNutritionSource('usda');
+
+        const successRate = Math.round(result.coverage);
+        if (result.failedIngredients.length > 0) {
+          toast.success(
+            `Enhanced with USDA data! ${successRate}% ingredient coverage.\n` +
+            `Couldn't match: ${result.failedIngredients.slice(0, 3).join(', ')}${result.failedIngredients.length > 3 ? '...' : ''}`,
+            { duration: 5000 }
+          );
+        } else {
+          toast.success(`✅ 100% ingredient coverage with USDA nutritional data!`);
+        }
+      } else {
+        toast.error(result.error || 'Failed to enrich with USDA data');
+      }
+    } catch (error) {
+      console.error('USDA enrichment error:', error);
+      toast.error('Failed to enrich recipe with USDA data');
+    } finally {
+      setIsEnriching(false);
+      setEnrichmentProgress(null);
     }
   };
 
@@ -184,6 +239,51 @@ function RecipesContent() {
     }
   };
 
+  const handleSaveScannedRecipe = async (scannedRecipe, imageFile) => {
+    setUploading(true);
+    try {
+      let imageUrl = '';
+
+      // Upload the scanned image if provided
+      if (imageFile) {
+        const timestamp = Date.now();
+        const storageRef = ref(
+          storage,
+          `families/${userData.familyId}/recipes/${timestamp}_${imageFile.name}`
+        );
+        await uploadBytes(storageRef, imageFile);
+        imageUrl = await getDownloadURL(storageRef);
+      }
+
+      // Combine prep and cook time if both exist
+      let totalTime = '';
+      if (scannedRecipe.prepTime && scannedRecipe.cookTime) {
+        totalTime = `Prep: ${scannedRecipe.prepTime}, Cook: ${scannedRecipe.cookTime}`;
+      } else {
+        totalTime = scannedRecipe.prepTime || scannedRecipe.cookTime || '';
+      }
+
+      await addRecipe({
+        name: scannedRecipe.name,
+        description: scannedRecipe.description || 'Scanned recipe',
+        servings: scannedRecipe.servings,
+        prepTime: totalTime,
+        ingredients: scannedRecipe.ingredients.filter(ing => ing.name),
+        instructions: scannedRecipe.instructions,
+        imageUrl,
+      });
+
+      toast.success(`Successfully added "${scannedRecipe.name}" to your recipes! 📖`);
+      setActiveTab('my-recipes');
+    } catch (error) {
+      console.error('Error saving scanned recipe:', error);
+      toast.error('Failed to save recipe');
+      throw error;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const addAllToGroceries = async (recipe) => {
     for (const ing of recipe.ingredients || []) {
       await addGroceryItem({
@@ -220,12 +320,20 @@ function RecipesContent() {
               {recipes.length} {currentTheme === 'dark' ? 'potions' : 'saved recipes'}
             </p>
           </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-orange-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
-          >
-            <FaPlus /> {currentTheme === 'dark' ? 'Add Potion' : 'Add Recipe'}
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowScanModal(true)}
+              className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-blue-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+            >
+              <FaCamera /> Scan Recipe
+            </button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-orange-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+            >
+              <FaPlus /> {currentTheme === 'dark' ? 'Add Potion' : 'Add Recipe'}
+            </button>
+          </div>
         </div>
 
         {/* Search Bar */}
@@ -242,11 +350,14 @@ function RecipesContent() {
             <button
               type="submit"
               disabled={searching}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-8 py-4 rounded-2xl font-bold hover:from-blue-600 hover:to-purple-600 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center gap-2"
+              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-8 py-4 rounded-2xl font-bold transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center gap-2"
             >
               {searching ? 'Searching...' : <><FaSearch /> Search</>}
             </button>
           </div>
+          <p className="mt-2 text-sm text-gray-600 font-semibold">
+            🍳 Search thousands of recipes with photos and instructions. Click "Enhance with USDA" for accurate nutrition data.
+          </p>
         </form>
 
         {/* Tabs */}
@@ -728,19 +839,106 @@ function RecipesContent() {
                   {/* Nutrition Info */}
                   {selectedSearchRecipe.nutrition && (
                     <div className="bg-gradient-to-br from-green-50 to-blue-50 p-6 rounded-2xl mb-6">
-                      <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                        <span>📊</span> Nutrition Facts
-                      </h3>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-xl font-bold flex items-center gap-2">
+                          <span>📊</span> Nutrition Facts
+                          {usdaNutrition && (
+                            <span className="text-sm font-normal text-green-600">
+                              ({nutritionSource === 'usda' ? 'USDA Enhanced' : 'Spoonacular'})
+                            </span>
+                          )}
+                        </h3>
+
+                        {/* USDA Enrichment Button */}
+                        {!isEnriching && !usdaNutrition && selectedSearchRecipe.extendedIngredients?.length > 0 && (
+                          <button
+                            onClick={() => handleEnrichWithUSDA(selectedSearchRecipe)}
+                            className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-xl font-bold hover:from-green-600 hover:to-emerald-600 transition-all shadow-lg text-sm flex items-center gap-2"
+                          >
+                            🥗 Enhance with USDA
+                          </button>
+                        )}
+
+                        {/* Toggle between sources */}
+                        {usdaNutrition && !isEnriching && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setNutritionSource('spoonacular')}
+                              className={`px-3 py-1 rounded-lg font-bold text-sm transition-all ${
+                                nutritionSource === 'spoonacular'
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              }`}
+                            >
+                              Spoonacular
+                            </button>
+                            <button
+                              onClick={() => setNutritionSource('usda')}
+                              className={`px-3 py-1 rounded-lg font-bold text-sm transition-all ${
+                                nutritionSource === 'usda'
+                                  ? 'bg-green-500 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              }`}
+                            >
+                              USDA
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Enrichment Progress */}
+                      {isEnriching && enrichmentProgress && (
+                        <div className="mb-4 p-4 bg-white rounded-xl">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-bold text-gray-700">
+                              Looking up ingredients in USDA database...
+                            </span>
+                            <span className="text-sm font-bold text-green-600">
+                              {enrichmentProgress.current} / {enrichmentProgress.total}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                            <div
+                              className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all"
+                              style={{ width: `${(enrichmentProgress.current / enrichmentProgress.total) * 100}%` }}
+                            ></div>
+                          </div>
+                          <p className="text-xs text-gray-600">
+                            Current: {enrichmentProgress.ingredient}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Display nutrition data */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {selectedSearchRecipe.nutrition.nutrients?.slice(0, 8).map((nutrient, i) => (
+                        {(nutritionSource === 'usda' && usdaNutrition
+                          ? usdaNutrition.totalNutrition.nutrients
+                          : selectedSearchRecipe.nutrition.nutrients
+                        )?.slice(0, 12).map((nutrient, i) => (
                           <div key={i} className="bg-white p-3 rounded-xl">
-                            <div className="text-xs text-gray-600 mb-1">{nutrient.name}</div>
+                            <div className="text-xs text-gray-600 mb-1">
+                              {nutritionSource === 'usda' ? formatNutrientName(nutrient.name) : nutrient.name}
+                            </div>
                             <div className="text-lg font-bold text-gray-900">
-                              {nutrient.amount.toFixed(1)}{nutrient.unit}
+                              {(nutrient.amount ? nutrient.amount.toFixed(1) : 'N/A')}{nutrient.unit}
                             </div>
                           </div>
                         ))}
                       </div>
+
+                      {/* USDA Coverage Info */}
+                      {usdaNutrition && nutritionSource === 'usda' && (
+                        <div className="mt-4 p-3 bg-green-100 rounded-xl">
+                          <p className="text-sm text-green-800">
+                            <strong>✅ {Math.round(usdaNutrition.coverage)}% ingredient coverage</strong>
+                            {usdaNutrition.failedIngredients.length > 0 && (
+                              <span className="block mt-1 text-xs">
+                                Couldn't match: {usdaNutrition.failedIngredients.join(', ')}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -794,6 +992,13 @@ function RecipesContent() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Recipe Scanner Modal */}
+      <RecipeScannerModal
+        isOpen={showScanModal}
+        onClose={() => setShowScanModal(false)}
+        onSaveRecipe={handleSaveScannedRecipe}
+      />
     </>
   );
 }
@@ -805,3 +1010,15 @@ export default function RecipesPage() {
     </DashboardLayout>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+

@@ -50,3 +50,12 @@ type Review @table(name: "Reviews", key: ["movie", "user"]) {
   reviewText: String
   reviewDate: Date! @default(expr: "request.time")
 }
+
+type Medication @table {
+  user: User!
+  medicationName: String!
+  dosage: String!
+  frequency: String! @default(value: "daily")
+  reminderTimes: [String!]!
+  lastNotifiedAt: Timestamp
+}
