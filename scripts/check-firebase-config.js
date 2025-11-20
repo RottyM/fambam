@@ -5,6 +5,25 @@
  * Run this script to verify your Firebase and FCM setup
  */
 
+// Load environment variables from .env.local
+const fs = require('fs');
+const path = require('path');
+
+const envPath = path.join(__dirname, '..', '.env.local');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  envContent.split('\n').forEach(line => {
+    const trimmedLine = line.trim();
+    if (trimmedLine && !trimmedLine.startsWith('#')) {
+      const [key, ...valueParts] = trimmedLine.split('=');
+      const value = valueParts.join('=').trim();
+      if (key && value) {
+        process.env[key.trim()] = value;
+      }
+    }
+  });
+}
+
 console.log('\n🔍 Checking Firebase Configuration...\n');
 
 // Check environment variables
