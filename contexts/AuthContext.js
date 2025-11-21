@@ -10,7 +10,8 @@ import {
   signInWithPopup,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+// Changed to relative path to help resolution in preview
+import { auth, db } from '../lib/firebase';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
@@ -24,18 +25,49 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  // --- UPDATED: Token Refresh Logic ---
+  // Now accepts a 'requiredClaim' so we can wait for specific data (like familyId)
+  const waitForClaims = async (user, requiredClaim = 'role') => {
+    let retries = 0;
+    while (retries < 10) { // Try for max 10 seconds
+      try {
+        // Force-refresh the token from the server
+        const idTokenResult = await user.getIdTokenResult(true);
+        
+        // Check if the specific claim exists
+        if (idTokenResult.claims[requiredClaim]) {
+          console.log(`Claim '${requiredClaim}' synced successfully!`);
+          return idTokenResult.claims;
+        }
+        
+        console.log(`Waiting for claim '${requiredClaim}'... retry ${retries}`);
+        // Wait 1 second before trying again
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        retries++;
+      } catch (e) {
+        console.error("Error waiting for claims", e);
+        break;
+      }
+    }
+    console.warn("Timeout waiting for claims to sync.");
+    return null;
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
-        // Fetch user data from Firestore
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        if (userDoc.exists()) {
-          // Include the uid in the userData for easier access
-          setUserData({
-            ...userDoc.data(),
-            uid: firebaseUser.uid,
-          });
+        // Still fetching doc for frontend display data (avatar, display name, etc)
+        try {
+            const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+            if (userDoc.exists()) {
+            setUserData({
+                ...userDoc.data(),
+                uid: firebaseUser.uid,
+            });
+            }
+        } catch (error) {
+            console.error("Error fetching user doc:", error);
         }
       } else {
         setUser(null);
@@ -63,7 +95,6 @@ export function AuthProvider({ children }) {
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Create user document in Firestore
       await setDoc(doc(db, 'users', result.user.uid), {
         email,
         displayName,
@@ -72,6 +103,10 @@ export function AuthProvider({ children }) {
         avatar: null,
         createdAt: new Date(),
       });
+
+      // Wait for the Cloud Function to stamp the 'role'
+      toast.loading('Setting up your account...');
+      await waitForClaims(result.user, 'role');
 
       toast.success('Account created! Welcome to Family OS!');
       router.push(redirectUrl);
@@ -87,22 +122,21 @@ export function AuthProvider({ children }) {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       
-      // Check if user document exists
-      const userDoc = await getDoc(doc(db, 'users', result.user.uid));
+      const userDocRef = doc(db, 'users', result.user.uid);
+      const userDoc = await getDoc(userDocRef);
       
       if (!userDoc.exists()) {
-        // Create new user document
-        await setDoc(doc(db, 'users', result.user.uid), {
+        await setDoc(userDocRef, {
           email: result.user.email,
           displayName: result.user.displayName,
           role: 'parent',
           points: 0,
-          avatar: {
-            type: 'google',
-            url: result.user.photoURL,
-          },
+          avatar: { type: 'google', url: result.user.photoURL },
           createdAt: new Date(),
         });
+
+        toast.loading('Finalizing setup...');
+        await waitForClaims(result.user, 'role');
         router.push(redirectUrl || '/setup');
       } else {
         router.push(redirectUrl || '/dashboard');
@@ -135,6 +169,7 @@ export function AuthProvider({ children }) {
     signUp,
     signInWithGoogle,
     signOut,
+    waitForClaims,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

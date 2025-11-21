@@ -4,6 +4,7 @@ import {onSchedule} from "firebase-functions/v2/scheduler";
 import {
   onDocumentCreated,
   onDocumentUpdated,
+  onDocumentWritten,
 } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
@@ -17,11 +18,58 @@ const db = admin.firestore();
 setGlobalOptions({maxInstances: 10});
 
 /**
+ * Sync user profile changes to Auth Custom Claims
+ * This allows security rules to check role/familyId without reading the database
+ */
+export const syncUserClaims = onDocumentWritten("users/{userId}", async (event) => {
+  const userId = event.params.userId;
+
+  // 1. Handle User Deletion
+  if (!event.data?.after.exists) {
+    try {
+      await admin.auth().setCustomUserClaims(userId, null);
+      logger.info(`Claims cleared for deleted user ${userId}`);
+    } catch (error) {
+      logger.error("Error clearing claims:", error);
+    }
+    return;
+  }
+
+  const newData = event.data.after.data();
+  const previousData = event.data.before.data();
+
+  // Optimization: Only run if familyId or role actually changed
+  if (
+    previousData &&
+    newData?.familyId === previousData.familyId &&
+    newData?.role === previousData.role
+  ) {
+    return;
+  }
+
+  const customClaims = {
+    familyId: newData?.familyId || null,
+    role: newData?.role || null,
+  };
+
+  try {
+    await admin.auth().setCustomUserClaims(userId, customClaims);
+    logger.info(`Claims updated for user ${userId}:`, customClaims);
+
+    // Write timestamp back to Firestore to signal frontend that claims are ready
+    await event.data.after.ref.set(
+      { claimsUpdatedAt: admin.firestore.FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+  } catch (error) {
+    logger.error("Error setting custom claims:", error);
+  }
+});
+
+/**
  * Approve a chore and award points to the user
- * This ensures atomic update of both chore status and user points
  */
 export const approveChoreAndAwardPoints = onCall(async (request) => {
-  // Verify user is authenticated
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "User must be authenticated");
   }
@@ -29,20 +77,11 @@ export const approveChoreAndAwardPoints = onCall(async (request) => {
   const {familyId, choreId} = request.data;
 
   if (!familyId || !choreId) {
-    throw new HttpsError(
-      "invalid-argument",
-      "familyId and choreId are required"
-    );
+    throw new HttpsError("invalid-argument", "familyId and choreId are required");
   }
 
   try {
-    // Get the chore document
-    const choreRef = db
-      .collection("families")
-      .doc(familyId)
-      .collection("chores")
-      .doc(choreId);
-
+    const choreRef = db.collection("families").doc(familyId).collection("chores").doc(choreId);
     const choreDoc = await choreRef.get();
 
     if (!choreDoc.exists) {
@@ -50,50 +89,35 @@ export const approveChoreAndAwardPoints = onCall(async (request) => {
     }
 
     const choreData = choreDoc.data();
+    if (!choreData) throw new HttpsError("not-found", "Chore data not found");
 
-    if (!choreData) {
-      throw new HttpsError("not-found", "Chore data not found");
-    }
-
-    // Check if chore is in submitted status
     if (choreData.status !== "submitted") {
-      throw new HttpsError(
-        "failed-precondition",
-        "Chore must be in submitted status to approve"
-      );
+      throw new HttpsError("failed-precondition", "Chore must be in submitted status");
     }
 
     const userId = choreData.assignedTo;
     const pointValue = choreData.pointValue || 0;
 
-    // Use a transaction to ensure atomic updates
     await db.runTransaction(async (transaction) => {
       const userRef = db.collection("users").doc(userId);
       const userDoc = await transaction.get(userRef);
 
-      if (!userDoc.exists) {
-        throw new HttpsError("not-found", "User not found");
-      }
+      if (!userDoc.exists) throw new HttpsError("not-found", "User not found");
 
       const currentPoints = userDoc.data()?.points || 0;
 
-      // Update chore status
       transaction.update(choreRef, {
         status: "approved",
         approvedAt: admin.firestore.FieldValue.serverTimestamp(),
         approvedBy: request.auth?.uid || null,
       });
 
-      // Award points to user
       transaction.update(userRef, {
         points: currentPoints + pointValue,
       });
     });
 
-    logger.info(
-      `Chore ${choreId} approved and ${pointValue} points awarded to ${userId}`
-    );
-
+    logger.info(`Chore ${choreId} approved for ${userId}`);
     return {
       success: true,
       pointsAwarded: pointValue,
@@ -101,16 +125,13 @@ export const approveChoreAndAwardPoints = onCall(async (request) => {
     };
   } catch (error) {
     logger.error("Error approving chore:", error);
-    if (error instanceof HttpsError) {
-      throw error;
-    }
+    if (error instanceof HttpsError) throw error;
     throw new HttpsError("internal", "Failed to approve chore");
   }
 });
 
 /**
  * Assign a random avatar to a user
- * Returns a random avatar configuration
  */
 export const assignRandomAvatar = onCall(async (request) => {
   if (!request.auth) {
@@ -126,8 +147,7 @@ export const assignRandomAvatar = onCall(async (request) => {
     "pixel-art",
   ];
 
-  const randomStyle =
-    avatarStyles[Math.floor(Math.random() * avatarStyles.length)];
+  const randomStyle = avatarStyles[Math.floor(Math.random() * avatarStyles.length)];
   const seed = request.auth.uid;
 
   const avatar = {
@@ -136,8 +156,6 @@ export const assignRandomAvatar = onCall(async (request) => {
     seed: seed,
     url: `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${seed}`,
   };
-
-  logger.info(`Random avatar assigned to user ${request.auth.uid}:`, avatar);
 
   return {avatar};
 });
@@ -148,15 +166,12 @@ export const assignRandomAvatar = onCall(async (request) => {
  */
 export const fetchDailyMeme = onSchedule(
   {
-    schedule: "0 0 * * *", // Run at midnight UTC every day
+    schedule: "0 0 * * *",
     timeZone: "UTC",
   },
   async () => {
     try {
       logger.info("Fetching daily meme...");
-
-      // Use meme-api.com with family-friendly subreddits
-      // Includes food, pets, wholesome, and general memes
       const subreddits = "wholesomememes+memes+foodmemes+aww+rarepuppers+AnimalsBeingDerps";
       const response = await fetch(`https://meme-api.com/gimme/${subreddits}`);
 
@@ -166,7 +181,6 @@ export const fetchDailyMeme = onSchedule(
 
       const memeData = await response.json();
 
-      // Verify it's SFW
       if (memeData.nsfw) {
         logger.warn("Got NSFW meme, fetching another...");
         const retryResponse = await fetch(`https://meme-api.com/gimme/${subreddits}`);
@@ -178,7 +192,6 @@ export const fetchDailyMeme = onSchedule(
         }
       }
 
-      // Store in Firestore
       await db.collection("app-config").doc("daily-meme").set({
         title: memeData.title,
         url: memeData.url,
@@ -198,6 +211,7 @@ export const fetchDailyMeme = onSchedule(
 
 /**
  * Manual trigger for fetching daily meme (for testing)
+ * UPDATED: Better error handling to reveal API issues
  */
 export const fetchDailyMemeManual = onCall(async (request) => {
   if (!request.auth) {
@@ -206,9 +220,6 @@ export const fetchDailyMemeManual = onCall(async (request) => {
 
   try {
     logger.info("Manually fetching daily meme...");
-
-    // Use meme-api.com with family-friendly subreddits
-    // Includes food, pets, wholesome, and general memes
     const subreddits = "wholesomememes+memes+foodmemes+aww+rarepuppers+AnimalsBeingDerps";
     const response = await fetch(`https://meme-api.com/gimme/${subreddits}`);
 
@@ -217,20 +228,18 @@ export const fetchDailyMemeManual = onCall(async (request) => {
     if (!response.ok) {
       const errorText = await response.text();
       logger.error("Meme API error response:", errorText);
-      throw new Error(`Meme API error: ${response.statusText}`);
+      throw new HttpsError("unavailable", `Meme API error: ${response.statusText}`);
     }
 
     const memeData = await response.json();
     logger.info("Meme data received:", memeData.title);
 
-    // Verify it's SFW
     if (memeData.nsfw) {
-      // Try one more time if we got NSFW
       logger.warn("Got NSFW meme, fetching another...");
       const retryResponse = await fetch(`https://meme-api.com/gimme/${subreddits}`);
       const retryData = await retryResponse.json();
       if (retryData.nsfw) {
-        throw new HttpsError("not-found", "No SFW memes found");
+        throw new HttpsError("not-found", "No SFW memes found after retry");
       }
       Object.assign(memeData, retryData);
     }
@@ -244,8 +253,6 @@ export const fetchDailyMemeManual = onCall(async (request) => {
       date: new Date().toISOString().split("T")[0],
     });
 
-    logger.info("Daily meme updated successfully:", memeData.title);
-
     return {
       success: true,
       meme: {
@@ -255,39 +262,33 @@ export const fetchDailyMemeManual = onCall(async (request) => {
     };
   } catch (error) {
     logger.error("Error fetching daily meme:", error);
-    throw new HttpsError("internal", "Failed to fetch daily meme");
+    
+    // --- FIX: Allow specific errors to bubble up to the client ---
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    
+    // If it's a network/fetch error, give more detail
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    throw new HttpsError("internal", `Failed to fetch meme: ${errorMessage}`);
   }
 });
 
 /**
  * Create a Google Calendar for a family
- * Called when family is first created
  */
 export const createFamilyCalendar = onCall(async (request) => {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "User must be authenticated");
-  }
-
+  if (!request.auth) throw new HttpsError("unauthenticated", "User must be authenticated");
   const {familyId, familyName} = request.data;
-
-  if (!familyId || !familyName) {
-    throw new HttpsError(
-      "invalid-argument",
-      "familyId and familyName are required"
-    );
-  }
+  if (!familyId || !familyName) throw new HttpsError("invalid-argument", "familyId required");
 
   try {
     logger.info(`Creating Google Calendar for family: ${familyId}`);
-
-    // Initialize Google Calendar API with service account
     const auth = new google.auth.GoogleAuth({
       scopes: ["https://www.googleapis.com/auth/calendar"],
     });
-
     const calendar = google.calendar({version: "v3", auth});
 
-    // Create a new calendar
     const calendarResponse = await calendar.calendars.insert({
       requestBody: {
         summary: `${familyName} Calendar`,
@@ -297,34 +298,24 @@ export const createFamilyCalendar = onCall(async (request) => {
     });
 
     const calendarId = calendarResponse.data.id;
-    logger.info(`Calendar created with ID: ${calendarId}`);
-
-    // Make the calendar public (readable by family members)
+    
     await calendar.acl.insert({
       calendarId: calendarId as string,
       requestBody: {
         role: "reader",
-        scope: {
-          type: "default",
-        },
+        scope: { type: "default" },
       },
     });
 
-    // Store calendar ID in family document
     await db.collection("families").doc(familyId).update({
       googleCalendarId: calendarId,
       calendarCreatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    logger.info("Family calendar created successfully");
-
-    return {
-      success: true,
-      calendarId: calendarId,
-    };
+    return { success: true, calendarId: calendarId };
   } catch (error) {
-    logger.error("Error creating family calendar:", error);
-    throw new HttpsError("internal", "Failed to create family calendar");
+    logger.error("Error creating calendar:", error);
+    throw new HttpsError("internal", "Failed to create calendar");
   }
 });
 
@@ -332,87 +323,44 @@ export const createFamilyCalendar = onCall(async (request) => {
  * Sync a Firestore event to Google Calendar
  */
 export const syncEventToGoogleCalendar = onCall(async (request) => {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "User must be authenticated");
-  }
-
+  if (!request.auth) throw new HttpsError("unauthenticated", "Auth required");
   const {familyId, eventId, eventData} = request.data;
-
-  if (!familyId || !eventId || !eventData) {
-    throw new HttpsError(
-      "invalid-argument",
-      "familyId, eventId, and eventData are required"
-    );
-  }
+  if (!familyId || !eventId || !eventData) throw new HttpsError("invalid-argument", "Missing args");
 
   try {
-    // Get family's Google Calendar ID
     const familyDoc = await db.collection("families").doc(familyId).get();
     const familyData = familyDoc.data();
-
-    if (!familyData?.googleCalendarId) {
-      throw new HttpsError(
-        "failed-precondition",
-        "Family calendar not set up"
-      );
-    }
+    if (!familyData?.googleCalendarId) throw new HttpsError("failed-precondition", "No calendar");
 
     const calendarId = familyData.googleCalendarId;
-
-    // Initialize Google Calendar API
-    const auth = new google.auth.GoogleAuth({
-      scopes: ["https://www.googleapis.com/auth/calendar"],
-    });
-
+    const auth = new google.auth.GoogleAuth({ scopes: ["https://www.googleapis.com/auth/calendar"] });
     const calendar = google.calendar({version: "v3", auth});
 
-    // Format event for Google Calendar
     const googleEvent = {
       summary: eventData.title,
       description: eventData.description || "",
-      start: {
-        dateTime: eventData.start,
-        timeZone: "America/New_York",
-      },
-      end: {
-        dateTime: eventData.end,
-        timeZone: "America/New_York",
-      },
+      start: { dateTime: eventData.start, timeZone: "America/New_York" },
+      end: { dateTime: eventData.end, timeZone: "America/New_York" },
     };
 
-    // Check if event already exists in Google Calendar
     if (eventData.googleEventId) {
-      // Update existing event
       await calendar.events.update({
         calendarId: calendarId,
         eventId: eventData.googleEventId,
         requestBody: googleEvent,
       });
-
-      logger.info(`Updated event in Google Calendar: ${eventData.title}`);
     } else {
-      // Create new event
       const response = await calendar.events.insert({
         calendarId: calendarId,
         requestBody: googleEvent,
       });
-
-      // Store Google event ID in Firestore
-      await db
-        .collection("families")
-        .doc(familyId)
-        .collection("calendar-events")
-        .doc(eventId)
-        .update({
-          googleEventId: response.data.id,
-        });
-
-      logger.info(`Created event in Google Calendar: ${eventData.title}`);
+      await db.collection("families").doc(familyId).collection("calendar-events").doc(eventId).update({
+        googleEventId: response.data.id,
+      });
     }
-
     return {success: true};
   } catch (error) {
-    logger.error("Error syncing event to Google Calendar:", error);
+    logger.error("Sync error:", error);
     throw new HttpsError("internal", "Failed to sync event");
   }
 });
@@ -421,440 +369,152 @@ export const syncEventToGoogleCalendar = onCall(async (request) => {
  * Delete an event from Google Calendar
  */
 export const deleteEventFromGoogleCalendar = onCall(async (request) => {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "User must be authenticated");
-  }
-
+  if (!request.auth) throw new HttpsError("unauthenticated", "Auth required");
   const {familyId, googleEventId} = request.data;
-
-  if (!familyId || !googleEventId) {
-    throw new HttpsError(
-      "invalid-argument",
-      "familyId and googleEventId are required"
-    );
-  }
+  if (!familyId || !googleEventId) throw new HttpsError("invalid-argument", "Missing args");
 
   try {
-    // Get family's Google Calendar ID
     const familyDoc = await db.collection("families").doc(familyId).get();
     const familyData = familyDoc.data();
-
-    if (!familyData?.googleCalendarId) {
-      throw new HttpsError(
-        "failed-precondition",
-        "Family calendar not set up"
-      );
-    }
+    if (!familyData?.googleCalendarId) throw new HttpsError("failed-precondition", "No calendar");
 
     const calendarId = familyData.googleCalendarId;
-
-    // Initialize Google Calendar API
-    const auth = new google.auth.GoogleAuth({
-      scopes: ["https://www.googleapis.com/auth/calendar"],
-    });
-
+    const auth = new google.auth.GoogleAuth({ scopes: ["https://www.googleapis.com/auth/calendar"] });
     const calendar = google.calendar({version: "v3", auth});
 
-    // Delete event from Google Calendar
-    await calendar.events.delete({
-      calendarId: calendarId,
-      eventId: googleEventId,
-    });
-
-    logger.info(`Deleted event from Google Calendar: ${googleEventId}`);
-
+    await calendar.events.delete({ calendarId: calendarId, eventId: googleEventId });
     return {success: true};
   } catch (error) {
-    logger.error("Error deleting event from Google Calendar:", error);
+    logger.error("Delete error:", error);
     throw new HttpsError("internal", "Failed to delete event");
   }
 });
 
-/**
- * Helper function to send push notification to a user
- * @param {string} userId - The ID of the user to send notification to
- * @param {string} title - The notification title
- * @param {string} body - The notification body text
- * @param {Record<string, string>} data - Optional data payload
- * @return {Promise<any>} The FCM response or null
- */
-async function sendNotificationToUser(
-  userId: string,
-  title: string,
-  body: string,
-  data?: Record<string, string>
-) {
+async function sendNotificationToUser(userId: string, title: string, body: string, data?: Record<string, string>) {
   try {
-    // Get user's FCM token
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
+    if (!userData?.fcmToken || !userData?.notificationsEnabled) return null;
 
-    if (!userData?.fcmToken || !userData?.notificationsEnabled) {
-      logger.info(`User ${userId} doesn't have notifications enabled`);
-      return null;
-    }
-
-    // Send notification using FCM
     const message = {
       token: userData.fcmToken,
-      notification: {
-        title,
-        body,
-      },
+      notification: { title, body },
       data: data || {},
-      webpush: {
-        fcmOptions: {
-          link: data?.url || "/dashboard",
-        },
-      },
+      webpush: { fcmOptions: { link: data?.url || "/dashboard" } },
     };
-
-    const response = await admin.messaging().send(message);
-    logger.info(`Notification sent successfully to ${userId}:`, response);
-    return response;
+    return await admin.messaging().send(message);
   } catch (error) {
-    logger.error(`Error sending notification to ${userId}:`, error);
-    // Don't throw - notifications failing shouldn't break the main flow
+    logger.error(`Notification error for ${userId}:`, error);
     return null;
   }
 }
 
-/**
- * Send notification when a chore is assigned
- */
-export const onChoreAssigned = onDocumentCreated(
-  "families/{familyId}/chores/{choreId}",
-  async (event) => {
-    const choreData = event.data?.data();
+export const onChoreAssigned = onDocumentCreated("families/{familyId}/chores/{choreId}", async (event) => {
+  const choreData = event.data?.data();
+  if (!choreData?.assignedTo) return;
+  await sendNotificationToUser(choreData.assignedTo, "🧹 New Chore Assigned", `Assigned: ${choreData.title}`, {
+    type: "chore_assigned", choreId: event.params.choreId, url: "/chores"
+  });
+});
 
-    if (!choreData || !choreData.assignedTo) {
-      return;
-    }
+export const onChoreUpdated = onDocumentUpdated("families/{familyId}/chores/{choreId}", async (event) => {
+  const before = event.data?.before.data();
+  const after = event.data?.after.data();
+  if (!before || !after) return;
 
-    logger.info(`New chore assigned to ${choreData.assignedTo}`);
+  if (before.assignedTo !== after.assignedTo && after.assignedTo) {
+    await sendNotificationToUser(after.assignedTo, "🧹 Chore Reassigned", `Assigned: ${after.title}`, {
+      type: "chore_reassigned", choreId: event.params.choreId, url: "/chores"
+    });
+  }
 
-    await sendNotificationToUser(
-      choreData.assignedTo,
-      "🧹 New Chore Assigned",
-      `You've been assigned: ${choreData.title}`,
-      {
-        type: "chore_assigned",
-        choreId: event.params.choreId,
-        url: "/chores",
+  if (before.status !== "approved" && after.status === "approved" && after.assignedTo) {
+    await sendNotificationToUser(after.assignedTo, "✅ Chore Approved!", `Earned ${after.pointValue || 0} pts!`, {
+      type: "chore_approved", choreId: event.params.choreId, points: String(after.pointValue), url: "/chores"
+    });
+  }
+});
+
+export const onTodoAssigned = onDocumentCreated("families/{familyId}/todos/{todoId}", async (event) => {
+  const data = event.data?.data();
+  if (!data?.assignedTo) return;
+  await sendNotificationToUser(data.assignedTo, "✅ New To-Do", `Assigned: ${data.title}`, {
+    type: "todo_assigned", todoId: event.params.todoId, url: "/todos"
+  });
+});
+
+export const onTodoUpdated = onDocumentUpdated("families/{familyId}/todos/{todoId}", async (event) => {
+  const before = event.data?.before.data();
+  const after = event.data?.after.data();
+  if (!before || !after) return;
+
+  if (before.assignedTo !== after.assignedTo && after.assignedTo) {
+    await sendNotificationToUser(after.assignedTo, "✅ To-Do Reassigned", `Assigned: ${after.title}`, {
+      type: "todo_reassigned", todoId: event.params.todoId, url: "/todos"
+    });
+  }
+});
+
+export const sendCalendarReminders = onSchedule({ schedule: "0 * * * *", timeZone: "America/New_York" }, async () => {
+  const now = new Date();
+  const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+  const familiesSnapshot = await db.collection("families").get();
+
+  for (const familyDoc of familiesSnapshot.docs) {
+    const eventsSnapshot = await db.collection("families").doc(familyDoc.id).collection("calendar-events")
+      .where("start", ">=", now.toISOString()).where("start", "<=", oneHourLater.toISOString()).get();
+
+    for (const eventDoc of eventsSnapshot.docs) {
+      const eventData = eventDoc.data();
+      if (eventData.reminderSent) continue;
+      const members = familyDoc.data().members || [];
+      for (const memberId of members) {
+        await sendNotificationToUser(memberId, "📅 Upcoming Event", `${eventData.title} starts in 1h`, {
+          type: "calendar_reminder", eventId: eventDoc.id, url: "/calendar"
+        });
       }
-    );
-  }
-);
-
-/**
- * Send notification when a chore assignment changes
- */
-export const onChoreUpdated = onDocumentUpdated(
-  "families/{familyId}/chores/{choreId}",
-  async (event) => {
-    const beforeData = event.data?.before.data();
-    const afterData = event.data?.after.data();
-
-    if (!beforeData || !afterData) {
-      return;
-    }
-
-    // Check if assignedTo changed
-    if (
-      beforeData.assignedTo !== afterData.assignedTo &&
-      afterData.assignedTo
-    ) {
-      logger.info(`Chore reassigned to ${afterData.assignedTo}`);
-
-      await sendNotificationToUser(
-        afterData.assignedTo,
-        "🧹 Chore Reassigned to You",
-        `You've been assigned: ${afterData.title}`,
-        {
-          type: "chore_reassigned",
-          choreId: event.params.choreId,
-          url: "/chores",
-        }
-      );
-    }
-
-    // Check if chore was approved
-    if (
-      beforeData.status !== "approved" &&
-      afterData.status === "approved" &&
-      afterData.assignedTo
-    ) {
-      logger.info(`Chore approved for ${afterData.assignedTo}`);
-
-      const points = afterData.pointValue || 0;
-      const message = `Great job! Your chore "${afterData.title}" ` +
-        `was approved and you earned ${points} points!`;
-
-      await sendNotificationToUser(
-        afterData.assignedTo,
-        "✅ Chore Approved!",
-        message,
-        {
-          type: "chore_approved",
-          choreId: event.params.choreId,
-          points: String(afterData.pointValue || 0),
-          url: "/chores",
-        }
-      );
+      await eventDoc.ref.update({ reminderSent: true });
     }
   }
-);
+});
 
-/**
- * Send notification when a todo is assigned
- */
-export const onTodoAssigned = onDocumentCreated(
-  "families/{familyId}/todos/{todoId}",
-  async (event) => {
-    const todoData = event.data?.data();
-
-    if (!todoData || !todoData.assignedTo) {
-      return;
-    }
-
-    logger.info(`New todo assigned to ${todoData.assignedTo}`);
-
-    await sendNotificationToUser(
-      todoData.assignedTo,
-      "✅ New To-Do Assigned",
-      `You've been assigned: ${todoData.title}`,
-      {
-        type: "todo_assigned",
-        todoId: event.params.todoId,
-        url: "/todos",
-      }
-    );
-  }
-);
-
-/**
- * Send notification when a todo assignment changes
- */
-export const onTodoUpdated = onDocumentUpdated(
-  "families/{familyId}/todos/{todoId}",
-  async (event) => {
-    const beforeData = event.data?.before.data();
-    const afterData = event.data?.after.data();
-
-    if (!beforeData || !afterData) {
-      return;
-    }
-
-    // Check if assignedTo changed
-    if (
-      beforeData.assignedTo !== afterData.assignedTo &&
-      afterData.assignedTo
-    ) {
-      logger.info(`Todo reassigned to ${afterData.assignedTo}`);
-
-      await sendNotificationToUser(
-        afterData.assignedTo,
-        "✅ To-Do Reassigned to You",
-        `You've been assigned: ${afterData.title}`,
-        {
-          type: "todo_reassigned",
-          todoId: event.params.todoId,
-          url: "/todos",
-        }
-      );
-    }
-  }
-);
-
-/**
- * Send calendar event reminders
- * Runs every hour to check for upcoming events
- */
-export const sendCalendarReminders = onSchedule(
-  {
-    schedule: "0 * * * *", // Run every hour
-    timeZone: "America/New_York",
-  },
-  async () => {
-    try {
-      logger.info("Checking for calendar reminders...");
-
-      const now = new Date();
-      const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
-
-      // Query all families
-      const familiesSnapshot = await db.collection("families").get();
-
-      for (const familyDoc of familiesSnapshot.docs) {
-        const familyId = familyDoc.id;
-
-        // Get calendar events starting in the next hour
-        const eventsSnapshot = await db
-          .collection("families")
-          .doc(familyId)
-          .collection("calendar-events")
-          .where("start", ">=", now.toISOString())
-          .where("start", "<=", oneHourLater.toISOString())
-          .get();
-
-        for (const eventDoc of eventsSnapshot.docs) {
-          const eventData = eventDoc.data();
-
-          // Check if reminder was already sent
-          if (eventData.reminderSent) {
-            continue;
-          }
-
-          logger.info(`Sending reminder for event: ${eventData.title}`);
-
-          // Get all family members
-          const familyData = familyDoc.data();
-          const memberIds = familyData?.members || [];
-
-          // Send notification to all family members
-          for (const memberId of memberIds) {
-            await sendNotificationToUser(
-              memberId,
-              "📅 Upcoming Event",
-              `${eventData.title} starts in 1 hour`,
-              {
-                type: "calendar_reminder",
-                eventId: eventDoc.id,
-                url: "/calendar",
-              }
-            );
-          }
-
-          // Mark reminder as sent
-          await eventDoc.ref.update({
-            reminderSent: true,
-          });
-        }
-      }
-
-      logger.info("Calendar reminders sent successfully");
-    } catch (error) {
-      logger.error("Error sending calendar reminders:", error);
-      throw error;
-    }
-  }
-);
-
-/**
- * Delete a memory from Firestore and Storage
- */
 export const deleteMemory = onCall(async (request) => {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "User must be authenticated");
-  }
-
+  if (!request.auth) throw new HttpsError("unauthenticated", "Auth required");
   const {familyId, memoryId, storagePath} = request.data;
-  const userId = request.auth.uid;
-
-  if (!familyId || !memoryId || !storagePath) {
-    throw new HttpsError(
-      "invalid-argument",
-      "familyId, memoryId, and storagePath are required"
-    );
-  }
+  if (!familyId || !memoryId || !storagePath) throw new HttpsError("invalid-argument", "Missing args");
 
   try {
-    const memoryRef = db
-      .collection("families")
-      .doc(familyId)
-      .collection("memories")
-      .doc(memoryId);
+    const memoryRef = db.collection("families").doc(familyId).collection("memories").doc(memoryId);
+    const docSnap = await memoryRef.get();
+    if (!docSnap.exists) throw new HttpsError("not-found", "Memory not found");
+    if (docSnap.data()?.uploadedBy !== request.auth.uid) throw new HttpsError("permission-denied", "Not your memory");
 
-    const memoryDoc = await memoryRef.get();
-
-    if (!memoryDoc.exists) {
-      throw new HttpsError("not-found", "Memory not found");
-    }
-
-    const memoryData = memoryDoc.data();
-    if (memoryData?.uploadedBy !== userId) {
-      throw new HttpsError(
-        "permission-denied",
-        "You can only delete your own memories"
-      );
-    }
-
-    // Delete from Firestore
     await memoryRef.delete();
-    logger.info(`Deleted memory ${memoryId} from Firestore`);
-
-    // Delete from Storage
     const bucket = admin.storage().bucket();
-    const file = bucket.file(storagePath);
-    await file.delete();
-    logger.info(`Deleted memory file ${storagePath} from Storage`);
-
+    await bucket.file(storagePath).delete();
     return {success: true};
   } catch (error) {
     logger.error("Error deleting memory:", error);
-    if (error instanceof HttpsError) {
-      throw error;
-    }
+    if (error instanceof HttpsError) throw error;
     throw new HttpsError("internal", "Failed to delete memory");
   }
 });
 
-/**
- * Send medication reminders
- * Runs every minute to check for due medications
- */
-export const sendMedicationReminders = onSchedule(
-  {
-    schedule: "* * * * *", // Run every minute
-    timeZone: "America/New_York",
-  },
-  async () => {
-    try {
-      logger.info("Checking for medication reminders...");
+export const sendMedicationReminders = onSchedule({ schedule: "* * * * *", timeZone: "America/New_York" }, async () => {
+  const now = new Date();
+  const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+  const medsSnapshot = await db.collectionGroup("medications").get();
 
-      const now = new Date();
-      const currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+  for (const doc of medsSnapshot.docs) {
+    const data = doc.data();
+    if (data.reminderTimes.includes(timeString)) {
+      const last = data.lastNotifiedAt?.toDate();
+      if (last && (now.getTime() - last.getTime()) / 60000 < 1) continue;
 
-      // Query all medications
-      const medicationsSnapshot = await db.collectionGroup("medications").get();
-
-      for (const medDoc of medicationsSnapshot.docs) {
-        const medData = medDoc.data();
-        const userId = medData.user.id;
-
-        // Check if any reminder time matches the current time
-        if (medData.reminderTimes.includes(currentTime)) {
-          // Check if a notification was sent recently to avoid duplicates
-          const lastNotified = medData.lastNotifiedAt?.toDate();
-          if (lastNotified) {
-            const minutesSinceLast = (now.getTime() - lastNotified.getTime()) / 60000;
-            if (minutesSinceLast < 1) {
-              continue; // Skip if notified in the last minute
-            }
-          }
-
-          logger.info(`Sending reminder for medication: ${medData.medicationName} to user ${userId}`);
-
-          await sendNotificationToUser(
-            userId,
-            "💊 Medication Reminder",
-            `Time to take your ${medData.medicationName} (${medData.dosage})`,
-            {
-              type: "medication_reminder",
-              medicationId: medDoc.id,
-              url: "/medication",
-            }
-          );
-
-          // Mark reminder as sent
-          await medDoc.ref.update({
-            lastNotifiedAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-        }
-      }
-    } catch (error) {
-      logger.error("Error sending medication reminders:", error);
-      // We don't throw here to prevent the function from being disabled
+      await sendNotificationToUser(data.user.id, "💊 Med Reminder", `Take ${data.medicationName} (${data.dosage})`, {
+        type: "med_reminder", medicationId: doc.id, url: "/medication"
+      });
+      await doc.ref.update({ lastNotifiedAt: admin.firestore.FieldValue.serverTimestamp() });
     }
   }
-);
+});

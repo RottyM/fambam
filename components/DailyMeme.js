@@ -1,6 +1,6 @@
 'use client';
 
-import { useDailyMeme } from '@/hooks/useFirebase';
+import { useDailyMeme } from '@/hooks/useFirestore';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { httpsCallable } from 'firebase/functions';

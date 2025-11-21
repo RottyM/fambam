@@ -6,7 +6,7 @@ import UserAvatar from '@/components/UserAvatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useTodos, useChores, useMemories, useCalendarEvents } from '@/hooks/useFirebase';
+import { useTodos, useChores, useMemories, useCalendarEvents } from '@/hooks/useFirestore';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useState } from 'react';

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import TodoItem from '@/components/TodoItem';
-import { useTodos } from '@/hooks/useFirebase';
+import { useTodos } from '@/hooks/useFirestore';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';

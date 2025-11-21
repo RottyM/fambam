@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { useMemories, useMemoriesFolders } from '@/hooks/useFirebase';
+import { useMemories, useMemoriesFolders } from '@/hooks/useFirestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -24,6 +24,25 @@ import DraggableMemory from '@/components/DraggableMemory';
 import DroppableFolder from '@/components/DroppableFolder';
 import { format } from 'date-fns';
 import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
+
+// --- NEW: Custom Drag & Drop Configuration ---
+// This adds a delay to touch events so scrolling still works!
+const customDnDOptions = {
+  backends: [
+    {
+      ...HTML5toTouch.backends[0], // Keep HTML5 (Mouse) settings as-is
+    },
+    {
+      ...HTML5toTouch.backends[1], // Modify Touch settings
+      options: {
+        ...HTML5toTouch.backends[1].options,
+        enableTouchEvents: true,
+        enableMouseEvents: true,
+        delayTouchStart: 200, // <--- THE MAGIC FIX: Wait 200ms before dragging
+      },
+    },
+  ],
+};
 
 function MemoriesContent() {
   const { memories, loading: loadingMemories, updateMemory } = useMemories();
@@ -49,7 +68,6 @@ function MemoriesContent() {
   // Combine loading states
   const loading = loadingMemories || loadingFolders;
 
-  // Filter memories based on reveal date
   // Filter memories based on reveal date and current folder
   const today = new Date();
   const filteredMemories = memories.filter(m => {
@@ -192,67 +210,69 @@ function MemoriesContent() {
     } catch (error) {
       console.error('Delete error:', error);
       toast.error(`Failed to delete memory: ${error.message}`);
-            } finally {
-              setDeleting(null);
-            }
-          };
-        
-          const handleMoveMemory = async (memoryId, newFolderId) => {
-            try {
-              await updateMemory(memoryId, { folderId: newFolderId });
-              // Close the modal so the user can see the change
-              setSelectedMemory(null);
-              toast.success('Memory moved!');
-            } catch (error) {
-              console.error('Error moving memory:', error);
-              toast.error('Failed to move memory');
-            }
-          };
-        
-          const handleAddFolder = async (e) => {        e.preventDefault();
-        if (!newFolderName.trim()) return;
-    
-        try {
-          await addFolder({
-            name: newFolderName,
-          });
-          setNewFolderName('');
-          setShowAddFolderModal(false);
-          toast.success('Folder created!');
-        } catch (error) {
-          console.error('Error creating folder:', error);
-          toast.error('Failed to create folder');
-        }
-      };
-    
-      const handleDeleteFolder = async (folderId, folderName) => {
-        if (!isParent() && !window.confirm(`Deleting folder "${folderName}" will NOT delete the memories inside it. They will return to the main vault. Are you sure?`)) return;
-        if (isParent() && !window.confirm(`As a parent, you can delete this folder "${folderName}". Memories inside it will return to the main vault. Are you sure?`)) return;
-    
-        try {
-          await deleteFolder(folderId);
-          // If the deleted folder was the current one, reset to root
-          if (currentFolder?.id === folderId) {
-            setCurrentFolder(null);
-          }
-          toast.success('Folder deleted!');
-            } catch (error) {
-              console.error('Error deleting folder:', error);
-              toast.error('Failed to delete folder');
-            }
-          };
-        
-          const openFolderView = (clickedMemory) => {
-            const memoriesToShow = filteredMemories;
-            const initialIndex = memoriesToShow.findIndex(m => m.id === clickedMemory.id);
-            setFolderView({
-              isOpen: true,
-              memories: memoriesToShow,
-              initialIndex: initialIndex >= 0 ? initialIndex : 0,
-            });
-          };
-        
-          if (loading) {    return (
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const handleMoveMemory = async (memoryId, newFolderId) => {
+    try {
+      await updateMemory(memoryId, { folderId: newFolderId });
+      // Close the modal so the user can see the change
+      setSelectedMemory(null);
+      toast.success('Memory moved!');
+    } catch (error) {
+      console.error('Error moving memory:', error);
+      toast.error('Failed to move memory');
+    }
+  };
+
+  const handleAddFolder = async (e) => {
+    e.preventDefault();
+    if (!newFolderName.trim()) return;
+
+    try {
+      await addFolder({
+        name: newFolderName,
+      });
+      setNewFolderName('');
+      setShowAddFolderModal(false);
+      toast.success('Folder created!');
+    } catch (error) {
+      console.error('Error creating folder:', error);
+      toast.error('Failed to create folder');
+    }
+  };
+
+  const handleDeleteFolder = async (folderId, folderName) => {
+    if (!isParent() && !window.confirm(`Deleting folder "${folderName}" will NOT delete the memories inside it. They will return to the main vault. Are you sure?`)) return;
+    if (isParent() && !window.confirm(`As a parent, you can delete this folder "${folderName}". Memories inside it will return to the main vault. Are you sure?`)) return;
+
+    try {
+      await deleteFolder(folderId);
+      // If the deleted folder was the current one, reset to root
+      if (currentFolder?.id === folderId) {
+        setCurrentFolder(null);
+      }
+      toast.success('Folder deleted!');
+    } catch (error) {
+      console.error('Error deleting folder:', error);
+      toast.error('Failed to delete folder');
+    }
+  };
+
+  const openFolderView = (clickedMemory) => {
+    const memoriesToShow = filteredMemories;
+    const initialIndex = memoriesToShow.findIndex(m => m.id === clickedMemory.id);
+    setFolderView({
+      isOpen: true,
+      memories: memoriesToShow,
+      initialIndex: initialIndex >= 0 ? initialIndex : 0,
+    });
+  };
+
+  if (loading) {
+    return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <div className="text-6xl mb-4 animate-bounce">📸</div>
@@ -452,7 +472,7 @@ function MemoriesContent() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-4 md:hidden bg-gradient-to-r from-blue-500 to-teal-500 text-white rounded-2xl p-4 text-center"
         >
-          <p className="text-sm font-bold">💡 Tip: Press and hold (0.5s) a memory, then drag it to a folder to organize!</p>
+          <p className="text-sm font-bold">💡 Tip: Press and hold (0.2s) a memory, then drag it to a folder!</p>
         </motion.div>
       )}
 
@@ -828,7 +848,8 @@ function MemoriesContent() {
 export default function MemoriesPage() {
   return (
     <DashboardLayout>
-      <DndProvider backend={MultiBackend} options={HTML5toTouch}>
+      {/* Use the Custom DnD Options here */}
+      <DndProvider backend={MultiBackend} options={customDnDOptions}>
         <MemoriesContent />
       </DndProvider>
     </DashboardLayout>

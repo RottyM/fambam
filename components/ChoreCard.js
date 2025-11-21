@@ -5,7 +5,7 @@ import { getIcon } from '@/lib/icons';
 import UserAvatar from './UserAvatar';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useChores } from '@/hooks/useFirebase';
+import { useChores } from '@/hooks/useFirestore';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
 import toast from 'react-hot-toast';

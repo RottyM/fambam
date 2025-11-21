@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { getIcon } from '@/lib/icons';
 import UserAvatar from './UserAvatar';
 import { useFamily } from '@/contexts/FamilyContext';
-import { useTodos } from '@/hooks/useFirebase';
+import { useTodos } from '@/hooks/useFirestore';
 import { FaTrash, FaFlag } from 'react-icons/fa';
 import { format, isPast, isToday, isTomorrow, parseISO } from 'date-fns';
 

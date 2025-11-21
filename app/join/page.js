@@ -2,29 +2,29 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+// Fixed import to relative path
+import { useAuth } from '../../contexts/AuthContext';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+// Fixed import to relative path
+import { db } from '../../lib/firebase';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 function JoinFamilyContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, userData } = useAuth();
+  const { user, userData, waitForClaims } = useAuth(); 
   const [familyCode, setFamilyCode] = useState(searchParams.get('code') || '');
   const [loading, setLoading] = useState(false);
   const [familyName, setFamilyName] = useState('');
 
   useEffect(() => {
-    // If user already has a family, redirect to dashboard
     if (userData?.familyId) {
       router.push('/dashboard');
     }
   }, [userData, router]);
 
   useEffect(() => {
-    // Auto-check if code is provided in URL
     if (familyCode && !familyName) {
       checkFamilyCode(familyCode);
     }
@@ -32,7 +32,6 @@ function JoinFamilyContent() {
 
   const checkFamilyCode = async (code) => {
     if (!code) return;
-
     try {
       const familyDoc = await getDoc(doc(db, 'families', code));
       if (familyDoc.exists()) {
@@ -52,45 +51,47 @@ function JoinFamilyContent() {
     try {
       setLoading(true);
 
-      // Verify family exists
       const familyRef = doc(db, 'families', familyCode);
       const familyDoc = await getDoc(familyRef);
       if (!familyDoc.exists()) {
         toast.error('Invalid family code!');
+        setLoading(false);
         return;
       }
 
       const familyData = familyDoc.data();
 
-      // Update user with family ID
+      // 1. Update user in Firestore (Triggers Cloud Function)
       await setDoc(
         doc(db, 'users', user.uid),
-        {
-          familyId: familyCode,
-        },
+        { familyId: familyCode },
         { merge: true }
       );
 
-      // Add user to family's members array
       const currentMembers = familyData.members || [];
       if (!currentMembers.includes(user.uid)) {
         await setDoc(
           familyRef,
-          {
-            members: [...currentMembers, user.uid],
-          },
+          { members: [...currentMembers, user.uid] },
           { merge: true }
         );
       }
 
+      // 2. CRITICAL FIX: Wait for token to get the new familyId
+      toast.loading('Syncing family permissions...');
+      
+      // We wait specifically for the 'familyId' claim to appear on the token
+      await waitForClaims(user, 'familyId');
+
+      toast.dismiss();
       toast.success(`Joined ${familyData.name}! 🎉`);
       router.push('/dashboard');
+      
     } catch (error) {
       console.error('Error joining family:', error);
       toast.error('Failed to join family');
-    } finally {
       setLoading(false);
-    }
+    } 
   };
 
   if (!user) {
@@ -182,7 +183,7 @@ function JoinFamilyContent() {
             disabled={loading || !familyName}
             className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Joining...' : 'Join Family 🎉'}
+            {loading ? 'Joining & Syncing...' : 'Join Family 🎉'}
           </button>
         </form>
 

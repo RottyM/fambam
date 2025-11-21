@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import ChoreCard from '@/components/ChoreCard';
-import { useChores } from '@/hooks/useFirebase';
+import { useChores } from '@/hooks/useFirestore';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';

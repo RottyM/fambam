@@ -11,11 +11,12 @@ import {
   doc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useAuth } from '@/contexts/AuthContext';
+// Relative import for better stability
+import { db } from '../lib/firebase';
+import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
-// Hook for Todos
+// --- 1. TODOS ---
 export function useTodos() {
   const { userData } = useAuth();
   const [todos, setTodos] = useState([]);
@@ -100,7 +101,7 @@ export function useTodos() {
   return { todos, loading, addTodo, updateTodo, toggleTodo, deleteTodo };
 }
 
-// Hook for Chores
+// --- 2. CHORES ---
 export function useChores() {
   const { userData } = useAuth();
   const [chores, setChores] = useState([]);
@@ -185,7 +186,7 @@ export function useChores() {
   return { chores, loading, addChore, updateChore, submitChore, deleteChore };
 }
 
-// Hook for Calendar Events
+// --- 3. CALENDAR ---
 export function useCalendarEvents() {
   const { userData } = useAuth();
   const [events, setEvents] = useState([]);
@@ -217,7 +218,7 @@ export function useCalendarEvents() {
   return { events, loading };
 }
 
-// Hook for Documents
+// --- 4. DOCUMENTS ---
 export function useDocuments() {
   const { userData } = useAuth();
   const [documents, setDocuments] = useState([]);
@@ -249,7 +250,7 @@ export function useDocuments() {
   return { documents, loading };
 }
 
-// Hook for Memories
+// --- 5. MEMORIES ---
 export function useMemories() {
   const { userData } = useAuth();
   const [memories, setMemories] = useState([]);
@@ -294,7 +295,7 @@ export function useMemories() {
   return { memories, loading, updateMemory };
 }
 
-// Hook for Memories Folders
+// --- 6. FOLDERS ---
 export function useMemoriesFolders() {
   const { userData } = useAuth();
   const [folders, setFolders] = useState([]);
@@ -352,7 +353,7 @@ export function useMemoriesFolders() {
   return { folders, loading, addFolder, deleteFolder };
 }
 
-// Hook for Daily Meme
+// --- 7. MEME ---
 export function useDailyMeme() {
   const [meme, setMeme] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -374,7 +375,7 @@ export function useDailyMeme() {
   return { meme, loading };
 }
 
-// Hook for Grocery List
+// --- 8. GROCERIES ---
 export function useGroceries() {
   const { userData } = useAuth();
   const [groceries, setGroceries] = useState([]);
@@ -482,7 +483,7 @@ export function useGroceries() {
   };
 }
 
-// Hook for Recipes
+// --- 9. RECIPES ---
 export function useRecipes() {
   const { userData } = useAuth();
   const [recipes, setRecipes] = useState([]);
@@ -540,7 +541,7 @@ export function useRecipes() {
   return { recipes, loading, addRecipe, deleteRecipe };
 }
 
-// Hook for Meal Plan
+// --- 10. MEAL PLAN ---
 export function useMealPlan() {
   const { userData } = useAuth();
   const [meals, setMeals] = useState([]);
@@ -598,7 +599,7 @@ export function useMealPlan() {
   return { meals, loading, addMeal, deleteMeal };
 }
 
-// Hook for Family Credentials
+// --- 11. CREDENTIALS ---
 export function useCredentials() {
   const { userData } = useAuth();
   const [credentials, setCredentials] = useState([]);
