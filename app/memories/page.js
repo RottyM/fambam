@@ -19,7 +19,7 @@ import Image from 'next/image';
 import FolderView from '@/components/FolderView';
 import { DndProvider } from 'react-dnd';
 import { MultiBackend } from 'react-dnd-multi-backend';
-import { HTML5toTouch } from '@/lib/dndBackend';
+import { HTML5toTouch } from 'rdndmb-html5-to-touch';
 import DraggableMemory from '@/components/DraggableMemory';
 import DroppableFolder from '@/components/DroppableFolder';
 import { format } from 'date-fns';
