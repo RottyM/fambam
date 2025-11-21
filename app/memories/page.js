@@ -25,8 +25,8 @@ import DroppableFolder from '@/components/DroppableFolder';
 import { format } from 'date-fns';
 import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
 
-// --- NEW: Custom Drag & Drop Configuration ---
-// This adds a delay to touch events so scrolling still works!
+// --- UPDATED: Custom Drag & Drop Configuration ---
+// Tuned for better sensitivity (100ms vs 200ms)
 const customDnDOptions = {
   backends: [
     {
@@ -38,7 +38,8 @@ const customDnDOptions = {
         ...HTML5toTouch.backends[1].options,
         enableTouchEvents: true,
         enableMouseEvents: true,
-        delayTouchStart: 200, // <--- THE MAGIC FIX: Wait 200ms before dragging
+        delayTouchStart: 100, // <--- CHANGED: Reduced to 100ms for better responsiveness
+        ignoreContextMenu: true, // <--- ADDED: Prevents system menus from interfering
       },
     },
   ],
@@ -472,7 +473,7 @@ function MemoriesContent() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-4 md:hidden bg-gradient-to-r from-blue-500 to-teal-500 text-white rounded-2xl p-4 text-center"
         >
-          <p className="text-sm font-bold">💡 Tip: Press and hold (0.2s) a memory, then drag it to a folder!</p>
+          <p className="text-sm font-bold">💡 Tip: Press and hold (0.1s) a memory, then drag it to a folder!</p>
         </motion.div>
       )}
 
@@ -670,7 +671,6 @@ function MemoriesContent() {
           </motion.div>
         )}
       </AnimatePresence>
-
 
       {/* Memory Detail Modal with Comments */}
       <AnimatePresence>
