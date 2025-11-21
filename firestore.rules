@@ -26,15 +26,20 @@ service cloud.firestore {
       allow read: if isAuthenticated() && 
                      (request.auth.uid == userId || 
                       isFamilyMember(resource.data.familyId));
-      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow create: if isAuthenticated() && 
+                     request.auth.uid == userId &&
+                     exists(/databases/$(database)/documents/allowlist/$(request.resource.data.email));
       allow update: if isAuthenticated() && request.auth.uid == userId;
       allow delete: if false;
     }
     
     match /families/{familyId} {
-      allow read: if isFamilyMember(familyId);
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update: if isParentInFamily(familyId);
+      allow update: if isParentInFamily(familyId) || 
+                     (isAuthenticated() && 
+                      request.resource.data.members == resource.data.members.concat(request.auth.uid) &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members']));
       allow delete: if false;
       
       match /todos/{todoId} {
@@ -123,6 +128,10 @@ service cloud.firestore {
       }
     }
     
+        match /allowlist/{email} {
+      allow read, write: if false;
+    }
+
     match /app-config/{doc} {
       allow read: if isAuthenticated();
       allow write: if false;

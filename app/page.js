@@ -1,33 +1,45 @@
 // Test edit by Grok  
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { FaGoogle, FaListUl, FaTasks, FaUsers, FaCameraRetro } from 'react-icons/fa';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function HomePage() {
+function HomeContent() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const { signIn, signUp, signInWithGoogle, user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect');
 
-  if (user) {
-    router.push('/dashboard');
-    return null;
-  }
+  useEffect(() => {
+    if (user) {
+      router.push(redirect || '/dashboard');
+    }
+  }, [user, redirect, router]);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSignUp) {
-      await signUp(email, password, displayName);
+      await signUp(email, password, displayName, 'parent', redirect);
     } else {
-      await signIn(email, password);
+      await signIn(email, password, redirect);
     }
   };
+
+  const handleGoogleSignIn = async () => {
+    await signInWithGoogle(redirect);
+  };
+  
+  if (user) {
+    return null; // Or a loading spinner
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8">
@@ -95,7 +107,7 @@ export default function HomePage() {
 
           {/* Google Sign In */}
           <button
-            onClick={signInWithGoogle}
+            onClick={handleGoogleSignIn}
             className="w-full bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-50 active:bg-gray-100 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 mb-6 touch-manipulation min-h-[48px]"
           >
             <FaGoogle className="text-red-500" />
@@ -196,4 +208,13 @@ export default function HomePage() {
       </motion.div>
     </div>
   );
+}
+
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomeContent />
+    </Suspense>
+  )
 }

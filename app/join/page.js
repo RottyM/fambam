@@ -109,7 +109,7 @@ function JoinFamilyContent() {
             You need to sign in before joining a family.
           </p>
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.push(`/?redirect=/join?code=${familyCode}`)}
             className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg"
           >
             Go to Sign In

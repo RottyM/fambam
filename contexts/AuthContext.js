@@ -47,11 +47,11 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
-  const signIn = async (email, password) => {
+  const signIn = async (email, password, redirectUrl = '/dashboard') => {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       toast.success('Welcome back!');
-      router.push('/dashboard');
+      router.push(redirectUrl);
       return result;
     } catch (error) {
       toast.error(error.message);
@@ -59,7 +59,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const signUp = async (email, password, displayName, role = 'parent') => {
+  const signUp = async (email, password, displayName, role = 'parent', redirectUrl = '/setup') => {
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
       
@@ -74,7 +74,7 @@ export function AuthProvider({ children }) {
       });
 
       toast.success('Account created! Welcome to Family OS!');
-      router.push('/setup');
+      router.push(redirectUrl);
       return result;
     } catch (error) {
       toast.error(error.message);
@@ -82,7 +82,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (redirectUrl) => {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
@@ -103,9 +103,9 @@ export function AuthProvider({ children }) {
           },
           createdAt: new Date(),
         });
-        router.push('/setup');
+        router.push(redirectUrl || '/setup');
       } else {
-        router.push('/dashboard');
+        router.push(redirectUrl || '/dashboard');
       }
       
       toast.success('Welcome!');
