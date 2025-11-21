@@ -42,3 +42,7 @@ firestore-debug.log
 ui-debug.log
 
 .vercel
+
+# Local ENV files
+list-models.js
+test-gemini.js

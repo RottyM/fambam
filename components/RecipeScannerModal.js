@@ -79,7 +79,7 @@ async function scanRecipe(imageFile) {
     const base64Image = await fileToBase64(imageFile);
     const mimeType = imageFile.type || 'image/jpeg';
 
-    // Attempt real API call
+    // ✅ CORRECT: Removed '/app' and the trailing slash
     const response = await fetch('/api/scan-recipe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

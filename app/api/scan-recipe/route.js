@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
-
+// ✅ UPDATED: Use the working 2.0-flash URL
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 export async function POST(req) {
   try {
     const { base64Image, mimeType } = await req.json();
