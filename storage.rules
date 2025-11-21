@@ -1,0 +1,59 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // --- HELPER FUNCTIONS ---
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Checks if user has the "VIP Badge" for this family
+    function isFamilyMember(familyId) {
+      return isAuthenticated() && request.auth.token.familyId == familyId;
+    }
+
+    // Checks if user is a Parent
+    function isParent() {
+      return isAuthenticated() && request.auth.token.role == 'parent';
+    }
+
+    // --- 1. CREDENTIALS & DOCUMENTS (Highest Security) ---
+    // Path: families/{familyId}/credentials/{fileName}
+    // Path: families/{familyId}/documents/{fileName}
+    match /families/{familyId}/{folder}/{fileName} {
+      allow read: if isFamilyMember(familyId) 
+                  && (folder == 'credentials' || folder == 'documents');
+      
+      // Only Parents can add/delete sensitive docs
+      allow write, delete: if isFamilyMember(familyId) 
+                           && isParent()
+                           && (folder == 'credentials' || folder == 'documents');
+    }
+
+    // --- 2. MEMORIES (Standard Security) ---
+    // Path: families/{familyId}/memories/{fileName}
+    match /families/{familyId}/memories/{fileName} {
+      allow read: if isFamilyMember(familyId);
+      
+      // Any family member can upload memories
+      allow write: if isFamilyMember(familyId) 
+                   && request.resource.size < 50 * 1024 * 1024; // 50MB limit
+      
+      allow delete: if isFamilyMember(familyId);
+    }
+
+    // --- 3. AVATARS ---
+    match /users/{userId}/avatar {
+      allow read: if isAuthenticated();
+      allow write: if request.auth.uid == userId;
+    }
+    
+    // --- 4. DEFAULT DENY ---
+    // Blocks access to any other folder not listed above
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
