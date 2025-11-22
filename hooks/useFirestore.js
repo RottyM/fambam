@@ -10,11 +10,15 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
+  arrayUnion,  // <-- Added for voting
+  arrayRemove  // <-- Added for voting
 } from 'firebase/firestore';
 // Relative import for better stability
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
+
+// ... [Keep all existing hooks: useTodos, useChores, useCalendarEvents, useDocuments, useMemories, useMemoriesFolders, useDailyMeme, useGroceries, useRecipes, useMealPlan, useCredentials] ...
 
 // --- 1. TODOS ---
 export function useTodos() {
@@ -672,4 +676,93 @@ export function useCredentials() {
   };
 
   return { credentials, loading, addCredential, updateCredential, deleteCredential };
+}
+
+// --- 12. MOVIES (The Revival! 🎬) ---
+export function useMovies() {
+  const { userData } = useAuth();
+  const [movies, setMovies] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userData?.familyId) {
+      setLoading(false);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'families', userData.familyId, 'movies'),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const moviesList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setMovies(moviesList);
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [userData?.familyId]);
+
+  const addMovie = async (movieData) => {
+    try {
+      await addDoc(collection(db, 'families', userData.familyId, 'movies'), {
+        ...movieData,
+        addedBy: userData.uid,
+        watched: false,
+        votes: [],
+        createdAt: serverTimestamp(),
+      });
+      toast.success('Movie added to list!');
+    } catch (error) {
+      toast.error('Failed to add movie');
+      console.error(error);
+    }
+  };
+
+  const toggleWatched = async (movieId, currentStatus) => {
+    try {
+      await updateDoc(
+        doc(db, 'families', userData.familyId, 'movies', movieId),
+        { watched: !currentStatus }
+      );
+    } catch (error) {
+      toast.error('Failed to update status');
+      console.error(error);
+    }
+  };
+
+  // --- NEW: Toggle Vote Logic ---
+  const toggleVote = async (movieId, currentVotes) => {
+    const userId = userData.uid;
+    const hasVoted = currentVotes?.includes(userId);
+    try {
+      await updateDoc(
+        doc(db, 'families', userData.familyId, 'movies', movieId),
+        {
+          votes: hasVoted ? arrayRemove(userId) : arrayUnion(userId)
+        }
+      );
+    } catch (error) {
+      console.error('Failed to vote:', error);
+      toast.error('Failed to vote');
+    }
+  };
+
+  const deleteMovie = async (movieId) => {
+    try {
+      await deleteDoc(
+        doc(db, 'families', userData.familyId, 'movies', movieId)
+      );
+      toast.success('Movie removed!');
+    } catch (error) {
+      toast.error('Failed to delete movie');
+      console.error(error);
+    }
+  };
+
+  return { movies, loading, addMovie, toggleWatched, toggleVote, deleteMovie };
 }

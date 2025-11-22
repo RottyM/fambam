@@ -1,8 +1,5 @@
 {
   "emulators": {
-    "dataconnect": {
-      "dataDir": "dataconnect/.dataconnect/pgliteData"
-    },
     "auth": {
       "port": 9099
     },
@@ -16,9 +13,6 @@
       "enabled": true
     },
     "singleProjectMode": true
-  },
-  "dataconnect": {
-    "source": "dataconnect"
   },
   "firestore": {
     "database": "(default)",
@@ -51,16 +45,16 @@
       ]
     }
   ],
-  "apphosting": {
-    "backendId": "fambam",
-    "rootDir": "/",
+  "hosting": {
+    "source": ".",
     "ignore": [
-      "node_modules",
-      ".git",
-      "firebase-debug.log",
-      "firebase-debug.*.log",
-      "functions"
-    ]
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "frameworksBackend": {
+      "region": "us-east1"
+    }
   },
   "storage": {
     "rules": "storage.rules"

@@ -11,7 +11,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useState } from 'react';
 import { format, isFuture, isToday, isTomorrow, parseISO } from 'date-fns';
-import { FaCheckCircle, FaBroom, FaCalendarAlt, FaImages, FaPills, FaClock, FaMapMarkerAlt, FaTimes, FaUtensils, FaShoppingCart, FaFileAlt, FaKey } from 'react-icons/fa';
+import { 
+  FaCheckCircle, FaBroom, FaCalendarAlt, FaImages, FaPills, FaClock, 
+  FaMapMarkerAlt, FaTimes, FaUtensils, FaShoppingCart, FaFileAlt, FaKey,
+  FaFilm // <--- Added FaFilm icon
+} from 'react-icons/fa';
 
 function StatsCard({ icon, title, value, color, href }) {
   return (
@@ -265,6 +269,15 @@ function DashboardContent() {
               Quick Actions
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
+              <Link href="/movies">
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  className="bg-gradient-to-br from-red-500 to-pink-600 p-3 md:p-4 rounded-xl md:rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
+                >
+                  <FaFilm className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
+                  <p className="font-bold text-xs md:text-base">Movie Night</p>
+                </motion.div>
+              </Link>
               <Link href="/recipes">
                 <motion.div
                   whileHover={{ scale: 1.05 }}

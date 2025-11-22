@@ -10,6 +10,7 @@
     "check-firebase": "node scripts/check-firebase-config.js"
   },
   "dependencies": {
+    "canvas-confetti": "^1.9.4",
     "date-fns": "^3.6.0",
     "firebase": "^10.12.4",
     "firebase-admin": "^12.2.0",
