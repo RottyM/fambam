@@ -449,6 +449,62 @@ export const deleteEventFromGoogleCalendar = onCall(async (request) => {
   }
 });
 
+/**
+ * Setup Google Calendar for a family
+ * Creates a new Google Calendar and returns the calendar ID
+ */
+export const setupGoogleCalendar = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Auth required");
+  const {familyId} = request.data;
+  if (!familyId) throw new HttpsError("invalid-argument", "Missing familyId");
+
+  try {
+    // Get family data to use family name in calendar
+    const familyDoc = await db.collection("families").doc(familyId).get();
+    const familyData = familyDoc.data();
+    const familyName = familyData?.name || "Family";
+
+    const auth = new google.auth.GoogleAuth({ scopes: ["https://www.googleapis.com/auth/calendar"] });
+    const calendar = google.calendar({version: "v3", auth});
+
+    // Create a new calendar for the family
+    const newCalendar = await calendar.calendars.insert({
+      requestBody: {
+        summary: `${familyName} Calendar`,
+        description: `Shared family calendar for ${familyName} - managed by FamBam`,
+        timeZone: "America/New_York",
+      },
+    });
+
+    const calendarId = newCalendar.data.id;
+
+    if (!calendarId) {
+      throw new HttpsError("internal", "Failed to create calendar");
+    }
+
+    // Make the calendar publicly readable (so family members can subscribe)
+    await calendar.acl.insert({
+      calendarId: calendarId,
+      requestBody: {
+        role: "reader",
+        scope: {
+          type: "default",
+        },
+      },
+    });
+
+    logger.info(`Created Google Calendar for family ${familyId}: ${calendarId}`);
+
+    return {
+      success: true,
+      calendarId: calendarId,
+    };
+  } catch (error) {
+    logger.error("Setup Google Calendar error:", error);
+    throw new HttpsError("internal", "Failed to setup Google Calendar");
+  }
+});
+
 async function sendNotificationToUser(userId: string, title: string, body: string, data?: Record<string, string>) {
   try {
     const userDoc = await db.collection("users").doc(userId).get();

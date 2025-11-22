@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useCalendarEvents } from '@/hooks/useFirestore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,10 +8,10 @@ import { useFamily } from '@/contexts/FamilyContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, isSameMonth, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
-import { FaPlus, FaTrash, FaClock, FaMapMarkerAlt, FaUser, FaTimes, FaCalendarAlt, FaList, FaCalendarWeek, FaFilter } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaClock, FaMapMarkerAlt, FaUser, FaTimes, FaCalendarAlt, FaList, FaCalendarWeek, FaFilter, FaGoogle, FaLink, FaCheckCircle } from 'react-icons/fa';
 import { httpsCallable } from 'firebase/functions';
 import { functions, db } from '@/lib/firebase';
-import { addDoc, collection, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import UserAvatar from '@/components/UserAvatar';
 
@@ -50,6 +50,64 @@ function CalendarContent() {
     recurring: 'none',
   });
   const [syncing, setSyncing] = useState(false);
+
+  // Google Calendar Setup
+  const [showGoogleSetup, setShowGoogleSetup] = useState(false);
+  const [googleCalendarId, setGoogleCalendarId] = useState(null);
+  const [settingUpGoogle, setSettingUpGoogle] = useState(false);
+  const [calendarShareLink, setCalendarShareLink] = useState('');
+
+  // Check if Google Calendar is already set up
+  useEffect(() => {
+    const checkGoogleCalendar = async () => {
+      if (!userData?.familyId) return;
+
+      try {
+        const familyDoc = await getDoc(doc(db, 'families', userData.familyId));
+        const familyData = familyDoc.data();
+
+        if (familyData?.googleCalendarId) {
+          setGoogleCalendarId(familyData.googleCalendarId);
+          // Generate share link
+          const shareLink = `https://calendar.google.com/calendar/u/0?cid=${encodeURIComponent(familyData.googleCalendarId)}`;
+          setCalendarShareLink(shareLink);
+        }
+      } catch (error) {
+        console.error('Error checking Google Calendar:', error);
+      }
+    };
+
+    checkGoogleCalendar();
+  }, [userData?.familyId]);
+
+  const handleSetupGoogleCalendar = async () => {
+    if (!userData?.familyId) return;
+
+    setSettingUpGoogle(true);
+    try {
+      const setupCalendar = httpsCallable(functions, 'setupGoogleCalendar');
+      const result = await setupCalendar({ familyId: userData.familyId });
+
+      if (result.data.calendarId) {
+        // Save to Firestore
+        await updateDoc(doc(db, 'families', userData.familyId), {
+          googleCalendarId: result.data.calendarId,
+        });
+
+        setGoogleCalendarId(result.data.calendarId);
+        const shareLink = `https://calendar.google.com/calendar/u/0?cid=${encodeURIComponent(result.data.calendarId)}`;
+        setCalendarShareLink(shareLink);
+        setShowGoogleSetup(true);
+
+        toast.success('Google Calendar created! 🎉');
+      }
+    } catch (error) {
+      console.error('Error setting up Google Calendar:', error);
+      toast.error('Failed to setup Google Calendar. Please try again.');
+    } finally {
+      setSettingUpGoogle(false);
+    }
+  };
 
   const handleAddEvent = async (e) => {
     e.preventDefault();
@@ -197,6 +255,40 @@ function CalendarContent() {
             </button>
           )}
         </div>
+
+        {/* Google Calendar Setup Banner */}
+        {!googleCalendarId && isParent() && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 rounded-2xl p-4 mb-6 shadow-lg"
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="text-3xl">📅</div>
+                <div>
+                  <h3 className="font-bold text-gray-800 mb-1">Sync with Google Calendar</h3>
+                  <p className="text-sm text-gray-600">
+                    Connect to see events on your phone, Gmail, and all devices automatically!
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleSetupGoogleCalendar}
+                disabled={settingUpGoogle}
+                className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-6 py-3 rounded-xl font-bold hover:from-green-600 hover:to-blue-600 transition-all shadow-lg disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+              >
+                {settingUpGoogle ? (
+                  <>Creating...</>
+                ) : (
+                  <>
+                    <FaGoogle /> Connect Google Calendar
+                  </>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        )}
 
         {/* View Mode & Filters */}
         <div className="flex flex-col gap-3 mb-6">
@@ -702,6 +794,120 @@ function CalendarContent() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Google Calendar Setup Success Modal */}
+        {showGoogleSetup && googleCalendarId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto p-4"
+            onClick={() => setShowGoogleSetup(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              onClick={(e) => e.stopPropagation()}
+              className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-2xl w-full shadow-2xl my-8`}
+            >
+              <div className="text-center mb-6">
+                <div className="text-6xl mb-4">🎉</div>
+                <h2 className="text-3xl font-display font-bold gradient-text mb-2">
+                  Google Calendar Connected!
+                </h2>
+                <p className="text-gray-600">
+                  Your family calendar is now synced with Google Calendar
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                {/* Success Message */}
+                <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <FaCheckCircle className="text-green-500 text-2xl flex-shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-bold text-green-800 mb-1">Calendar Created Successfully!</h3>
+                      <p className="text-sm text-green-700">
+                        Events you create in FamBam will now automatically appear in Google Calendar,
+                        on everyone's phones, Gmail, and all devices.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Share Instructions */}
+                <div>
+                  <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <FaLink className="text-blue-500" />
+                    Share with Family Members
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Send this link to family members so they can subscribe to the calendar:
+                  </p>
+                  <div className="bg-gray-100 p-3 rounded-xl flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={calendarShareLink}
+                      readOnly
+                      className="flex-1 bg-transparent text-sm font-mono text-gray-700 outline-none"
+                    />
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(calendarShareLink);
+                        toast.success('Link copied!');
+                      }}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-600 transition-all text-sm whitespace-nowrap"
+                    >
+                      Copy Link
+                    </button>
+                  </div>
+                </div>
+
+                {/* Setup Instructions */}
+                <div>
+                  <h3 className="font-bold text-gray-800 mb-3">How Family Members Subscribe:</h3>
+                  <div className="space-y-4">
+                    {/* Android */}
+                    <div className="border-2 border-gray-200 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-2xl">📱</span>
+                        <h4 className="font-bold text-gray-800">Android Phones</h4>
+                      </div>
+                      <ol className="text-sm text-gray-600 space-y-1 ml-6 list-decimal">
+                        <li>Click the share link above</li>
+                        <li>Calendar automatically appears in Google Calendar app</li>
+                        <li>Done! ✅</li>
+                      </ol>
+                    </div>
+
+                    {/* iPhone/iPad */}
+                    <div className="border-2 border-gray-200 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-2xl">📱</span>
+                        <h4 className="font-bold text-gray-800">iPhone / iPad</h4>
+                      </div>
+                      <ol className="text-sm text-gray-600 space-y-1 ml-6 list-decimal">
+                        <li>Go to <strong>Settings → Calendar → Accounts → Add Account → Google</strong></li>
+                        <li>Sign in with Google account</li>
+                        <li>Toggle <strong>Calendars</strong> ON</li>
+                        <li>Family calendar appears in Apple Calendar app ✅</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Close Button */}
+                <button
+                  onClick={() => setShowGoogleSetup(false)}
+                  className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-xl font-bold hover:from-blue-600 hover:to-purple-600 transition-all shadow-lg"
+                >
+                  Got It!
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
