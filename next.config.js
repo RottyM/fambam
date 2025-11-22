@@ -1,9 +1,12 @@
+/** @type {import('next').NextConfig} */
 const withPWA = require('next-pwa')({
   dest: 'public',
-  register: false, // We'll manually register in NotificationContext
+  register: false, // We handle registration in NotificationContext
   skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development', // Disable in dev to avoid conflicts
-  sw: 'sw.js', // Separate PWA service worker
+  disable: process.env.NODE_ENV === 'development',
+  sw: 'sw.js',
+  // --- THE FIX: Import Firebase logic into the PWA worker ---
+  importScripts: ['/firebase-messaging-sw.js'], 
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,
@@ -71,4 +74,4 @@ const nextConfig = {
   reactStrictMode: true,
 }
 
-module.exports = withPWA(nextConfig)
+module.exports = withPWA(nextConfig);
