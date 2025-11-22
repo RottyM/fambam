@@ -40,13 +40,13 @@ export default function DailyMeme() {
   if (!meme) {
     return (
       <div className={`bg-gradient-to-br ${currentTheme === 'dark' ? 'from-purple-900 via-pink-900 to-indigo-900' : 'from-pink-400 via-purple-400 to-blue-500'} p-6 rounded-3xl shadow-2xl`}>
-        <div className="text-center text-white">
+        <div className="text-center text-gray-100">
           <p className="text-4xl mb-4">🎭</p>
           <p className="text-lg font-bold mb-4">No meme yet!</p>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-xl font-bold transition-all disabled:opacity-50"
+            className="bg-white/20 hover:bg-white/30 text-gray-100 px-6 py-3 rounded-xl font-bold transition-all disabled:opacity-50"
           >
             {refreshing ? '⏳ Loading...' : '🔄 Fetch Meme'}
           </button>
@@ -63,14 +63,14 @@ export default function DailyMeme() {
       className={`bg-gradient-to-br ${currentTheme === 'dark' ? 'from-purple-900 via-pink-900 to-indigo-900' : 'from-pink-400 via-purple-400 to-blue-500'} p-3 rounded-3xl shadow-2xl hover:shadow-3xl transition-shadow`}
     >
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+        <h3 className="text-sm font-bold text-gray-100 flex items-center gap-1.5">
           <span className="text-lg">{currentTheme === 'dark' ? '🌚' : '😂'}</span>
           Today's Meme
         </h3>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="bg-white/20 hover:bg-white/30 text-white px-2 py-1 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+          className="bg-white/20 hover:bg-white/30 text-gray-100 px-2 py-1 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
         >
           {refreshing ? '⏳' : '🔄'}
         </button>

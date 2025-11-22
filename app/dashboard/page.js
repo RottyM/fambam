@@ -26,11 +26,11 @@ function StatsCard({ icon, title, value, color, href }) {
       >
         <div className="flex items-center justify-between mb-2 md:mb-4">
           <div className="text-2xl md:text-4xl">{icon}</div>
-          <div className="text-2xl md:text-3xl font-display font-bold text-white">
+          <div className="text-2xl md:text-3xl font-display font-bold text-gray-100">
             {value}
           </div>
         </div>
-        <h3 className="text-white font-bold text-sm md:text-lg">{title}</h3>
+        <h3 className="text-gray-100 font-bold text-sm md:text-lg">{title}</h3>
       </motion.div>
     </Link>
   );
@@ -119,8 +119,8 @@ function DashboardContent() {
             transition={{ delay: 0.3, type: 'spring' }}
             className="mt-3 md:mt-6 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-xl md:rounded-2xl p-3 md:p-6 text-center"
           >
-            <p className="text-white font-semibold mb-1 md:mb-2 text-sm md:text-base">Your Points</p>
-            <p className="text-3xl md:text-5xl font-display font-bold text-white">
+            <p className="text-gray-100 font-semibold mb-1 md:mb-2 text-sm md:text-base">Your Points</p>
+            <p className="text-3xl md:text-5xl font-display font-bold text-gray-100">
               ⭐ {userData?.points || 0}
             </p>
           </motion.div>
@@ -272,7 +272,7 @@ function DashboardContent() {
               <Link href="/movies">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  className="bg-gradient-to-br from-red-500 to-pink-600 p-3 md:p-4 rounded-xl md:rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-br from-red-500 to-pink-600 p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-100 text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
                 >
                   <FaFilm className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
                   <p className="font-bold text-xs md:text-base">Movie Night</p>
@@ -281,7 +281,7 @@ function DashboardContent() {
               <Link href="/recipes">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  className="bg-gradient-to-br from-orange-400 to-pink-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-br from-orange-400 to-pink-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-100 text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
                 >
                   <FaUtensils className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
                   <p className="font-bold text-xs md:text-base">Recipes</p>
@@ -290,7 +290,7 @@ function DashboardContent() {
               <Link href="/groceries">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  className="bg-gradient-to-br from-green-400 to-blue-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-br from-green-400 to-blue-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-100 text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
                 >
                   <FaShoppingCart className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
                   <p className="font-bold text-xs md:text-base">Groceries</p>
@@ -299,7 +299,7 @@ function DashboardContent() {
               <Link href="/calendar">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  className="bg-gradient-to-br from-blue-400 to-purple-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-br from-blue-400 to-purple-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-100 text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
                 >
                   <FaCalendarAlt className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
                   <p className="font-bold text-xs md:text-base">Calendar</p>
@@ -308,7 +308,7 @@ function DashboardContent() {
               <Link href="/documents">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  className="bg-gradient-to-br from-indigo-400 to-cyan-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-br from-indigo-400 to-cyan-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-100 text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
                 >
                   <FaFileAlt className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
                   <p className="font-bold text-xs md:text-base">Documents</p>
@@ -317,7 +317,7 @@ function DashboardContent() {
               <Link href="/medication">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  className="bg-gradient-to-br from-purple-400 to-pink-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-br from-purple-400 to-pink-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-100 text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
                 >
                   <FaPills className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
                   <p className="font-bold text-xs md:text-base">Medication</p>
@@ -326,7 +326,7 @@ function DashboardContent() {
               <Link href="/memories">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  className="bg-gradient-to-br from-rose-400 to-orange-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-br from-rose-400 to-orange-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-100 text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
                 >
                   <FaImages className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
                   <p className="font-bold text-xs md:text-base">Memories</p>
@@ -335,7 +335,7 @@ function DashboardContent() {
               <Link href="/credentials">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  className="bg-gradient-to-br from-blue-500 to-indigo-500 p-3 md:p-4 rounded-xl md:rounded-2xl text-white text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-br from-blue-500 to-indigo-500 p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-100 text-center cursor-pointer shadow-lg hover:shadow-xl transition-all"
                 >
                   <FaKey className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
                   <p className="font-bold text-xs md:text-base">Credentials</p>
@@ -495,8 +495,8 @@ function DashboardContent() {
               {/* Member Stats */}
               {selectedMember.role !== 'parent' && (
                 <div className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-2xl p-4 mb-6 text-center">
-                  <p className="text-white font-semibold mb-1">Total Points</p>
-                  <p className="text-4xl font-display font-bold text-white">
+                  <p className="text-gray-100 font-semibold mb-1">Total Points</p>
+                  <p className="text-4xl font-display font-bold text-gray-100">
                     ⭐ {selectedMember.points || 0}
                   </p>
                 </div>
