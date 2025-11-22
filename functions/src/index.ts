@@ -286,8 +286,8 @@ export const searchMovies = onCall(async (request) => {
     return { results: [] };
   }
 
-  // --- FINAL FIX: Use process.env (modern way) to access the key set via env.tmdb_key ---
-  const tmdbKey = process.env.tmdb_key; 
+  // Access TMDB_KEY from environment (set via Secret Manager in Cloud Run)
+  const tmdbKey = process.env.TMDB_KEY; 
   
   if (!tmdbKey) {
     // If key is not found, log clearly and send diagnostic error back
