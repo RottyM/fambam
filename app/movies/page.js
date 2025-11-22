@@ -41,9 +41,10 @@ function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, search
   const handleAddFromSearch = async (movie) => {
     await addMovie({
       title: movie.title,
-      description: movie.overview,
+      overview: movie.overview,
       releaseDate: movie.releaseDate,
-      posterUrl: movie.posterPath,
+      posterUrl: movie.posterUrl,
+      rating: movie.rating,
       tmdbId: movie.id,
     });
     setShowModal(false);
@@ -90,6 +91,22 @@ function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, search
             </div>
 
             {/* --- TMDB Search Section --- */}
+            <form onSubmit={handleSearch} className="flex gap-2 mb-4">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search for a movie..."
+                className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none font-medium"
+              />
+              <button
+                type="submit"
+                disabled={isSearching || !searchQuery.trim()}
+                className="bg-purple-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-purple-600 transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {isSearching ? <FaSpinner className="animate-spin" /> : <FaSearch />}
+              </button>
+            </form>
 
             {/* --- Search Results --- */}
             {searchResults.length > 0 && (
@@ -101,11 +118,11 @@ function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, search
                     className="flex gap-3 p-3 bg-gray-50 rounded-xl items-center cursor-pointer hover:bg-gray-100 transition-colors"
                     onClick={() => handleAddFromSearch(movie)}
                   >
-                    <Image 
-                      src={movie.posterPath || 'https://placehold.co/60x90/cccccc/000?text=No+Poster'} 
-                      alt={movie.title} 
-                      width={40} 
-                      height={60} 
+                    <Image
+                      src={movie.posterUrl || 'https://placehold.co/60x90/cccccc/000?text=No+Poster'}
+                      alt={movie.title}
+                      width={40}
+                      height={60}
                       className="rounded-md object-cover flex-shrink-0"
                       unoptimized
                     />
