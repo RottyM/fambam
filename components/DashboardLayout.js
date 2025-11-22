@@ -178,7 +178,8 @@ export default function DashboardLayout({ children }) {
           )}
 
           {/* Action buttons - icon grid */}
-          <div className="grid grid-cols-4 gap-1 p-2">
+          <div className="flex justify-center p-2">
+            <div className="grid grid-cols-4 gap-1">
             <button
               onClick={toggleTheme}
               title={currentTheme === 'dark' ? 'Switch to Family Mode' : 'Switch to Dark Mode'}
@@ -242,6 +243,7 @@ export default function DashboardLayout({ children }) {
             >
               <FaSignOutAlt size={18} />
             </button>
+            </div>
           </div>
         </div>
       </div>
