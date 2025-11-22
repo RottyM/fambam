@@ -161,22 +161,6 @@ export default function DashboardLayout({ children }) {
 
         {/* Bottom tools - compact */}
         <div className={`border-t ${theme.colors.borderLight}`}>
-          {/* Family members - minimal */}
-          {members.length > 0 && (
-            <div className={`px-3 py-2 flex items-center justify-center gap-1.5 border-b ${theme.colors.borderLight}`}>
-              {members.slice(0, 4).map((member) => (
-                <div key={member.id} title={member.displayName} className={`ring-1 ${currentTheme === 'dark' ? 'ring-gray-800' : 'ring-gray-200'} rounded-full`}>
-                  <UserAvatar user={member} size={24} />
-                </div>
-              ))}
-              {members.length > 4 && (
-                <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${currentTheme === 'dark' ? 'from-purple-900 to-gray-800' : 'from-purple-400 to-pink-400'} flex items-center justify-center text-xs font-bold text-white`}>
-                  +{members.length - 4}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Action buttons - icon grid */}
           <div className="flex justify-center p-2">
             <div className="grid grid-cols-4 gap-1">
