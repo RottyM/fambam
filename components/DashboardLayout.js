@@ -71,7 +71,7 @@ export default function DashboardLayout({ children }) {
   }, [notificationsEnabled, disableNotifications, requestPermission]);
 
   return (
-    <div className="min-h-screen bg-gray-50"> 
+    <div className={`min-h-screen ${theme.colors.bg} transition-colors duration-300`}> 
       
       {/* Mobile hamburger button */}
       <button
