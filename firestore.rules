@@ -2,25 +2,19 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // --- Helper Functions ---
+    // --- OPTIMIZED HELPER FUNCTIONS (Using Custom Claims) ---
 
     function isAuthenticated() {
       return request.auth != null;
     }
-    
-    // CAUTION: This costs 1 Read per request. 
-    // Ensure 'users' collection permissions are tight so this doesn't fail.
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-    
-    // Checks if the current user has the target familyId in their profile
+
+    // Checks the "VIP Badge" on the token (Fast & Free)
     function isFamilyMember(familyId) {
-      return isAuthenticated() && getUserData().familyId == familyId;
+      return isAuthenticated() && request.auth.token.familyId == familyId;
     }
     
     function isParent() {
-      return isAuthenticated() && getUserData().role == "parent";
+      return isAuthenticated() && request.auth.token.role == "parent";
     }
     
     function isParentInFamily(familyId) {
@@ -32,7 +26,6 @@ service cloud.firestore {
       allow read: if isAuthenticated() && 
                    (request.auth.uid == userId || isFamilyMember(resource.data.familyId));
       
-      // Simplified create: ensures user is creating their own ID and is in allowlist
       allow create: if isAuthenticated() && 
                      request.auth.uid == userId &&
                      exists(/databases/$(database)/documents/allowlist/$(request.resource.data.email));
@@ -43,13 +36,12 @@ service cloud.firestore {
     
     // --- Family Data ---
     match /families/{familyId} {
-      // FIX: Only allow reading if you are actually in the family (or a specific list of members)
+      // Allow read if you have the badge OR if you are listed in the members array (for joining)
       allow read: if isFamilyMember(familyId) || 
                    (isAuthenticated() && resource.data.members.hasAny([request.auth.uid]));
       
       allow create: if isAuthenticated();
       
-      // Logic to allow users to join a family (add themselves to members array)
       allow update: if isParentInFamily(familyId) || 
                      (isAuthenticated() && 
                       request.resource.data.members == resource.data.members.concat(request.auth.uid) &&
@@ -71,7 +63,6 @@ service cloud.firestore {
       
       match /recipes/{recipeId} {
         allow read, create, update: if isFamilyMember(familyId);
-        // Users can delete their own recipes, Parents can delete any
         allow delete: if isParentInFamily(familyId) || resource.data.createdBy == request.auth.uid;
       }
       
@@ -81,12 +72,11 @@ service cloud.firestore {
 
       match /medications/{medicationId} {
         allow read: if isFamilyMember(familyId);
-        allow write: if isParentInFamily(familyId); // Simplified: Parents manage all meds
+        allow write: if isParentInFamily(familyId);
       }
       
       match /transactions/{transactionId} {
         allow read: if isFamilyMember(familyId);
-        // FIX: Enabled creation for parents (assuming kids don't manage budget)
         allow create, update, delete: if isParentInFamily(familyId); 
       }
       
@@ -101,14 +91,12 @@ service cloud.firestore {
       }
 
       match /folders/{folderId} {
-        allow read, create: if isFamilyMember(familyId);
-        allow update: if isFamilyMember(familyId); // Added update for renaming folders
+        allow read, create, update: if isFamilyMember(familyId);
         allow delete: if isParentInFamily(familyId) || resource.data.createdBy == request.auth.uid;
       }
       
       match /calendar-events/{eventId} {
         allow read: if isFamilyMember(familyId);
-        // FIX: Enabled write for all family members (shared calendar)
         allow write: if isFamilyMember(familyId); 
       }
 
@@ -128,14 +116,19 @@ service cloud.firestore {
 
       match /daily-checkins/{checkinId} {
         allow read: if isFamilyMember(familyId);
-        // FIX: Split create/update from delete to prevent crash
         allow create, update: if isFamilyMember(familyId) && request.resource.data.userId == request.auth.uid;
         allow delete: if isFamilyMember(familyId) && resource.data.userId == request.auth.uid;
+      }
+
+      // --- NEW: Movie Night Rules ---
+      match /movies/{movieId} {
+        allow read, create, update: if isFamilyMember(familyId);
+        allow delete: if isFamilyMember(familyId);
       }
     }
     
     match /allowlist/{email} {
-      allow read, write: if false; // Admin only (via Console)
+      allow read, write: if false; 
     }
 
     match /app-config/{doc} {

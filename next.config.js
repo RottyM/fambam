@@ -1,12 +1,18 @@
 /** @type {import('next').NextConfig} */
 const withPWA = require('next-pwa')({
   dest: 'public',
-  register: false, // We handle registration in NotificationContext
+  register: false,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
   sw: 'sw.js',
-  // --- THE FIX: Import Firebase logic into the PWA worker ---
-  importScripts: ['/firebase-messaging-sw.js'], 
+  importScripts: ['/firebase-messaging-sw.js'],
+  // --- THE FIX: Exclude volatile build files from precaching ---
+  buildExcludes: [
+    /middleware-manifest\.json$/,
+    /app-build-manifest\.json$/,
+    /_buildManifest\.js$/,
+    /_ssgManifest\.js$/,
+  ],
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,
