@@ -365,14 +365,14 @@ function DashboardContent() {
               {todos.filter(t => t.completed).slice(0, 2).map((todo) => {
                 const member = members.find(m => m.id === todo.assignedTo);
                 return (
-                  <div key={todo.id} className="flex items-center gap-2 md:gap-3 p-2 md:p-3 bg-green-50 rounded-lg md:rounded-xl">
+                  <div key={todo.id} className={`flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg md:rounded-xl ${currentTheme === 'dark' ? 'bg-green-900/20' : 'bg-green-50'}`}>
                     <div className="text-xl md:text-2xl">✅</div>
                     {member && <UserAvatar user={member} size={28} />}
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-800 text-xs md:text-sm truncate">
+                      <p className={`font-semibold ${theme.colors.text} text-xs md:text-sm truncate`}>
                         {member?.displayName} completed
                       </p>
-                      <p className="text-xs text-gray-600 truncate">{todo.title}</p>
+                      <p className={`text-xs ${theme.colors.textMuted} truncate`}>{todo.title}</p>
                     </div>
                   </div>
                 );
@@ -382,14 +382,14 @@ function DashboardContent() {
               {chores.filter(c => c.status === 'approved').slice(0, 2).map((chore) => {
                 const member = members.find(m => m.id === chore.assignedTo);
                 return (
-                  <div key={chore.id} className="flex items-center gap-2 md:gap-3 p-2 md:p-3 bg-yellow-50 rounded-lg md:rounded-xl">
+                  <div key={chore.id} className={`flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg md:rounded-xl ${currentTheme === 'dark' ? 'bg-yellow-900/20' : 'bg-yellow-50'}`}>
                     <div className="text-xl md:text-2xl">🏆</div>
                     {member && <UserAvatar user={member} size={28} />}
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-800 text-xs md:text-sm truncate">
+                      <p className={`font-semibold ${theme.colors.text} text-xs md:text-sm truncate`}>
                         {member?.displayName} +{chore.pointValue}pts
                       </p>
-                      <p className="text-xs text-gray-600 truncate">{chore.title}</p>
+                      <p className={`text-xs ${theme.colors.textMuted} truncate`}>{chore.title}</p>
                     </div>
                   </div>
                 );
