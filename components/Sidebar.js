@@ -42,8 +42,6 @@ const navItems = [
   { href: '/recipes', icon: FaUtensils, label: 'Recipes', emoji: '🍳' },
   { href: '/movies', icon: FaFilm, label: 'Movie Night', emoji: '🎬' }, // <--- NEW ITEM
   { href: '/memories', icon: FaImages, label: 'Memories', emoji: '📸' },
-  { href: '/medication', icon: FaCapsules, label: 'Medication', emoji: '💊' }, // Added Meds too just in case you missed it
-  { href: '/documents', icon: FaFileAlt, label: 'Documents', emoji: '📂' }, // Added Docs too
 ];
 
 export default function Sidebar({ children }) { // Added children prop destructuring to wrap content

@@ -15,14 +15,9 @@ export function useFamilyActions() {
       return result.data;
     } catch (error) {
       console.error(`Error calling ${functionName}:`, error);
-      
-      // Clean up the error message for the user (removes "INTERNAL" prefixes)
+      // Clean up the error message for the user
       const message = error.message.replace('INTERNAL', '').replace('UNKNOWN', '').trim();
-      
-      // Don't toast if it's a specific validation error we want to handle in the UI
-      if (!message.includes('cancelled')) {
-          toast.error(message || 'Something went wrong');
-      }
+      toast.error(message || 'Something went wrong');
       throw error;
     } finally {
       setActionLoading(false);
@@ -30,19 +25,16 @@ export function useFamilyActions() {
   };
 
   // --- 1. CHORES ACTIONS ---
-  // Triggers atomic point transaction on the server
   const approveChore = async (familyId, choreId) => {
     return callFunction('approveChoreAndAwardPoints', { familyId, choreId });
   };
 
-  // --- 2. USER PROFILE ACTIONS ---
-  // Generates a random avatar without needing client-side logic
+  // --- 2. AVATARS ACTIONS ---
   const assignAvatar = async () => {
     return callFunction('assignRandomAvatar');
   };
 
   // --- 3. CALENDAR ACTIONS ---
-  // These talk to Google APIs which must happen on the server
   const createCalendar = async (familyId, familyName) => {
     return callFunction('createFamilyCalendar', { familyId, familyName });
   };
@@ -51,12 +43,11 @@ export function useFamilyActions() {
     return callFunction('syncEventToGoogleCalendar', { familyId, eventId, eventData });
   };
 
-  const deleteEventFromGoogle = async (familyId, googleEventId) => {
+  const deleteCalendarEvent = async (familyId, googleEventId) => {
     return callFunction('deleteEventFromGoogleCalendar', { familyId, googleEventId });
   };
 
   // --- 4. MEMORY ACTIONS ---
-  // Deletes both the file (Storage) and the doc (Firestore)
   const removeMemory = async (familyId, memoryId, storagePath) => {
     return callFunction('deleteMemory', { familyId, memoryId, storagePath });
   };
@@ -66,14 +57,20 @@ export function useFamilyActions() {
     return callFunction('fetchDailyMemeManual');
   };
 
+  // --- 6. MOVIE ACTIONS ---
+  const searchMovies = async (query) => {
+    return callFunction('searchMovies', { query });
+  };
+
   return {
-    actionLoading, // Renamed to distinguish from data loading states
+    actionLoading,
     approveChore,
     assignAvatar,
     createCalendar,
     syncEventToGoogle,
-    deleteEventFromGoogle,
+    deleteCalendarEvent,
     removeMemory,
-    refreshDailyMeme
+    refreshDailyMeme,
+    searchMovies, // <--- EXPOSED
   };
 }

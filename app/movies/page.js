@@ -7,16 +7,155 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
 import UserAvatar from '@/components/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaFilm, FaPlus, FaCheck, FaTrash, FaRandom, FaHeart } from 'react-icons/fa';
+import { FaFilm, FaPlus, FaCheck, FaTrash, FaRandom, FaHeart, FaSearch, FaTimes, FaSpinner } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
+import Image from 'next/image';
+import { useFamilyActions } from '@/hooks/useFamilyActions';
+// --- D&D Imports REMOVED (The source of the compilation crash) ---
+
+
+function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, searchLoading }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [manualTitle, setManualTitle] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+
+    setIsSearching(true);
+    try {
+      const { results } = await searchMovies(searchQuery); 
+      setSearchResults(results);
+    } catch (error) {
+      // The error is handled by the hook, but we catch locally to reset state
+      toast.error('Search failed. Check your TMDB key or network connection.');
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleAddFromSearch = async (movie) => {
+    await addMovie({
+      title: movie.title,
+      description: movie.overview,
+      releaseDate: movie.releaseDate,
+      posterUrl: movie.posterPath,
+      tmdbId: movie.id,
+    });
+    setShowModal(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  const handleAddManual = async (e) => {
+    e.preventDefault();
+    if (!manualTitle.trim()) return;
+    
+    await addMovie({
+      title: manualTitle,
+      description: 'Manually added movie.',
+    });
+    setShowModal(false);
+    setManualTitle('');
+  };
+
+  return (
+    <AnimatePresence>
+      {showModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0.9 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl max-h-[95vh] overflow-y-auto"
+          >
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold gradient-text flex items-center gap-2">
+                    <FaFilm /> Add a Movie
+                </h2>
+                <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+                    <FaTimes size={20} />
+                </button>
+            </div>
+
+            {/* --- TMDB Search Section --- */}
+
+            {/* --- Search Results --- */}
+            {searchResults.length > 0 && (
+              <div className="space-y-3 mb-6 border-t pt-4">
+                <h3 className="text-lg font-bold text-gray-700">Results:</h3>
+                {searchResults.map(movie => (
+                  <div 
+                    key={movie.id} 
+                    className="flex gap-3 p-3 bg-gray-50 rounded-xl items-center cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleAddFromSearch(movie)}
+                  >
+                    <Image 
+                      src={movie.posterPath || 'https://placehold.co/60x90/cccccc/000?text=No+Poster'} 
+                      alt={movie.title} 
+                      width={40} 
+                      height={60} 
+                      className="rounded-md object-cover flex-shrink-0"
+                      unoptimized
+                    />
+                    <div className='flex-1 min-w-0'>
+                        <p className="font-bold text-gray-800 truncate">{movie.title}</p>
+                        <p className="text-sm text-gray-500">{movie.releaseDate?.substring(0, 4)}</p>
+                    </div>
+                    <FaPlus className='text-purple-500 flex-shrink-0' />
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* --- Manual Entry Fallback --- */}
+            <div className="border-t pt-4">
+                <h3 className="text-lg font-bold text-gray-700 mb-3">Or, Add Manually:</h3>
+                <form onSubmit={handleAddManual} className="flex gap-2">
+                    <input
+                        type="text"
+                        value={manualTitle}
+                        onChange={(e) => setManualTitle(e.target.value)}
+                        placeholder="Type movie title here"
+                        className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none font-medium"
+                        required
+                    />
+                    <button
+                        type="submit"
+                        disabled={!manualTitle.trim()}
+                        className="bg-green-500 text-white px-4 py-3 rounded-xl font-bold hover:bg-green-600 transition-all disabled:opacity-50 flex items-center justify-center"
+                    >
+                        <FaPlus />
+                    </button>
+                </form>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 
 function MoviesContent() {
   const { movies, loading, addMovie, toggleWatched, toggleVote, deleteMovie } = useMovies();
+  const { searchMovies, loading: searchLoading } = useFamilyActions(); 
+  
   const { user } = useAuth();
   const { getMemberById } = useFamily();
+  
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newMovieTitle, setNewMovieTitle] = useState('');
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [winningMovie, setWinningMovie] = useState(null);
   const [view, setView] = useState('active'); // 'active' or 'watched'
@@ -25,34 +164,22 @@ function MoviesContent() {
   const watchedMovies = movies.filter(m => m.watched);
   const displayedMovies = view === 'active' ? activeMovies : watchedMovies;
 
-  const handleAddMovie = async (e) => {
-    e.preventDefault();
-    if (!newMovieTitle.trim()) return;
-
-    await addMovie({ title: newMovieTitle });
-    setNewMovieTitle('');
-    setShowAddModal(false);
-  };
-
   const pickRandomMovie = () => {
     if (activeMovies.length === 0) {
       toast.error('No movies to pick from!');
       return;
     }
 
-    // Logic: Movies with more votes have a higher chance of being picked
-    // We create a "weighted array" where a movie appears once + once for each vote
     let weightedList = [];
     activeMovies.forEach(movie => {
-      weightedList.push(movie); // Base chance
+      weightedList.push(movie); 
       if (movie.votes) {
         for (let i = 0; i < movie.votes.length; i++) {
-          weightedList.push(movie); // Extra chance per vote
+          weightedList.push(movie); 
         }
       }
     });
 
-    // Spin animation effect
     const spinDuration = 2000;
     const intervalTime = 100;
     const startTime = Date.now();
@@ -64,7 +191,6 @@ function MoviesContent() {
 
       if (Date.now() - startTime > spinDuration) {
         clearInterval(shuffleInterval);
-        // Final selection
         const winner = weightedList[Math.floor(Math.random() * weightedList.length)];
         setWinningMovie(winner);
         confetti({
@@ -163,8 +289,23 @@ function MoviesContent() {
                     <FaTrash size={14} />
                   </button>
                 </div>
+                
+                {/* Movie Poster & Description */}
+                {movie.posterUrl && (
+                    <Image 
+                        src={movie.posterUrl} 
+                        alt={movie.title} 
+                        width={100} 
+                        height={150} 
+                        className="rounded-lg object-cover mb-4 shadow-md" 
+                        unoptimized
+                    />
+                )}
+                <p className="text-sm text-gray-600 line-clamp-3 mb-4">{movie.overview}</p>
+                <p className="text-xs text-gray-400 mb-2">Release: {movie.releaseDate}</p>
 
-                <div className="flex items-center justify-between mt-4">
+
+                <div className="flex items-center justify-between mt-4 border-t pt-3">
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     <span>Added by</span>
                     <UserAvatar user={uploader} size={20} />
@@ -213,58 +354,15 @@ function MoviesContent() {
         </div>
       )}
 
-      {/* Add Movie Modal */}
-      <AnimatePresence>
-        {showAddModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            onClick={() => setShowAddModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl"
-            >
-              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                <FaFilm className="text-purple-500" /> Add a Movie
-              </h2>
-              <form onSubmit={handleAddMovie}>
-                <input
-                  type="text"
-                  value={newMovieTitle}
-                  onChange={(e) => setNewMovieTitle(e.target.value)}
-                  placeholder="Movie Title (e.g. Shrek 2)"
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none font-bold text-lg mb-6"
-                  autoFocus
-                />
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddModal(false)}
-                    className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!newMovieTitle.trim()}
-                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-bold hover:opacity-90 disabled:opacity-50"
-                  >
-                    Add
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <AddMovieModal 
+        showModal={showAddModal} 
+        setShowModal={setShowAddModal} 
+        addMovie={addMovie} 
+        searchMovies={searchMovies} 
+        searchLoading={searchLoading}
+      />
 
-      {/* Winner Modal */}
+      {/* Winner Modal (kept the original structure) */}
       <AnimatePresence>
         {showWinnerModal && winningMovie && (
           <motion.div

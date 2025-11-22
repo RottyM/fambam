@@ -1,6 +1,6 @@
-import {setGlobalOptions} from "firebase-functions";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {onSchedule} from "firebase-functions/v2/scheduler";
+import { setGlobalOptions } from "firebase-functions/v2"; 
 import {
   onDocumentCreated,
   onDocumentUpdated,
@@ -9,17 +9,18 @@ import {
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import {google} from "googleapis";
+// LAST_UPDATED_FOR_TMDB_KEY_FIX: 2025-11-22 (Final Lowercase Fix)
+// FORCING DEPLOYMENT DUE TO CONFIG ERROR: 2025-11-22 (Final Attempt)
 
 // Initialize Firebase Admin
 admin.initializeApp();
 const db = admin.firestore();
 
 // For cost control
-setGlobalOptions({maxInstances: 10});
+setGlobalOptions({maxInstances: 10}); 
 
 /**
  * Sync user profile changes to Auth Custom Claims
- * This allows security rules to check role/familyId without reading the database
  */
 export const syncUserClaims = onDocumentWritten("users/{userId}", async (event) => {
   const userId = event.params.userId;
@@ -211,7 +212,6 @@ export const fetchDailyMeme = onSchedule(
 
 /**
  * Manual trigger for fetching daily meme (for testing)
- * UPDATED: Better error handling to reveal API issues
  */
 export const fetchDailyMemeManual = onCall(async (request) => {
   if (!request.auth) {
@@ -263,16 +263,75 @@ export const fetchDailyMemeManual = onCall(async (request) => {
   } catch (error) {
     logger.error("Error fetching daily meme:", error);
     
-    // --- FIX: Allow specific errors to bubble up to the client ---
     if (error instanceof HttpsError) {
       throw error;
     }
     
-    // If it's a network/fetch error, give more detail
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     throw new HttpsError("internal", `Failed to fetch meme: ${errorMessage}`);
   }
 });
+
+/**
+ * Securely searches The Movie Database (TMDB) for movie information.
+ * @type {functions.HttpsFunction}
+ */
+export const searchMovies = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Authentication required to search.');
+  }
+
+  const { query: searchQuery } = request.data;
+  if (!searchQuery) {
+    return { results: [] };
+  }
+
+  // --- FINAL FIX: Use process.env (modern way) to access the key set via env.tmdb_key ---
+  const tmdbKey = process.env.tmdb_key; 
+  
+  if (!tmdbKey) {
+    // If key is not found, log clearly and send diagnostic error back
+    logger.error("TMDB_KEY is not set in process.env. Cannot perform TMDB search.");
+    throw new HttpsError('internal', 'TMDB API key not configured.'); 
+  }
+
+  try {
+    // TMDB API Key v3 must be passed as 'api_key'
+    const url = `https://api.themoviedb.org/3/search/movie?api_key=${tmdbKey}&query=${encodeURIComponent(searchQuery)}&language=en-US`;
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      logger.error(`TMDB API Error: ${response.status} - ${response.statusText}`);
+      
+      // Check for 401 explicitly to guide user if the key itself is wrong
+      if (response.status === 401) {
+          throw new HttpsError('unauthenticated', 'TMDB API key is invalid.');
+      }
+      throw new HttpsError('unavailable', 'Movie search service is temporarily unavailable.');
+    }
+
+    const data = await response.json();
+    
+    // Process and return only the necessary fields
+    const results = data.results.slice(0, 5).map((movie: any) => ({
+      id: movie.id.toString(),
+      title: movie.title,
+      releaseDate: movie.release_date,
+      posterUrl: movie.poster_path ? `https://image.tmdb.org/t/p/w342${movie.poster_path}` : null,
+      rating: movie.vote_average,
+      overview: movie.overview,
+    }));
+
+    return { results };
+
+  } catch (error) {
+    logger.error("TMDB search failed:", error);
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError('internal', 'Failed to perform movie search.');
+  }
+});
+
 
 /**
  * Create a Google Calendar for a family
@@ -500,21 +559,27 @@ export const deleteMemory = onCall(async (request) => {
   }
 });
 
-export const sendMedicationReminders = onSchedule({ schedule: "* * * * *", timeZone: "America/New_York" }, async () => {
-  const now = new Date();
-  const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-  const medsSnapshot = await db.collectionGroup("medications").get();
+export const sendMedicationReminders = onSchedule(
+  { 
+    // FIX: Changed from "* * * * *" (every minute) to every 5 minutes
+    schedule: "*/5 * * * *", 
+    timeZone: "America/New_York" 
+  }, 
+  async () => {
+    const now = new Date();
+    const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+    const medsSnapshot = await db.collectionGroup("medications").get();
 
-  for (const doc of medsSnapshot.docs) {
-    const data = doc.data();
-    if (data.reminderTimes.includes(timeString)) {
-      const last = data.lastNotifiedAt?.toDate();
-      if (last && (now.getTime() - last.getTime()) / 60000 < 1) continue;
+    for (const doc of medsSnapshot.docs) {
+      const data = doc.data();
+      if (data.reminderTimes.includes(timeString)) {
+        const last = data.lastNotifiedAt?.toDate();
+        if (last && (now.getTime() - last.getTime()) / 60000 < 1) continue;
 
-      await sendNotificationToUser(data.user.id, "💊 Med Reminder", `Take ${data.medicationName} (${data.dosage})`, {
-        type: "med_reminder", medicationId: doc.id, url: "/medication"
-      });
-      await doc.ref.update({ lastNotifiedAt: admin.firestore.FieldValue.serverTimestamp() });
+        await sendNotificationToUser(data.user.id, "💊 Med Reminder", `Take ${data.medicationName} (${data.dosage})`, {
+          type: "med_reminder", medicationId: doc.id, url: "/medication"
+        });
+        await doc.ref.update({ lastNotifiedAt: admin.firestore.FieldValue.serverTimestamp() });
+      }
     }
-  }
 });

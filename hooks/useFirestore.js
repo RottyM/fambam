@@ -18,8 +18,6 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
-// ... [Keep all existing hooks: useTodos, useChores, useCalendarEvents, useDocuments, useMemories, useMemoriesFolders, useDailyMeme, useGroceries, useRecipes, useMealPlan, useCredentials] ...
-
 // --- 1. TODOS ---
 export function useTodos() {
   const { userData } = useAuth();
