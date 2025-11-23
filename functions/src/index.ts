@@ -1,6 +1,7 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {onSchedule} from "firebase-functions/v2/scheduler";
-import { setGlobalOptions } from "firebase-functions/v2"; 
+import { setGlobalOptions } from "firebase-functions/v2";
+import { defineSecret } from "firebase-functions/params";
 import {
   onDocumentCreated,
   onDocumentUpdated,
@@ -17,7 +18,10 @@ admin.initializeApp();
 const db = admin.firestore();
 
 // For cost control
-setGlobalOptions({maxInstances: 10}); 
+setGlobalOptions({maxInstances: 10});
+
+// Define secret for TMDB API key
+const tmdbKey = defineSecret('TMDB_KEY'); 
 
 /**
  * Sync user profile changes to Auth Custom Claims
@@ -276,7 +280,7 @@ export const fetchDailyMemeManual = onCall(async (request) => {
  * Securely searches The Movie Database (TMDB) for movie information.
  * @type {functions.HttpsFunction}
  */
-export const searchMovies = onCall(async (request) => {
+export const searchMovies = onCall({ secrets: [tmdbKey] }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Authentication required to search.');
   }
@@ -286,18 +290,18 @@ export const searchMovies = onCall(async (request) => {
     return { results: [] };
   }
 
-  // Access TMDB_KEY from environment (set via Secret Manager in Cloud Run)
-  const tmdbKey = process.env.TMDB_KEY; 
-  
-  if (!tmdbKey) {
+  // Access TMDB_KEY from secret
+  const apiKey = tmdbKey.value();
+
+  if (!apiKey) {
     // If key is not found, log clearly and send diagnostic error back
-    logger.error("TMDB_KEY is not set in process.env. Cannot perform TMDB search.");
-    throw new HttpsError('internal', 'TMDB API key not configured.'); 
+    logger.error("TMDB_KEY is not set. Cannot perform TMDB search.");
+    throw new HttpsError('internal', 'TMDB API key not configured.');
   }
 
   try {
     // TMDB API Key v3 must be passed as 'api_key'
-    const url = `https://api.themoviedb.org/3/search/movie?api_key=${tmdbKey}&query=${encodeURIComponent(searchQuery)}&language=en-US`;
+    const url = `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(searchQuery)}&language=en-US`;
     
     const response = await fetch(url);
     
@@ -336,7 +340,7 @@ export const searchMovies = onCall(async (request) => {
  * Get detailed movie information from TMDB
  * Fetches: genres, runtime, tagline, certification, director, screenplay
  */
-export const getMovieDetails = onCall(async (request) => {
+export const getMovieDetails = onCall({ secrets: [tmdbKey] }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Authentication required.');
   }
@@ -346,16 +350,17 @@ export const getMovieDetails = onCall(async (request) => {
     throw new HttpsError('invalid-argument', 'Movie ID is required.');
   }
 
-  const tmdbKey = process.env.TMDB_KEY;
+  // Access TMDB_KEY from secret
+  const apiKey = tmdbKey.value();
 
-  if (!tmdbKey) {
-    logger.error("TMDB_KEY is not set in process.env.");
+  if (!apiKey) {
+    logger.error("TMDB_KEY is not set.");
     throw new HttpsError('internal', 'TMDB API key not configured.');
   }
 
   try {
     // Fetch all movie data in a single API call using append_to_response
-    const detailsUrl = `https://api.themoviedb.org/3/movie/${movieId}?api_key=${tmdbKey}&language=en-US&append_to_response=release_dates,credits`;
+    const detailsUrl = `https://api.themoviedb.org/3/movie/${movieId}?api_key=${apiKey}&language=en-US&append_to_response=release_dates,credits`;
     const detailsResponse = await fetch(detailsUrl);
 
     if (!detailsResponse.ok) {
