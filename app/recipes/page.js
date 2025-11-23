@@ -8,7 +8,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { searchRecipes, getRecipeInformation, getRecipeNutrition } from '@/lib/spoonacular';
 import { enrichRecipeWithUSDA, formatNutrientName } from '@/lib/usdaEnrichment';
-import { FaPlus, FaTrash, FaShoppingCart, FaCalendar, FaSearch, FaCamera } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaShoppingCart, FaCalendar, FaSearch, FaCamera, FaYoutube } from 'react-icons/fa';
 import RecipeScannerModal from '@/components/RecipeScannerModal';
 import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -122,6 +122,7 @@ function RecipesContent() {
     }
   };
 
+// Find this function in your page.js and replace it with this version
   const handleAddApiRecipe = async (apiRecipe) => {
     try {
       // Parse ingredients from API format
@@ -155,6 +156,7 @@ function RecipesContent() {
         instructions,
         imageUrl: apiRecipe.image,
         nutrition: apiRecipe.nutrition,
+        // --- THIS IS THE FIX: Restored sourceUrl ---
         sourceUrl: apiRecipe.sourceUrl,
       });
 
@@ -165,7 +167,7 @@ function RecipesContent() {
       console.error('Error adding recipe:', error);
       toast.error('Failed to add recipe');
     }
-  };  
+  };
 
   const handleAddIngredient = () => {
     setNewRecipe({
@@ -600,7 +602,22 @@ function RecipesContent() {
                     </p>
                   </div>
                 )}
-
+                {/* --- ADDED: Watch Video Button (only if URL exists) --- */}
+                {selectedRecipe.videoUrl && (
+                  <button
+                    onClick={() => {
+                      const videoId = getYouTubeId(selectedRecipe.videoUrl);
+                      if (videoId) {
+                        setVideoToPlay(videoId);
+                      } else {
+                        toast.error("Invalid YouTube URL");
+                      }
+                    }}
+                    className="w-full mb-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 rounded-2xl font-bold hover:from-purple-700 hover:to-indigo-700 transition-all shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <FaYoutube size={20} /> Watch Video Tutorial
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     addAllToGroceries(selectedRecipe);
@@ -729,7 +746,19 @@ function RecipesContent() {
                     + Add Ingredient
                   </button>
                 </div>
-
+                  {/* --- ADDED: Video URL Input --- */}
+                <div>
+                  <label className={`block text-sm font-bold ${theme.colors.text} mb-2 flex items-center gap-2`}>
+                    <FaYoutube className="text-red-500" /> YouTube Video URL (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    value={newRecipe.videoUrl}
+                    onChange={(e) => setNewRecipe({ ...newRecipe, videoUrl: e.target.value })}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none"
+                  />
+                </div>
                 <div>
                   <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     Instructions

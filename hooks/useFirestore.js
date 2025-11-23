@@ -520,6 +520,7 @@ export function useRecipes() {
         ...recipeData,
         createdBy: userData.uid,
         createdAt: serverTimestamp(),
+        tutorialVideoUrl: '', // e.g., 'https://www.youtube.com/watch?v=...' (Optional)
       });
       toast.success('Recipe added!');
     } catch (error) {
