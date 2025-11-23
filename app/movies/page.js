@@ -15,11 +15,12 @@ import { useFamilyActions } from '@/hooks/useFamilyActions';
 // --- D&D Imports REMOVED (The source of the compilation crash) ---
 
 
-function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, searchLoading }) {
+function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, getMovieDetails, searchLoading }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [manualTitle, setManualTitle] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [isAddingMovie, setIsAddingMovie] = useState(false);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -27,7 +28,7 @@ function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, search
 
     setIsSearching(true);
     try {
-      const { results } = await searchMovies(searchQuery); 
+      const { results } = await searchMovies(searchQuery);
       setSearchResults(results);
     } catch (error) {
       // The error is handled by the hook, but we catch locally to reset state
@@ -39,17 +40,34 @@ function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, search
   };
 
   const handleAddFromSearch = async (movie) => {
-    await addMovie({
-      title: movie.title,
-      overview: movie.overview,
-      releaseDate: movie.releaseDate,
-      posterUrl: movie.posterUrl,
-      rating: movie.rating,
-      tmdbId: movie.id,
-    });
-    setShowModal(false);
-    setSearchQuery('');
-    setSearchResults([]);
+    setIsAddingMovie(true);
+    try {
+      // Fetch detailed movie information
+      const details = await getMovieDetails(movie.id);
+
+      await addMovie({
+        title: movie.title,
+        overview: movie.overview,
+        releaseDate: movie.releaseDate,
+        posterUrl: movie.posterUrl,
+        rating: movie.rating,
+        tmdbId: movie.id,
+        // Add detailed TMDB data
+        genres: details.genres,
+        runtime: details.runtime,
+        tagline: details.tagline,
+        certification: details.certification,
+        director: details.director,
+        screenplay: details.screenplay,
+      });
+      setShowModal(false);
+      setSearchQuery('');
+      setSearchResults([]);
+    } catch (error) {
+      toast.error('Failed to add movie. Please try again.');
+    } finally {
+      setIsAddingMovie(false);
+    }
   };
 
   const handleAddManual = async (e) => {
@@ -113,10 +131,12 @@ function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, search
               <div className="space-y-3 mb-6 border-t pt-4">
                 <h3 className="text-lg font-bold text-gray-700">Results:</h3>
                 {searchResults.map(movie => (
-                  <div 
-                    key={movie.id} 
-                    className="flex gap-3 p-3 bg-gray-50 rounded-xl items-center cursor-pointer hover:bg-gray-100 transition-colors"
-                    onClick={() => handleAddFromSearch(movie)}
+                  <div
+                    key={movie.id}
+                    className={`flex gap-3 p-3 bg-gray-50 rounded-xl items-center transition-colors ${
+                      isAddingMovie ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-100'
+                    }`}
+                    onClick={() => !isAddingMovie && handleAddFromSearch(movie)}
                   >
                     <Image
                       src={movie.posterUrl || 'https://placehold.co/60x90/cccccc/000?text=No+Poster'}
@@ -167,7 +187,7 @@ function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, search
 
 function MoviesContent() {
   const { movies, loading, addMovie, toggleWatched, toggleVote, deleteMovie } = useMovies();
-  const { searchMovies, loading: searchLoading } = useFamilyActions(); 
+  const { searchMovies, getMovieDetails, loading: searchLoading } = useFamilyActions(); 
   
   const { user } = useAuth();
   const { getMemberById } = useFamily();
@@ -281,12 +301,22 @@ function MoviesContent() {
       </div>
 
       {/* Movie Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <AnimatePresence>
           {displayedMovies.map((movie) => {
             const uploader = getMemberById(movie.addedBy);
-            const hasVoted = movie.votes?.includes(user.uid);
+            const hasVoted = movie.votes?.includes(user?.uid);
             const voteCount = movie.votes?.length || 0;
+            const year = movie.releaseDate ? movie.releaseDate.substring(0, 4) : '';
+            const userScore = movie.rating ? Math.round(movie.rating * 10) : null;
+
+            // Format runtime (e.g., 157 minutes → "2h 37m")
+            const formatRuntime = (minutes) => {
+              if (!minutes) return null;
+              const hours = Math.floor(minutes / 60);
+              const mins = minutes % 60;
+              return `${hours}h ${mins}m`;
+            };
 
             return (
               <motion.div
@@ -295,67 +325,158 @@ function MoviesContent() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className="bg-white rounded-2xl p-5 shadow-md hover:shadow-lg transition-all border-2 border-transparent hover:border-purple-100"
+                className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-100 overflow-hidden relative"
               >
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="text-xl font-bold text-gray-800 line-clamp-2">{movie.title}</h3>
-                  <button
-                    onClick={() => deleteMovie(movie.id)}
-                    className="text-gray-300 hover:text-red-500 transition-colors p-1"
-                  >
-                    <FaTrash size={14} />
-                  </button>
-                </div>
-                
-                {/* Movie Poster & Description */}
-                {movie.posterUrl && (
-                    <Image 
-                        src={movie.posterUrl} 
-                        alt={movie.title} 
-                        width={100} 
-                        height={150} 
-                        className="rounded-lg object-cover mb-4 shadow-md" 
+                {/* Delete Button - Absolute Position */}
+                <button
+                  onClick={() => deleteMovie(movie.id)}
+                  className="absolute top-3 right-3 z-10 bg-white/90 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors p-2 rounded-full shadow-md"
+                >
+                  <FaTrash size={14} />
+                </button>
+
+                <div className="flex flex-col sm:flex-row">
+                  {/* Movie Poster */}
+                  {movie.posterUrl && (
+                    <div className="flex-shrink-0">
+                      <Image
+                        src={movie.posterUrl}
+                        alt={movie.title}
+                        width={200}
+                        height={300}
+                        className="object-cover w-full sm:w-[200px] h-[300px]"
                         unoptimized
-                    />
-                )}
-                <p className="text-sm text-gray-600 line-clamp-3 mb-4">{movie.overview}</p>
-                <p className="text-xs text-gray-400 mb-2">Release: {movie.releaseDate}</p>
+                      />
+                    </div>
+                  )}
 
+                  {/* Movie Details */}
+                  <div className="flex-1 p-5 flex flex-col">
+                    {/* Title and Year */}
+                    <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                      {movie.title} {year && <span className="text-gray-500">({year})</span>}
+                    </h3>
 
-                <div className="flex items-center justify-between mt-4 border-t pt-3">
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span>Added by</span>
-                    <UserAvatar user={uploader} size={20} />
-                  </div>
+                    {/* Certification | Release Date | Genres | Runtime */}
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 mb-3">
+                      {movie.certification && (
+                        <span className="border border-gray-400 px-1.5 py-0.5 rounded text-xs font-semibold">
+                          {movie.certification}
+                        </span>
+                      )}
+                      {movie.releaseDate && (
+                        <span>{movie.releaseDate}</span>
+                      )}
+                      {movie.genres && movie.genres.length > 0 && (
+                        <>
+                          <span>•</span>
+                          <span>{movie.genres.join(', ')}</span>
+                        </>
+                      )}
+                      {movie.runtime && (
+                        <>
+                          <span>•</span>
+                          <span>{formatRuntime(movie.runtime)}</span>
+                        </>
+                      )}
+                    </div>
 
-                  <div className="flex items-center gap-3">
-                    {/* Watched Toggle */}
-                    <button
-                      onClick={() => toggleWatched(movie.id, movie.watched)}
-                      className={`p-2 rounded-full transition-colors ${
-                        movie.watched 
-                          ? 'bg-green-100 text-green-600' 
-                          : 'bg-gray-100 text-gray-400 hover:bg-green-50 hover:text-green-500'
-                      }`}
-                      title={movie.watched ? "Mark as unwatched" : "Mark as watched"}
-                    >
-                      <FaCheck />
-                    </button>
-
-                    {/* Vote Button (Only for active movies) */}
-                    {!movie.watched && (
-                      <button
-                        onClick={() => toggleVote(movie.id, movie.votes)}
-                        className={`flex items-center gap-1 px-3 py-1.5 rounded-full font-bold transition-all ${
-                          hasVoted
-                            ? 'bg-red-50 text-red-500 ring-2 ring-red-100'
-                            : 'bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-400'
-                        }`}
-                      >
-                        <FaHeart className={hasVoted ? 'fill-current' : ''} />
-                        <span>{voteCount}</span>
-                      </button>
+                    {/* User Score */}
+                    {userScore && (
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="relative w-12 h-12">
+                          <svg className="transform -rotate-90 w-12 h-12">
+                            <circle
+                              cx="24"
+                              cy="24"
+                              r="20"
+                              stroke="#e5e7eb"
+                              strokeWidth="4"
+                              fill="none"
+                            />
+                            <circle
+                              cx="24"
+                              cy="24"
+                              r="20"
+                              stroke="#22c55e"
+                              strokeWidth="4"
+                              fill="none"
+                              strokeDasharray={`${userScore * 1.256} 125.6`}
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex items-center justify-center text-xs font-bold">
+                            {userScore}%
+                          </div>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-700">User Score</span>
+                      </div>
                     )}
+
+                    {/* Tagline */}
+                    {movie.tagline && (
+                      <p className="text-sm italic text-gray-500 mb-3">{movie.tagline}</p>
+                    )}
+
+                    {/* Overview */}
+                    <div className="mb-3 flex-1">
+                      <h4 className="font-bold text-gray-800 mb-1">Overview</h4>
+                      <p className="text-sm text-gray-600 line-clamp-4">{movie.overview}</p>
+                    </div>
+
+                    {/* Director and Screenplay */}
+                    <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
+                      {movie.director && (
+                        <div>
+                          <p className="font-bold text-gray-800">{movie.director}</p>
+                          <p className="text-gray-500 text-xs">Director</p>
+                        </div>
+                      )}
+                      {movie.screenplay && movie.screenplay.length > 0 && (
+                        <div>
+                          <p className="font-bold text-gray-800">{movie.screenplay.join(', ')}</p>
+                          <p className="text-gray-500 text-xs">Screenplay</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions Footer */}
+                    <div className="flex items-center justify-between mt-auto pt-3 border-t">
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span>Added by</span>
+                        <UserAvatar user={uploader} size={20} />
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        {/* Watched Toggle */}
+                        <button
+                          onClick={() => toggleWatched(movie.id, movie.watched)}
+                          className={`p-2 rounded-full transition-colors ${
+                            movie.watched
+                              ? 'bg-green-100 text-green-600'
+                              : 'bg-gray-100 text-gray-400 hover:bg-green-50 hover:text-green-500'
+                          }`}
+                          title={movie.watched ? "Mark as unwatched" : "Mark as watched"}
+                        >
+                          <FaCheck />
+                        </button>
+
+                        {/* Vote Button (Only for active movies) */}
+                        {!movie.watched && (
+                          <button
+                            onClick={() => toggleVote(movie.id, movie.votes)}
+                            className={`flex items-center gap-1 px-3 py-1.5 rounded-full font-bold transition-all ${
+                              hasVoted
+                                ? 'bg-red-50 text-red-500 ring-2 ring-red-100'
+                                : 'bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-400'
+                            }`}
+                          >
+                            <FaHeart className={hasVoted ? 'fill-current' : ''} />
+                            <span>{voteCount}</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -371,11 +492,12 @@ function MoviesContent() {
         </div>
       )}
 
-      <AddMovieModal 
-        showModal={showAddModal} 
-        setShowModal={setShowAddModal} 
-        addMovie={addMovie} 
-        searchMovies={searchMovies} 
+      <AddMovieModal
+        showModal={showAddModal}
+        setShowModal={setShowAddModal}
+        addMovie={addMovie}
+        searchMovies={searchMovies}
+        getMovieDetails={getMovieDetails}
         searchLoading={searchLoading}
       />
 
