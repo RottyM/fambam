@@ -704,13 +704,26 @@ export const sendMedicationReminders = onSchedule(
 
     for (const doc of medsSnapshot.docs) {
       const data = doc.data();
-      if (data.reminderTimes.includes(timeString)) {
+
+      // Fix: Use correct field names and add null checks
+      if (!data.times || !Array.isArray(data.times) || !data.assignedTo) {
+        continue; // Skip medications without proper reminder times or assignment
+      }
+
+      if (data.times.includes(timeString)) {
         const last = data.lastNotifiedAt?.toDate();
         if (last && (now.getTime() - last.getTime()) / 60000 < 1) continue;
 
-        await sendNotificationToUser(data.user.id, "💊 Med Reminder", `Take ${data.medicationName} (${data.dosage})`, {
-          type: "med_reminder", medicationId: doc.id, url: "/medication"
-        });
+        await sendNotificationToUser(
+          data.assignedTo,
+          "💊 Med Reminder",
+          `Take ${data.name} (${data.dosage})`,
+          {
+            type: "med_reminder",
+            medicationId: doc.id,
+            url: "/medication"
+          }
+        );
         await doc.ref.update({ lastNotifiedAt: admin.firestore.FieldValue.serverTimestamp() });
       }
     }
