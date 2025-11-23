@@ -15,6 +15,7 @@ export function NotificationProvider({ children }) {
   const [permission, setPermission] = useState('default');
   const [fcmToken, setFcmToken] = useState(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notificationsSupported, setNotificationsSupported] = useState(false);
   const { user, userData } = useAuth();
 
   // Request notification permission and get FCM token
@@ -111,6 +112,15 @@ export function NotificationProvider({ children }) {
     }
   };
 
+  // Check if browser supports notifications (client-side only to avoid hydration errors)
+  useEffect(() => {
+    setNotificationsSupported(
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      'serviceWorker' in navigator
+    );
+  }, []);
+
   // Sync state
   useEffect(() => {
     if (userData) {
@@ -159,12 +169,6 @@ export function NotificationProvider({ children }) {
       }
     }
   }, []);
-
-  // Check if browser supports notifications
-  const notificationsSupported =
-    typeof window !== 'undefined' &&
-    'Notification' in window &&
-    'serviceWorker' in navigator;
 
   const value = {
     permission,
