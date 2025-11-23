@@ -305,7 +305,7 @@ function MoviesContent() {
         <AnimatePresence>
           {displayedMovies.map((movie) => {
             const uploader = getMemberById(movie.addedBy);
-            const hasVoted = movie.votes?.includes(user.uid);
+            const hasVoted = movie.votes?.includes(user?.uid);
             const voteCount = movie.votes?.length || 0;
             const year = movie.releaseDate ? movie.releaseDate.substring(0, 4) : '';
             const userScore = movie.rating ? Math.round(movie.rating * 10) : null;
