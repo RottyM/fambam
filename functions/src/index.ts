@@ -354,8 +354,8 @@ export const getMovieDetails = onCall(async (request) => {
   }
 
   try {
-    // Fetch movie details (genres, runtime, tagline)
-    const detailsUrl = `https://api.themoviedb.org/3/movie/${movieId}?api_key=${tmdbKey}&language=en-US`;
+    // Fetch all movie data in a single API call using append_to_response
+    const detailsUrl = `https://api.themoviedb.org/3/movie/${movieId}?api_key=${tmdbKey}&language=en-US&append_to_response=release_dates,credits`;
     const detailsResponse = await fetch(detailsUrl);
 
     if (!detailsResponse.ok) {
@@ -365,38 +365,27 @@ export const getMovieDetails = onCall(async (request) => {
 
     const details = await detailsResponse.json();
 
-    // Fetch release dates (for certification/rating)
-    const releaseDatesUrl = `https://api.themoviedb.org/3/movie/${movieId}/release_dates?api_key=${tmdbKey}`;
-    const releaseDatesResponse = await fetch(releaseDatesUrl);
-
+    // Extract certification from release_dates
     let certification = null;
-    if (releaseDatesResponse.ok) {
-      const releaseDates = await releaseDatesResponse.json();
-      // Find US certification
-      const usRelease = releaseDates.results.find((r: any) => r.iso_3166_1 === 'US');
+    if (details.release_dates?.results) {
+      const usRelease = details.release_dates.results.find((r: any) => r.iso_3166_1 === 'US');
       if (usRelease && usRelease.release_dates.length > 0) {
-        // Get the first certification available
         const certData = usRelease.release_dates.find((rd: any) => rd.certification);
         certification = certData?.certification || null;
       }
     }
 
-    // Fetch credits (director, screenplay)
-    const creditsUrl = `https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${tmdbKey}`;
-    const creditsResponse = await fetch(creditsUrl);
-
+    // Extract director and screenplay from credits
     let director = null;
     let screenplay = [];
 
-    if (creditsResponse.ok) {
-      const credits = await creditsResponse.json();
-
+    if (details.credits?.crew) {
       // Find director
-      const directorData = credits.crew.find((person: any) => person.job === 'Director');
+      const directorData = details.credits.crew.find((person: any) => person.job === 'Director');
       director = directorData?.name || null;
 
       // Find screenplay writers
-      const screenplayWriters = credits.crew.filter((person: any) =>
+      const screenplayWriters = details.credits.crew.filter((person: any) =>
         person.job === 'Screenplay' || person.job === 'Writer'
       );
       screenplay = screenplayWriters.map((writer: any) => writer.name);
