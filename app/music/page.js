@@ -3,14 +3,38 @@
 import { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useTheme } from '@/contexts/ThemeContext';
-import { FaMusic, FaTimes } from 'react-icons/fa';
+import { 
+  FaMusic, 
+  FaTimes, 
+  FaFolderPlus, 
+  FaPlay, 
+  FaStepBackward, 
+  FaStepForward, 
+  FaShareSquare 
+} from 'react-icons/fa';
 import { useMusicJams } from '@/hooks/useMusicJams';
 import JamCard from '@/components/JamCard';
 import AddJamModal from '@/components/AddJamModal';
+import PlaylistFolder from '@/components/PlaylistFolder';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import YouTube from 'react-youtube'; 
 
-// Helper function to extract YouTube ID (same as in recipes)
+// --- DRAG AND DROP IMPORTS ---
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { TouchBackend } from 'react-dnd-touch-backend';
+import { MultiBackend, TouchTransition } from 'react-dnd-multi-backend';
+
+// --- DND Backend Pipeline ---
+const HTML5toTouch = {
+  backends: [
+    { id: 'html5', backend: HTML5Backend, transition: TouchTransition },
+    { id: 'touch', backend: TouchBackend, options: {enableMouseEvents: true}, preview: true },
+  ],
+};
+
+// Helpers
 const getYouTubeId = (url) => {
   if (!url) return null;
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -18,24 +42,138 @@ const getYouTubeId = (url) => {
   return (match && match[2].length === 11) ? match[2] : null;
 };
 
+const getSpotifyId = (url) => {
+  if (!url) return null;
+  const match = url.match(/track\/([a-zA-Z0-9]+)/);
+  return match ? match[1] : null;
+};
+
 function MusicContent() {
   const { theme, currentTheme } = useTheme();
-  const { jams, loading, addJam, deleteJam } = useMusicJams();
+  const [activeFilterId, setActiveFilterId] = useState('all'); 
   const [showAddModal, setShowAddModal] = useState(false);
   
-  // State for the YouTube video modal
-  const [videoToPlay, setVideoToPlay] = useState(null);
+  // --- PLAYER STATE ---
+  const [queue, setQueue] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
 
-  const handlePlayVideo = (url) => {
-    const videoId = getYouTubeId(url);
-    if (videoId) {
-      setVideoToPlay(videoId);
-    } else {
-      toast.error("Invalid YouTube URL");
-    }
+  const { 
+      jams, folders, loading, addJam, deleteJam, 
+      toggleLike, createFolder, deleteFolder, assignJamToFolder
+  } = useMusicJams(activeFilterId);
+
+  // --- PLAYBACK HANDLERS ---
+  
+  const handlePlaySingle = (clickedLink) => {
+      // When clicking a card, set the current view (jams) as the queue
+      const index = jams.findIndex(j => j.link === clickedLink);
+      if (index !== -1) {
+          setQueue(jams);
+          setCurrentIndex(index);
+          setIsPlaying(true);
+      } else {
+          toast.error("Could not load song.");
+      }
   };
 
-  if (loading) {
+  const handlePlayFolder = () => {
+      if (jams.length > 0) {
+          setQueue(jams);
+          setCurrentIndex(0);
+          setIsPlaying(true);
+          toast.success(`Playing ${jams.length} songs`);
+      } else {
+          toast.error("This playlist is empty!");
+      }
+  };
+
+  const playNext = () => {
+      if (currentIndex < queue.length - 1) {
+          setCurrentIndex(prev => prev + 1);
+      } else {
+          toast("End of playlist", { icon: '🏁' });
+      }
+  };
+
+  const playPrev = () => {
+      if (currentIndex > 0) {
+          setCurrentIndex(prev => prev - 1);
+      }
+  };
+
+  const currentTrack = queue[currentIndex];
+  const youtubeId = currentTrack ? getYouTubeId(currentTrack.link) : null;
+  const spotifyId = currentTrack ? getSpotifyId(currentTrack.link) : null;
+
+  // --- FOLDER HANDLERS ---
+  const handleCreateFolder = async () => {
+      const name = prompt("Enter playlist name:");
+      if (name) await createFolder(name);
+  };
+
+  const handleDeleteFolder = async (folderId) => {
+      await deleteFolder(folderId);
+      // If we deleted the active folder, switch back to 'all'
+      if (activeFilterId === folderId) setActiveFilterId('all');
+  };
+
+  // --- EXPORT TO SPOTIFY ---
+  const handleExport = async () => {
+      if (jams.length === 0) {
+          toast.error("No songs to export!");
+          return;
+      }
+      
+      const toastId = toast.loading("Connecting to Spotify...");
+      
+      try {
+        const res = await fetch('/api/spotify/create-playlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                // Export current queue or the current filtered list
+                jams: jams, 
+                playlistName: activeFilterId !== 'all' 
+                    ? folders.find(f => f.id === activeFilterId)?.name 
+                    : `Family Jams ${new Date().toLocaleDateString()}`
+            }),
+        });
+        
+        // 1. Not Logged In? Redirect to Auth
+        if (res.status === 401) {
+            toast.dismiss(toastId);
+            toast("Redirecting to Spotify Login...", { icon: '🔐' });
+            // Redirects to our Auth API Route
+            window.location.href = '/api/spotify/auth';
+            return;
+        }
+
+        const data = await res.json();
+        
+        // 2. Success!
+        if (data.success) {
+            toast.dismiss(toastId);
+            toast.success(
+                <div className="flex flex-col gap-1">
+                    <span><b>Created Playlist!</b> ({data.count} songs)</span>
+                    <a href={data.link} target="_blank" rel="noreferrer" className="underline text-sm text-green-200">Open in Spotify</a>
+                </div>,
+                { duration: 5000, style: { background: '#1DB954', color: '#fff' } }
+            );
+        } else {
+            toast.dismiss(toastId);
+            toast.error(data.error || "Something went wrong");
+        }
+
+      } catch (error) {
+        toast.dismiss(toastId);
+        console.error(error);
+        toast.error("Export failed.");
+      }
+  };
+
+  if (loading && folders.length === 0) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
@@ -47,8 +185,8 @@ function MusicContent() {
   }
 
   return (
-    <>
-      <div className="mb-8 flex items-center justify-between">
+    <DndProvider backend={MultiBackend} options={HTML5toTouch}>
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-display font-bold mb-2">
             <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
@@ -59,33 +197,99 @@ function MusicContent() {
             Share your favorite tunes of the week!
           </p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg flex items-center gap-2"
-        >
-          <FaMusic /> <span className="hidden md:inline">Post a Jam</span>
-        </button>
+        
+        {/* Top Action Buttons */}
+        <div className="flex gap-3">
+            <button
+                onClick={handlePlayFolder}
+                className="bg-green-500 text-white px-6 py-3 rounded-2xl font-bold hover:bg-green-600 transition-all shadow-lg flex items-center gap-2 shrink-0"
+            >
+                <FaPlay /> <span className="hidden md:inline">Play All</span>
+            </button>
+            <button
+                onClick={() => setShowAddModal(true)}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg flex items-center gap-2 shrink-0"
+            >
+                <FaMusic /> <span className="">Post a Jam</span>
+            </button>
+        </div>
       </div>
 
+      {/* --- PLAYLIST BAR --- */}
+      <div className="mb-6 flex items-center gap-2 overflow-x-auto custom-scrollbar pb-4 pt-2 px-1">
+          <div className="flex gap-4 shrink-0">
+            {/* 'All' Folder */}
+            <PlaylistFolder 
+                folder={{ id: 'all', name: 'All Jams' }} 
+                isActive={activeFilterId === 'all'} 
+                onClick={() => setActiveFilterId('all')}
+                onPlay={() => { setActiveFilterId('all'); handlePlayFolder(); }}
+                onDropJam={() => {}} 
+                count={''} 
+            />
+
+            {/* Dynamic Folders */}
+            {folders.map(folder => (
+                <PlaylistFolder 
+                    key={folder.id}
+                    folder={folder} 
+                    isActive={activeFilterId === folder.id} 
+                    onClick={() => setActiveFilterId(folder.id)}
+                    onDelete={handleDeleteFolder}
+                    onPlay={() => { setActiveFilterId(folder.id); handlePlayFolder(); }}
+                    onDropJam={assignJamToFolder}
+                    count={''}
+                />
+            ))}
+
+            {/* Add Button */}
+            <button 
+                onClick={handleCreateFolder}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed text-gray-400 hover:text-purple-500 hover:border-purple-400 transition-colors font-bold whitespace-nowrap shrink-0 ${currentTheme === 'dark' ? 'border-gray-700' : 'border-gray-300'}`}
+            >
+                <FaFolderPlus /> Add Playlist
+            </button>
+
+            {/* Export Button */}
+            <button 
+                onClick={handleExport}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed text-gray-400 hover:text-green-500 hover:border-green-400 transition-colors font-bold whitespace-nowrap shrink-0 ${currentTheme === 'dark' ? 'border-gray-700' : 'border-gray-300'}`}
+                title="Create Spotify Playlist"
+            >
+                <FaShareSquare /> Export
+            </button>
+          </div>
+      </div>
+
+      {/* --- GRID --- */}
       {jams.length === 0 ? (
-        <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg`}>
-          <div className="text-6xl mb-4">🎧</div>
-          <p className={`text-xl font-bold ${theme.colors.textMuted}`}>No jams posted yet</p>
-          <p className={theme.colors.textMuted}>Be the first to share a song!</p>
+        <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg border-2 border-dashed border-gray-200 dark:border-gray-800`}>
+          <div className="text-6xl mb-4 text-gray-300">🎧</div>
+          <p className={`text-xl font-bold ${theme.colors.textMuted}`}>
+              {activeFilterId === 'all' ? 'No jams posted yet' : 'This playlist is empty'}
+          </p>
+          <p className={theme.colors.textMuted}>
+              {activeFilterId === 'all' ? 'Be the first to share a song!' : 'Drag songs here to fill it up!'}
+          </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <AnimatePresence>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <AnimatePresence mode="popLayout">
             {jams.map((jam) => (
               <motion.div
                 key={jam.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                layout
+                layout 
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ type: "spring", damping: 20, stiffness: 100 }}
               >
-                {/* Pass the handlePlayVideo function to the card */}
-                <JamCard jam={jam} onDelete={deleteJam} onPlayVideo={handlePlayVideo} />
+                <JamCard 
+                  jam={jam} 
+                  onDelete={deleteJam} 
+                  onPlayVideo={handlePlaySingle} 
+                  onToggleLike={toggleLike} 
+                />
               </motion.div>
             ))}
           </AnimatePresence>
@@ -98,44 +302,96 @@ function MusicContent() {
         onAddJam={addJam}
       />
 
-      {/* YouTube Video Modal */}
+      {/* --- PLAYER MODAL --- */}
       <AnimatePresence>
-        {videoToPlay && (
+        {isPlaying && currentTrack && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setVideoToPlay(null)}
-            className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/95 z-[70] flex flex-col items-center justify-center p-4"
           >
+            {/* Close Button */}
+            <button
+                onClick={() => setIsPlaying(false)}
+                className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors bg-white/10 p-3 rounded-full z-50"
+            >
+                <FaTimes size={24} />
+            </button>
+
+            {/* Video Container */}
             <motion.div
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-black rounded-2xl overflow-hidden shadow-2xl w-full max-w-4xl relative aspect-video"
+              className={`w-full max-w-4xl relative shadow-2xl rounded-2xl overflow-hidden bg-black ${youtubeId ? 'aspect-video' : 'max-w-xl'}`}
             >
-              <button
-                onClick={() => setVideoToPlay(null)}
-                className="absolute top-4 right-4 text-white/70 hover:text-white bg-black/50 rounded-full p-2 z-10 transition-colors"
-              >
-                <FaTimes size={24} />
-              </button>
-              <iframe
-                width="100%"
-                height="100%"
-                src={`https://www.youtube.com/embed/${videoToPlay}?autoplay=1&rel=0`}
-                title="YouTube video player"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                className="absolute inset-0"
-              ></iframe>
+              
+              {/* YOUTUBE: Smart Component (Auto-Advances) */}
+              {youtubeId && (
+                  <YouTube
+                    videoId={youtubeId}
+                    opts={{
+                      height: '100%',
+                      width: '100%',
+                      playerVars: {
+                        autoplay: 1, 
+                        rel: 0, 
+                      },
+                    }}
+                    onEnd={playNext} // Auto-play next song
+                    className="absolute inset-0 w-full h-full"
+                  />
+              )}
+
+              {/* SPOTIFY: Iframe Fallback */}
+              {spotifyId && (
+                  <iframe 
+                    style={{borderRadius: "12px"}} 
+                    src={`https://open.spotify.com/embed/track/${spotifyId}?utm_source=generator&theme=0`} 
+                    width="100%" 
+                    height="352" 
+                    frameBorder="0" 
+                    allowFullScreen="" 
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                    loading="lazy"
+                  ></iframe>
+              )}
             </motion.div>
+
+            {/* Controls */}
+            <div className="mt-8 flex items-center gap-8">
+                <button 
+                    onClick={playPrev} 
+                    disabled={currentIndex === 0}
+                    className="text-white hover:text-purple-400 disabled:opacity-30 disabled:hover:text-white transition-colors p-4"
+                >
+                    <FaStepBackward size={32} />
+                </button>
+
+                <div className="text-center text-white">
+                    <p className="font-bold text-lg line-clamp-1 max-w-[200px]">{currentTrack.title}</p>
+                    <p className="text-sm text-gray-400 line-clamp-1">{currentTrack.artist}</p>
+                </div>
+
+                <button 
+                    onClick={playNext} 
+                    disabled={currentIndex === queue.length - 1}
+                    className="text-white hover:text-purple-400 disabled:opacity-30 disabled:hover:text-white transition-colors p-4"
+                >
+                    <FaStepForward size={32} />
+                </button>
+            </div>
+
+            {/* Counter */}
+            <div className="mt-4 text-gray-500 text-sm font-medium bg-white/10 px-4 py-1 rounded-full">
+                {currentIndex + 1} / {queue.length}
+            </div>
+
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </DndProvider>
   );
 }
 

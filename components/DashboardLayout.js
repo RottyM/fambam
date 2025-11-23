@@ -29,6 +29,7 @@ import {
   FaCapsules,
   FaSpinner,
   FaFilm,
+  FaMusic, // <--- ADDED IMPORT
 } from 'react-icons/fa';
 
 const navItems = [
@@ -40,12 +41,12 @@ const navItems = [
   { href: '/groceries', icon: FaShoppingCart, label: 'Groceries', emoji: '🛒' },
   { href: '/recipes', icon: FaUtensils, label: 'Recipes', emoji: '🍳' },
   { href: '/movies', icon: FaFilm, label: 'Movie Night', emoji: '🎬' }, 
+  { href: '/music', icon: FaMusic, label: 'Music', emoji: '🎸' }, // <--- ADDED MUSIC ITEM
   { href: '/memories', icon: FaImages, label: 'Memories', emoji: '📸' },
   { href: '/medication', icon: FaCapsules, label: 'Medication', emoji: '💊' }, 
   { href: '/documents', icon: FaFileAlt, label: 'Documents', emoji: '📂' }, 
 ];
 
-// --- RENAMED COMPONENT TO MATCH THE IMPORT NAME ---
 export default function DashboardLayout({ children }) { 
   const pathname = usePathname();
   const { user, userData, signOut } = useAuth();
