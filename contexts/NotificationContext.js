@@ -160,12 +160,19 @@ export function NotificationProvider({ children }) {
     }
   }, []);
 
+  // Check if browser supports notifications
+  const notificationsSupported =
+    typeof window !== 'undefined' &&
+    'Notification' in window &&
+    'serviceWorker' in navigator;
+
   const value = {
     permission,
     fcmToken,
     notificationsEnabled,
     requestPermission,
     disableNotifications,
+    notificationsSupported,
   };
 
   return (
