@@ -59,6 +59,12 @@ function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, getMov
         certification: details.certification,
         director: details.director,
         screenplay: details.screenplay,
+        // Add streaming & trailer data
+        streamingProviders: details.streamingProviders,
+        rentProviders: details.rentProviders,
+        buyProviders: details.buyProviders,
+        watchLink: details.watchLink,
+        trailerKey: details.trailerKey,
       });
       setShowModal(false);
       setSearchQuery('');
@@ -439,6 +445,55 @@ function MoviesContent() {
                         </div>
                       )}
                     </div>
+
+                    {/* Streaming Providers */}
+                    {movie.streamingProviders && movie.streamingProviders.length > 0 && (
+                      <div className="mb-3">
+                        <h4 className="font-bold text-gray-800 mb-2 text-sm">Available on</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {movie.streamingProviders.map((provider, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center gap-2 bg-gray-100 rounded-lg px-2 py-1"
+                              title={provider.name}
+                            >
+                              <img
+                                src={provider.logo}
+                                alt={provider.name}
+                                className="w-6 h-6 rounded"
+                              />
+                              <span className="text-xs font-semibold text-gray-700">{provider.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Trailer & Watch Buttons */}
+                    {(movie.trailerKey || movie.watchLink) && (
+                      <div className="flex gap-2 mb-3">
+                        {movie.trailerKey && (
+                          <a
+                            href={`https://www.youtube.com/watch?v=${movie.trailerKey}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-bold text-sm text-center transition-colors flex items-center justify-center gap-2"
+                          >
+                            ▶ Play Trailer
+                          </a>
+                        )}
+                        {movie.watchLink && (
+                          <a
+                            href={movie.watchLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold text-sm text-center transition-colors"
+                          >
+                            Watch Now
+                          </a>
+                        )}
+                      </div>
+                    )}
 
                     {/* Actions Footer */}
                     <div className="flex items-center justify-between mt-auto pt-3 border-t">
