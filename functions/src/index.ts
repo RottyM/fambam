@@ -360,7 +360,7 @@ export const getMovieDetails = onCall({ secrets: [tmdbKey] }, async (request) =>
 
   try {
     // Fetch all movie data in a single API call using append_to_response
-    const detailsUrl = `https://api.themoviedb.org/3/movie/${movieId}?api_key=${apiKey}&language=en-US&append_to_response=release_dates,credits`;
+    const detailsUrl = `https://api.themoviedb.org/3/movie/${movieId}?api_key=${apiKey}&language=en-US&append_to_response=release_dates,credits,watch/providers,videos`;
     const detailsResponse = await fetch(detailsUrl);
 
     if (!detailsResponse.ok) {
@@ -396,6 +396,58 @@ export const getMovieDetails = onCall({ secrets: [tmdbKey] }, async (request) =>
       screenplay = screenplayWriters.map((writer: any) => writer.name);
     }
 
+    // Extract streaming providers (US region)
+    let streamingProviders = [];
+    let rentProviders = [];
+    let buyProviders = [];
+    let watchLink = null;
+
+    if (details['watch/providers']?.results?.US) {
+      const usProviders = details['watch/providers'].results.US;
+
+      // JustWatch link (where to find all streaming options)
+      watchLink = usProviders.link || null;
+
+      // Flatrate = streaming services like Netflix, Hulu
+      if (usProviders.flatrate) {
+        streamingProviders = usProviders.flatrate.map((p: any) => ({
+          name: p.provider_name,
+          logo: `https://image.tmdb.org/t/p/original${p.logo_path}`
+        }));
+      }
+
+      // Rent providers
+      if (usProviders.rent) {
+        rentProviders = usProviders.rent.map((p: any) => ({
+          name: p.provider_name,
+          logo: `https://image.tmdb.org/t/p/original${p.logo_path}`
+        }));
+      }
+
+      // Buy providers
+      if (usProviders.buy) {
+        buyProviders = usProviders.buy.map((p: any) => ({
+          name: p.provider_name,
+          logo: `https://image.tmdb.org/t/p/original${p.logo_path}`
+        }));
+      }
+    }
+
+    // Extract trailer (YouTube video)
+    let trailerKey = null;
+    if (details.videos?.results) {
+      // Find official YouTube trailer
+      const trailer = details.videos.results.find((v: any) =>
+        v.site === 'YouTube' &&
+        v.type === 'Trailer' &&
+        v.official === true
+      ) || details.videos.results.find((v: any) =>
+        v.site === 'YouTube' && v.type === 'Trailer'
+      );
+
+      trailerKey = trailer?.key || null;
+    }
+
     // Prepare response with all detailed data
     return {
       genres: details.genres?.map((g: any) => g.name) || [],
@@ -404,6 +456,11 @@ export const getMovieDetails = onCall({ secrets: [tmdbKey] }, async (request) =>
       certification,
       director,
       screenplay: screenplay.length > 0 ? screenplay : null,
+      streamingProviders: streamingProviders.length > 0 ? streamingProviders : null,
+      rentProviders: rentProviders.length > 0 ? rentProviders : null,
+      buyProviders: buyProviders.length > 0 ? buyProviders : null,
+      watchLink,
+      trailerKey,
     };
 
   } catch (error) {
