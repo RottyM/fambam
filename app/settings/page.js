@@ -66,7 +66,7 @@ function SettingsContent() {
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100"
+      className={`${theme.colors.bgCard} rounded-3xl p-6 shadow-xl border ${theme.colors.borderLight}`}
     >
       <h3 className="text-2xl font-bold mb-2 gradient-text">{title}</h3>
       <p className="text-gray-500 mb-4 text-sm">{description}</p>

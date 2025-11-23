@@ -62,8 +62,7 @@ service cloud.firestore {
       }
       
       match /recipes/{recipeId} {
-        allow read, create, update: if isFamilyMember(familyId);
-        allow delete: if isParentInFamily(familyId) || resource.data.createdBy == request.auth.uid;
+        allow read, write: if isAuthenticated();
       }
       
       match /groceries/{groceryId} {

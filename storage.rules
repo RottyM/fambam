@@ -44,7 +44,17 @@ service firebase.storage {
       allow delete: if isFamilyMember(familyId);
     }
 
-    // --- 3. AVATARS ---
+    // --- 3. RECIPES (New Rule) ---
+    // Path: families/{familyId}/recipes/{fileName}
+    match /families/{familyId}/recipes/{fileName} {
+      allow read: if isFamilyMember(familyId);
+      
+      // Any family member can upload recipe photos
+      allow write: if isFamilyMember(familyId) 
+                   && request.resource.size < 10 * 1024 * 1024; // 10MB limit
+    }
+
+    // --- 4. AVATARS ---
     match /users/{userId}/avatar {
       allow read: if isAuthenticated();
       allow write: if request.auth.uid == userId;
