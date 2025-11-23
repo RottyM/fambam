@@ -124,6 +124,10 @@ service cloud.firestore {
         allow read, create, update: if isFamilyMember(familyId);
         allow delete: if isFamilyMember(familyId);
       }
+      match /music_jams/{jamId} {
+        allow read, create, update: if isFamilyMember(familyId);
+        allow delete: if isParentInFamily(familyId) || resource.data.userId == request.auth.uid;
+      }
     }
     
     match /allowlist/{email} {
