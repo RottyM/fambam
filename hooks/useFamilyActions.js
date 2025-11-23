@@ -62,6 +62,10 @@ export function useFamilyActions() {
     return callFunction('searchMovies', { query });
   };
 
+  const getMovieDetails = async (movieId) => {
+    return callFunction('getMovieDetails', { movieId });
+  };
+
   return {
     actionLoading,
     approveChore,
@@ -72,5 +76,6 @@ export function useFamilyActions() {
     removeMemory,
     refreshDailyMeme,
     searchMovies, // <--- EXPOSED
+    getMovieDetails, // <--- EXPOSED
   };
 }

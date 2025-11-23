@@ -332,6 +332,93 @@ export const searchMovies = onCall(async (request) => {
   }
 });
 
+/**
+ * Get detailed movie information from TMDB
+ * Fetches: genres, runtime, tagline, certification, director, screenplay
+ */
+export const getMovieDetails = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Authentication required.');
+  }
+
+  const { movieId } = request.data;
+  if (!movieId) {
+    throw new HttpsError('invalid-argument', 'Movie ID is required.');
+  }
+
+  const tmdbKey = process.env.TMDB_KEY;
+
+  if (!tmdbKey) {
+    logger.error("TMDB_KEY is not set in process.env.");
+    throw new HttpsError('internal', 'TMDB API key not configured.');
+  }
+
+  try {
+    // Fetch movie details (genres, runtime, tagline)
+    const detailsUrl = `https://api.themoviedb.org/3/movie/${movieId}?api_key=${tmdbKey}&language=en-US`;
+    const detailsResponse = await fetch(detailsUrl);
+
+    if (!detailsResponse.ok) {
+      logger.error(`TMDB API Error (details): ${detailsResponse.status} - ${detailsResponse.statusText}`);
+      throw new HttpsError('unavailable', 'Failed to fetch movie details.');
+    }
+
+    const details = await detailsResponse.json();
+
+    // Fetch release dates (for certification/rating)
+    const releaseDatesUrl = `https://api.themoviedb.org/3/movie/${movieId}/release_dates?api_key=${tmdbKey}`;
+    const releaseDatesResponse = await fetch(releaseDatesUrl);
+
+    let certification = null;
+    if (releaseDatesResponse.ok) {
+      const releaseDates = await releaseDatesResponse.json();
+      // Find US certification
+      const usRelease = releaseDates.results.find((r: any) => r.iso_3166_1 === 'US');
+      if (usRelease && usRelease.release_dates.length > 0) {
+        // Get the first certification available
+        const certData = usRelease.release_dates.find((rd: any) => rd.certification);
+        certification = certData?.certification || null;
+      }
+    }
+
+    // Fetch credits (director, screenplay)
+    const creditsUrl = `https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${tmdbKey}`;
+    const creditsResponse = await fetch(creditsUrl);
+
+    let director = null;
+    let screenplay = [];
+
+    if (creditsResponse.ok) {
+      const credits = await creditsResponse.json();
+
+      // Find director
+      const directorData = credits.crew.find((person: any) => person.job === 'Director');
+      director = directorData?.name || null;
+
+      // Find screenplay writers
+      const screenplayWriters = credits.crew.filter((person: any) =>
+        person.job === 'Screenplay' || person.job === 'Writer'
+      );
+      screenplay = screenplayWriters.map((writer: any) => writer.name);
+    }
+
+    // Prepare response with all detailed data
+    return {
+      genres: details.genres?.map((g: any) => g.name) || [],
+      runtime: details.runtime || null,
+      tagline: details.tagline || null,
+      certification,
+      director,
+      screenplay: screenplay.length > 0 ? screenplay : null,
+    };
+
+  } catch (error) {
+    logger.error("Failed to fetch movie details:", error);
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError('internal', 'Failed to fetch movie details.');
+  }
+});
+
 
 /**
  * Create a Google Calendar for a family
