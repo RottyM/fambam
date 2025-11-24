@@ -102,7 +102,7 @@ function HomeContent() {
           className="bg-white rounded-3xl shadow-2xl p-8 border-4 border-purple-200"
         >
           <h2 className="text-2xl font-display font-bold text-center mb-6 text-gray-800">
-            {isSignUp ? '🎉 Join the Fun!' : '👋 Welcome Back!'}
+            {isSignUp ? '🎉 Create Your Account' : '👋 Log In'}
           </h2>
 
           {/* Google Sign In */}
@@ -155,18 +155,18 @@ function HomeContent() {
               type="submit"
               className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white py-3 rounded-xl font-bold hover:from-pink-600 hover:via-purple-600 hover:to-blue-600 active:from-pink-700 active:via-purple-700 active:to-blue-700 transition-all shadow-lg hover:shadow-xl touch-manipulation min-h-[48px]"
             >
-              {isSignUp ? '🚀 Create Account' : '🎯 Sign In'}
+              {isSignUp ? '🚀 Create Account' : '🎯 Log In'}
             </button>
           </form>
 
-          {/* Toggle sign up/in */}
+          {/* Toggle create account/login */}
           <button
             onClick={() => setIsSignUp(!isSignUp)}
             className="w-full mt-4 text-purple-600 hover:text-purple-700 active:text-purple-800 font-semibold py-2 touch-manipulation min-h-[44px]"
           >
             {isSignUp
-              ? 'Already have an account? Sign in! 👉'
-              : "Don't have an account? Sign up! 🎉"}
+              ? 'Already have an account? Log in here 👉'
+              : "Don't have an account? Create one here 🎉"}
           </button>
         </motion.div>
 

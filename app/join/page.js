@@ -104,16 +104,16 @@ function JoinFamilyContent() {
         >
           <div className="text-6xl mb-4">🔐</div>
           <h1 className="text-3xl font-display font-bold mb-4 gradient-text">
-            Sign In Required
+            Log In Required
           </h1>
           <p className="text-gray-600 mb-6">
-            You need to sign in before joining a family.
+            You need to log in before joining a family.
           </p>
           <button
             onClick={() => router.push(`/?redirect=/join?code=${familyCode}`)}
             className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg"
           >
-            Go to Sign In
+            Go to Log In
           </button>
         </motion.div>
       </div>

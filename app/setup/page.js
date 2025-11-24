@@ -255,8 +255,34 @@ export default function SetupPage() {
                   </button>
                 </div>
               </form>
+
+              {/* Join Existing Family Link */}
+              <div className="mt-6 text-center">
+                <p className="text-sm text-gray-600 mb-2">
+                  Already have a family invite code?
+                </p>
+                <button
+                  onClick={() => router.push('/join')}
+                  className="text-purple-600 hover:text-purple-800 font-bold text-lg underline"
+                >
+                  Join Existing Family Instead →
+                </button>
+              </div>
             </motion.div>
           )}
+        </div>
+
+        {/* Join Link - Always visible at bottom */}
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            Have a family invite code?{' '}
+            <button
+              onClick={() => router.push('/join')}
+              className="text-purple-600 hover:text-purple-800 font-bold underline"
+            >
+              Join here
+            </button>
+          </p>
         </div>
       </motion.div>
     </div>

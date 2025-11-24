@@ -12,7 +12,8 @@ import toast from 'react-hot-toast';
 import { useState } from 'react'; // Added useState import
 import { useFamily } from '@/contexts/FamilyContext';
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/lib/firebase';
+import { functions, db } from '@/lib/firebase';
+import { collection, query, where, getDocs, doc as firestoreDoc, updateDoc } from 'firebase/firestore';
 
 function SettingsContent() {
   const { user, userData, signOut } = useAuth();
@@ -76,8 +77,8 @@ function SettingsContent() {
   };
 
   const getInviteUrl = () => {
-    if (typeof window !== 'undefined' && userData?.familyId) {
-      return `${window.location.origin}/join?code=${userData.familyId}`;
+    if (typeof window !== 'undefined' && family?.id) {
+      return `${window.location.origin}/join?code=${family.id}`;
     }
     return '';
   };
@@ -118,6 +119,54 @@ function SettingsContent() {
     ), { duration: 10000, position: 'top-center' });
   };
 
+  const findAndFixFamily = async () => {
+    try {
+      toast.loading('Searching for your family...');
+
+      // Search for families where current user is a member
+      const familiesRef = collection(db, 'families');
+      const q = query(familiesRef, where('members', 'array-contains', user.uid));
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        toast.dismiss();
+        toast.error('No family found with you as a member. You may need to create a new family.');
+        return;
+      }
+
+      const familyDoc = snapshot.docs[0];
+      const correctFamilyId = familyDoc.id;
+
+      console.log('Found family:', correctFamilyId);
+      console.log('Your current familyId:', userData?.familyId);
+
+      if (userData?.familyId === correctFamilyId) {
+        toast.dismiss();
+        toast.success('Your familyId is already correct!');
+        return;
+      }
+
+      // Fix the familyId
+      const userRef = firestoreDoc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        familyId: correctFamilyId
+      });
+
+      toast.dismiss();
+      toast.success(`Fixed! Your familyId updated to: ${correctFamilyId}. Please refresh the page.`);
+
+      // Reload after 2 seconds
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+
+    } catch (error) {
+      toast.dismiss();
+      toast.error(`Error: ${error.message}`);
+      console.error('Find family error:', error);
+    }
+  };
+
   const Card = ({ title, description, children }) => (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
@@ -153,6 +202,24 @@ function SettingsContent() {
         </button>
       </Card>
 
+      {/* Family ID Fix Card - Shows when user has familyId but family isn't loading */}
+      {userData?.familyId && !family && (
+        <Card
+          title="⚠️ Family Not Found"
+          description="You have a familyId but we can't find your family. Click to auto-fix."
+        >
+          <button
+            onClick={findAndFixFamily}
+            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-xl"
+          >
+            🔧 Find and Fix My Family
+          </button>
+          <p className="text-xs text-gray-600 mt-2">
+            Current familyId: <code className="font-mono bg-gray-100 px-2 py-1 rounded">{userData.familyId}</code>
+          </p>
+        </Card>
+      )}
+
       {/* Invite Family Members Card */}
       {userData?.familyId && family && (
         <Card
@@ -160,20 +227,38 @@ function SettingsContent() {
           description={`Share this code or link to invite others to join ${family.name || 'your family'}!`}
         >
           <div className="space-y-4">
+            {/* Debug Info */}
+            <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-3">
+              <p className="text-xs font-mono text-gray-700 mb-2">
+                <strong>Debug Info:</strong><br/>
+                User familyId: {userData.familyId}<br/>
+                Family doc ID: {family.id}<br/>
+                Match: {userData.familyId === family.id ? '✅ Yes' : '❌ No - MISMATCH!'}
+              </p>
+              {userData.familyId !== family.id && (
+                <button
+                  onClick={findAndFixFamily}
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg text-sm"
+                >
+                  🔧 Auto-Fix Family ID Mismatch
+                </button>
+              )}
+            </div>
+
             {/* Family Code */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">
-                Family Code
+                Family Code (Use Family Doc ID)
               </label>
               <div className="flex gap-2">
                 <input
                   type="text"
-                  value={userData.familyId}
+                  value={family.id}
                   readOnly
                   className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 bg-gray-50 font-mono text-center text-lg font-bold"
                 />
                 <button
-                  onClick={() => copyToClipboard(userData.familyId, 'Family code')}
+                  onClick={() => copyToClipboard(family.id, 'Family code')}
                   className="bg-purple-500 hover:bg-purple-600 text-white font-bold px-6 rounded-xl transition-all flex items-center gap-2"
                 >
                   <FaCopy /> Copy
