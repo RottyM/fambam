@@ -10,12 +10,16 @@ import {
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import {google} from "googleapis";
+import * as nodemailer from "nodemailer";
 // LAST_UPDATED_FOR_TMDB_KEY_FIX: 2025-11-22 (Final Lowercase Fix)
 // FORCING DEPLOYMENT DUE TO CONFIG ERROR: 2025-11-22 (Final Attempt)
 
 // Initialize Firebase Admin
 admin.initializeApp();
 const db = admin.firestore();
+
+// Define days of the week for scheduling
+const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // For cost control
 setGlobalOptions({maxInstances: 10});
@@ -647,17 +651,92 @@ async function sendNotificationToUser(userId: string, title: string, body: strin
   try {
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
-    if (!userData?.fcmToken || !userData?.notificationsEnabled) return null;
 
-    const message = {
-      token: userData.fcmToken,
-      notification: { title, body },
-      data: data || {},
-      webpush: { fcmOptions: { link: data?.url || "/dashboard" } },
-    };
-    return await admin.messaging().send(message);
+    // Get all FCM tokens from the fcmTokens map
+    const fcmTokens = userData?.fcmTokens || {};
+    const tokens = Object.entries(fcmTokens).filter(([_, token]) => token !== null);
+
+    if (tokens.length === 0) {
+      logger.info(`No FCM tokens found for user ${userId}`);
+      return null;
+    }
+
+    const results = [];
+    const invalidTokens: string[] = [];
+
+    // Send notification to all registered devices
+    for (const [deviceId, token] of tokens) {
+      try {
+        const message = {
+          token: token as string,
+          notification: { title, body },
+          data: data || {},
+          webpush: { fcmOptions: { link: data?.url || "/dashboard" } },
+        };
+
+        const result = await admin.messaging().send(message);
+        results.push(result);
+        logger.info(`Notification sent to device ${deviceId}`);
+      } catch (error: any) {
+        // If token is invalid, mark it for removal
+        if (error.code === 'messaging/registration-token-not-registered' ||
+            error.code === 'messaging/invalid-registration-token') {
+          logger.warn(`Invalid token for device ${deviceId}, marking for removal`);
+          invalidTokens.push(deviceId);
+        } else {
+          logger.error(`Notification error for device ${deviceId}:`, error);
+        }
+      }
+    }
+
+    // Remove invalid tokens from Firestore
+    if (invalidTokens.length > 0) {
+      const updates: any = {};
+      invalidTokens.forEach(deviceId => {
+        updates[`fcmTokens.${deviceId}`] = admin.firestore.FieldValue.delete();
+      });
+      await db.collection("users").doc(userId).update(updates);
+      logger.info(`Removed ${invalidTokens.length} invalid token(s) for user ${userId}`);
+    }
+
+    return results.length > 0 ? results : null;
   } catch (error) {
     logger.error(`Notification error for ${userId}:`, error);
+    return null;
+  }
+}
+
+// Email transporter configuration (configure with your email service)
+const mailTransporter = nodemailer.createTransport({
+  service: 'gmail', // or 'smtp.gmail.com' for explicit
+  auth: {
+    user: process.env.EMAIL_USER, // Set in Firebase config
+    pass: process.env.EMAIL_PASSWORD, // App-specific password
+  },
+});
+
+async function sendEmailToUser(userId: string, subject: string, htmlContent: string) {
+  try {
+    const userDoc = await db.collection("users").doc(userId).get();
+    const userData = userDoc.data();
+
+    if (!userData?.email) {
+      logger.warn(`No email found for user ${userId}`);
+      return null;
+    }
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER || 'noreply@fambam.app',
+      to: userData.email,
+      subject: subject,
+      html: htmlContent,
+    };
+
+    const info = await mailTransporter.sendMail(mailOptions);
+    logger.info(`Email sent to ${userData.email}: ${info.messageId}`);
+    return info;
+  } catch (error) {
+    logger.error(`Email error for ${userId}:`, error);
     return null;
   }
 }
@@ -848,26 +927,90 @@ export const deleteUserAccount = onCall(async (request) => {
 
 export const sendMedicationReminders = onSchedule(
   {
-    // FIX: Changed from "* * * * *" (every minute) to every 5 minutes
     schedule: "*/5 * * * *",
     timeZone: "America/New_York"
   },
   async () => {
+    console.log('🔍 === MEDICATION REMINDER FUNCTION STARTED ===');
+    logger.info('🔍 === MEDICATION REMINDER FUNCTION STARTED ===');
+
     const now = new Date();
-    const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+    // Convert to America/New_York timezone
+    const estTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const currentHour = estTime.getHours();
+    const currentMinute = estTime.getMinutes();
+    const timeString = currentHour.toString().padStart(2, '0') + ':' + currentMinute.toString().padStart(2, '0');
+    const today = estTime.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    console.log(`Current time (EST): ${timeString}, Today: ${today}`);
+    logger.info(`Current time (EST): ${timeString}, Today: ${today}`);
+
+    // Calculate time 30 minutes ago for late reminder check (in EST)
+    const thirtyMinutesAgo = new Date(estTime.getTime() - 30 * 60 * 1000);
+    const lateReminderTime = thirtyMinutesAgo.getHours().toString().padStart(2, '0') + ':' +
+                             thirtyMinutesAgo.getMinutes().toString().padStart(2, '0');
+
+    console.log(`Late reminder time: ${lateReminderTime}`);
+    logger.info(`Late reminder time: ${lateReminderTime}`);
+
     const medsSnapshot = await db.collectionGroup("medications").get();
+    console.log(`Found ${medsSnapshot.docs.length} medications total`);
+    logger.info(`Found ${medsSnapshot.docs.length} medications total`);
 
     for (const doc of medsSnapshot.docs) {
       const data = doc.data();
+      console.log(`Processing med: ${data.name}, times: ${data.times}, frequency: ${data.frequency}`);
 
-      // Fix: Use correct field names and add null checks
       if (!data.times || !Array.isArray(data.times) || !data.assignedTo) {
-        continue; // Skip medications without proper reminder times or assignment
+        console.log(`Skipping ${data.name}: missing required fields`);
+        continue;
       }
 
-      if (data.times.includes(timeString)) {
+      // Check if the medication is scheduled for today based on frequency
+      const dayOfWeek = DAYS_OF_WEEK[estTime.getDay()];
+      console.log(`Day of week: ${dayOfWeek}`);
+
+      if (data.frequency === 'weekly' && data.dayOfWeek !== dayOfWeek) {
+        console.log(`Skipping ${data.name}: weekly but wrong day`);
+        continue;
+      }
+      if (data.frequency === 'custom' && !data.customDays?.includes(dayOfWeek)) {
+        console.log(`Skipping ${data.name}: custom but day not included`);
+        continue;
+      }
+
+      // Helper: Check if a time is within the last 5 minutes
+      const isTimeInWindow = (scheduledTime: string) => {
+        const [schedHours, schedMinutes] = scheduledTime.split(':').map(Number);
+        const scheduledMinutesOfDay = schedHours * 60 + schedMinutes;
+        const currentMinutesOfDay = estTime.getHours() * 60 + estTime.getMinutes();
+        const diff = currentMinutesOfDay - scheduledMinutesOfDay;
+        // Check if scheduled time is within 0-4 minutes ago (inclusive)
+        return diff >= 0 && diff <= 4;
+      };
+
+      // INITIAL REMINDER: On-time notification
+      // Check if any scheduled time is within the last 5 minutes
+      const matchedTime = data.times.find(isTimeInWindow);
+
+      if (matchedTime) {
+        console.log(`✅ Time match! ${data.name} at ${matchedTime} (current: ${timeString})`);
+        const takenLogsSnapshot = await doc.ref.collection('taken_log')
+          .where('scheduledTime', '==', matchedTime)
+          .where('takenAt', '>', new Date(today))
+          .get();
+
+        if (!takenLogsSnapshot.empty) {
+          logger.info(`Medication ${data.name} for ${data.assignedTo} at ${matchedTime} already taken. Skipping.`);
+          continue;
+        }
+
         const last = data.lastNotifiedAt?.toDate();
-        if (last && (now.getTime() - last.getTime()) / 60000 < 1) continue;
+        if (last && (estTime.getTime() - last.getTime()) / 60000 < 5) {
+          logger.info(`Medication ${data.name} for ${data.assignedTo} at ${matchedTime} was notified recently. Skipping.`);
+          continue;
+        }
 
         await sendNotificationToUser(
           data.assignedTo,
@@ -876,10 +1019,250 @@ export const sendMedicationReminders = onSchedule(
           {
             type: "med_reminder",
             medicationId: doc.id,
+            time: matchedTime,
             url: "/medication"
           }
         );
         await doc.ref.update({ lastNotifiedAt: admin.firestore.FieldValue.serverTimestamp() });
+        logger.info(`Initial reminder sent for ${data.name} at ${matchedTime}`);
+      }
+
+      // 30-MINUTE LATE REMINDER: Send notification + email
+      // Check if any medication time was 30 minutes ago (within 5-minute window)
+      const isLateReminderTime = (scheduledTime: string) => {
+        const [schedHours, schedMinutes] = scheduledTime.split(':').map(Number);
+        const scheduledMinutesOfDay = schedHours * 60 + schedMinutes;
+        const currentMinutesOfDay = estTime.getHours() * 60 + estTime.getMinutes();
+        const diff = currentMinutesOfDay - scheduledMinutesOfDay;
+        // Check if scheduled time was 30-34 minutes ago (30 min + 0-4 min window)
+        return diff >= 30 && diff <= 34;
+      };
+
+      const lateMatchedTime = data.times.find(isLateReminderTime);
+
+      if (lateMatchedTime) {
+        const takenLogsSnapshot = await doc.ref.collection('taken_log')
+          .where('scheduledTime', '==', lateMatchedTime)
+          .where('takenAt', '>', new Date(today))
+          .get();
+
+        if (!takenLogsSnapshot.empty) {
+          logger.info(`Medication ${data.name} for ${data.assignedTo} at ${lateMatchedTime} was taken. Skipping late reminder.`);
+          continue;
+        }
+
+        // Check if 30-min reminder already sent (stored in reminders30min map)
+        const reminders30min = data.reminders30min || {};
+        const reminderKey = `${today}_${lateMatchedTime}`;
+
+        if (reminders30min[reminderKey]) {
+          logger.info(`30-min reminder already sent for ${data.name} at ${lateMatchedTime}. Skipping.`);
+          continue;
+        }
+
+        console.log(`⚠️ Late reminder! ${data.name} at ${lateMatchedTime} (current: ${timeString})`);
+
+        // Send push notification
+        await sendNotificationToUser(
+          data.assignedTo,
+          "⚠️ Missed Medication",
+          `You missed ${data.name} (${data.dosage}) at ${formatTime(lateMatchedTime)}`,
+          {
+            type: "med_reminder_late",
+            medicationId: doc.id,
+            time: lateMatchedTime,
+            url: "/medication"
+          }
+        );
+
+        // Send email
+        const emailHtml = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #e74c3c;">⚠️ Missed Medication Reminder</h2>
+            <p>You have a missed medication:</p>
+            <div style="background-color: #f8f9fa; border-left: 4px solid #e74c3c; padding: 15px; margin: 20px 0;">
+              <h3 style="margin-top: 0; color: #333;">${data.name}</h3>
+              <p><strong>Dosage:</strong> ${data.dosage}</p>
+              <p><strong>Scheduled Time:</strong> ${formatTime(lateMatchedTime)}</p>
+              <p style="color: #e74c3c;"><strong>Status:</strong> Missed 30 minutes ago</p>
+            </div>
+            <p>Please take your medication as soon as possible.</p>
+            <a href="${process.env.APP_URL || 'https://your-app.com'}/medication"
+               style="display: inline-block; background-color: #8b5cf6; color: white; padding: 12px 24px;
+                      text-decoration: none; border-radius: 8px; margin-top: 10px;">
+              View Medications
+            </a>
+            <p style="color: #666; font-size: 12px; margin-top: 30px;">
+              This is an automated reminder from FamBam. Please do not reply to this email.
+            </p>
+          </div>
+        `;
+
+        await sendEmailToUser(
+          data.assignedTo,
+          `⚠️ Missed Medication: ${data.name}`,
+          emailHtml
+        );
+
+        // Mark 30-min reminder as sent
+        reminders30min[reminderKey] = true;
+        await doc.ref.update({ reminders30min });
+
+        logger.info(`30-min late reminder (notification + email) sent for ${data.name} at ${lateReminderTime}`);
       }
     }
 });
+
+// Helper function to format time from 24h to 12h
+function formatTime(time24: string): string {
+  if (!time24) return '';
+  const [hours, minutes] = time24.split(':');
+  const h = parseInt(hours, 10);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${minutes} ${suffix}`;
+}
+
+// End-of-day missed medication summary
+// Runs daily at 9:00 PM EST
+export const sendDailyMedicationSummary = onSchedule(
+  {
+    schedule: "0 21 * * *", // 9:00 PM every day
+    timeZone: "America/New_York"
+  },
+  async () => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const dayOfWeek = DAYS_OF_WEEK[now.getDay()];
+
+    logger.info(`Running daily medication summary for ${today}`);
+
+    // Group missed medications by user
+    const userMissedMeds: { [userId: string]: Array<{ name: string; dosage: string; times: string[] }> } = {};
+
+    const medsSnapshot = await db.collectionGroup("medications").get();
+
+    for (const doc of medsSnapshot.docs) {
+      const data = doc.data();
+
+      if (!data.times || !Array.isArray(data.times) || !data.assignedTo) {
+        continue;
+      }
+
+      // Check if medication was scheduled for today
+      if (data.frequency === 'weekly' && data.dayOfWeek !== dayOfWeek) {
+        continue;
+      }
+      if (data.frequency === 'custom' && !data.customDays?.includes(dayOfWeek)) {
+        continue;
+      }
+      if (data.frequency === 'as-needed') {
+        continue; // Skip as-needed meds from summary
+      }
+
+      const missedTimes: string[] = [];
+
+      // Check each scheduled time
+      for (const scheduledTime of data.times) {
+        const [hours, minutes] = scheduledTime.split(':');
+        const scheduledDateTime = new Date(now);
+        scheduledDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+        // Only check times that have already passed today
+        if (scheduledDateTime > now) {
+          continue;
+        }
+
+        // Check if medication was taken
+        const takenLogsSnapshot = await doc.ref.collection('taken_log')
+          .where('scheduledTime', '==', scheduledTime)
+          .where('takenAt', '>', new Date(today))
+          .get();
+
+        if (takenLogsSnapshot.empty) {
+          // Not taken - add to missed list
+          missedTimes.push(scheduledTime);
+        }
+      }
+
+      // If there are missed doses, add to user's list
+      if (missedTimes.length > 0) {
+        if (!userMissedMeds[data.assignedTo]) {
+          userMissedMeds[data.assignedTo] = [];
+        }
+        userMissedMeds[data.assignedTo].push({
+          name: data.name,
+          dosage: data.dosage,
+          times: missedTimes
+        });
+      }
+    }
+
+    // Send summary to each user with missed medications
+    for (const [userId, missedMeds] of Object.entries(userMissedMeds)) {
+      const totalMissed = missedMeds.reduce((sum, med) => sum + med.times.length, 0);
+
+      // Build email HTML
+      let medicationList = '';
+      for (const med of missedMeds) {
+        const timesList = med.times.map(t => formatTime(t)).join(', ');
+        medicationList += `
+          <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin: 10px 0; border-radius: 4px;">
+            <h4 style="margin: 0 0 8px 0; color: #333;">${med.name} - ${med.dosage}</h4>
+            <p style="margin: 0; color: #856404;"><strong>Missed doses:</strong> ${timesList}</p>
+          </div>
+        `;
+      }
+
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc3545;">📋 Daily Medication Summary</h2>
+          <p>Here's your medication summary for <strong>${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong>:</p>
+
+          <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #721c24;">⚠️ You missed ${totalMissed} dose${totalMissed !== 1 ? 's' : ''} today</h3>
+          </div>
+
+          <h3 style="color: #333;">Missed Medications:</h3>
+          ${medicationList}
+
+          <p style="margin-top: 30px;">If you've taken these medications but forgot to log them, please update your records.</p>
+
+          <a href="${process.env.APP_URL || 'https://your-app.com'}/medication"
+             style="display: inline-block; background-color: #8b5cf6; color: white; padding: 12px 24px;
+                    text-decoration: none; border-radius: 8px; margin-top: 10px;">
+            View All Medications
+          </a>
+
+          <p style="color: #666; font-size: 12px; margin-top: 30px; border-top: 1px solid #ddd; padding-top: 15px;">
+            This is an automated daily summary from FamBam.<br>
+            To stop receiving these emails, update your notification preferences in settings.
+          </p>
+        </div>
+      `;
+
+      // Send notification
+      await sendNotificationToUser(
+        userId,
+        "📋 Daily Med Summary",
+        `You missed ${totalMissed} dose${totalMissed !== 1 ? 's' : ''} today`,
+        {
+          type: "med_summary_daily",
+          missedCount: String(totalMissed),
+          url: "/medication"
+        }
+      );
+
+      // Send email
+      await sendEmailToUser(
+        userId,
+        `📋 Daily Medication Summary - ${totalMissed} Missed Dose${totalMissed !== 1 ? 's' : ''}`,
+        emailHtml
+      );
+
+      logger.info(`Daily summary sent to user ${userId}: ${totalMissed} missed doses`);
+    }
+
+    logger.info(`Daily medication summary complete. Sent to ${Object.keys(userMissedMeds).length} users.`);
+  }
+);

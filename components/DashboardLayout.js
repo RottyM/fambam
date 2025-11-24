@@ -43,7 +43,6 @@ const navItems = [
   { href: '/movies', icon: FaFilm, label: 'Movie Night', emoji: '🎬' }, 
   { href: '/music', icon: FaMusic, label: 'Music', emoji: '🎸' }, // <--- ADDED MUSIC ITEM
   { href: '/memories', icon: FaImages, label: 'Memories', emoji: '📸' },
-  { href: '/medication', icon: FaCapsules, label: 'Medication', emoji: '💊' }, 
   { href: '/documents', icon: FaFileAlt, label: 'Documents', emoji: '📂' }, 
 ];
 

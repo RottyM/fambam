@@ -83,7 +83,7 @@ export function AuthProvider({ children }) {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       toast.success('Welcome back!');
-      router.push(redirectUrl);
+      router.push(redirectUrl || '/dashboard');
       return result;
     } catch (error) {
       toast.error(error.message);

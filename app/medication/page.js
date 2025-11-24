@@ -6,6 +6,7 @@ import { collection, query, orderBy, onSnapshot, addDoc, deleteDoc, doc, serverT
 import { useAuth } from '../../contexts/AuthContext';
 import { useFamily } from '../../contexts/FamilyContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { FaPlus, FaTrash, FaClock, FaPills, FaCalendar, FaUser, FaTimes, FaPrescriptionBottleAlt, FaExclamationTriangle, FaNotesMedical, FaBan, FaShieldAlt, FaBoxOpen, FaInfoCircle } from 'react-icons/fa';
 import DashboardLayout from '../../components/DashboardLayout';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -19,6 +20,8 @@ const FREQUENCIES = [
   { value: 'as-needed', label: 'As Needed', icon: '💡' },
   { value: 'custom', label: 'Custom', icon: '⚙️' },
 ];
+
+const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // --- HELPER: Convert 24h time (14:25) to 12h (2:25 PM) ---
 const formatTime = (time24) => {
@@ -34,12 +37,14 @@ const MedicationPage = () => {
   const { userData: user } = useAuth();
   const { members } = useFamily();
   const { theme, currentTheme } = useTheme();
+  const { sendNotification } = useNotifications();
   const [medications, setMedications] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [drugInfos, setDrugInfos] = useState({});
   const [expandedInfos, setExpandedInfos] = useState({});
   const [loadingInfos, setLoadingInfos] = useState({});
+  const [activeFilterId, setActiveFilterId] = useState('all'); // For filtering by member
 
   const isDarkMode = currentTheme === 'dark';
 
@@ -48,7 +53,7 @@ const MedicationPage = () => {
       setLoading(false);
       return;
     }
-
+    
     const q = query(
       collection(db, 'families', user.familyId, 'medications'),
       orderBy('name', 'asc')
@@ -65,6 +70,11 @@ const MedicationPage = () => {
 
     return unsubscribe;
   }, [user?.familyId]);
+  
+  const filteredMedications = activeFilterId === 'all'
+    ? medications
+    : medications.filter(med => med.assignedTo === activeFilterId);
+
 
   const [newMedication, setNewMedication] = useState({
     name: '',
@@ -75,6 +85,9 @@ const MedicationPage = () => {
     startDate: '',
     endDate: '',
     notes: '',
+    dayOfWeek: '',
+    customDays: [], // For custom frequency
+    takenLogs: [],
   });
 
   const handleInputChange = (e) => {
@@ -98,20 +111,42 @@ const MedicationPage = () => {
       setNewMedication({ ...newMedication, times });
     }
   };
+  
+  const handleCustomDayToggle = (day) => {
+    const updatedDays = newMedication.customDays.includes(day)
+      ? newMedication.customDays.filter(d => d !== day)
+      : [...newMedication.customDays, day];
+    setNewMedication({ ...newMedication, customDays: updatedDays });
+  };
 
   const handleAddMedication = async (e) => {
     e.preventDefault();
+
+    console.log('🔍 === MEDICATION SAVE STARTED ===');
+    console.log('1. user.familyId:', user?.familyId);
+    console.log('2. user.uid:', user?.uid);
+    console.log('3. newMedication:', newMedication);
+
     if (!user?.familyId) {
+      console.log('❌ BLOCKED: No familyId');
       toast.error('You must be in a family to add medications.');
       return;
     }
 
     try {
-      await addDoc(collection(db, 'families', user.familyId, 'medications'), {
+      const path = `families/${user.familyId}/medications`;
+      console.log('4. Firestore path:', path);
+      console.log('5. Calling addDoc...');
+
+      const docRef = await addDoc(collection(db, 'families', user.familyId, 'medications'), {
         ...newMedication,
         createdBy: user.uid,
         createdAt: serverTimestamp(),
       });
+
+      console.log('✅ 6. Document created!');
+      console.log('7. Document ID:', docRef.id);
+      console.log('8. Full path:', docRef.path);
 
       setNewMedication({
         name: '',
@@ -122,12 +157,39 @@ const MedicationPage = () => {
         startDate: '',
         endDate: '',
         notes: '',
+        dayOfWeek: '',
+        customDays: [],
+        takenLogs: [],
       });
       setShowAddModal(false);
       toast.success('Medication added successfully! 💊');
+      console.log('✅ 9. Success toast shown');
     } catch (error) {
+      console.log('❌ ERROR CAUGHT:', error);
+      console.log('Error code:', error.code);
+      console.log('Error message:', error.message);
+      console.log('Full error:', error);
       toast.error('Failed to add medication.');
       console.error("Error adding medication: ", error);
+    }
+  };
+
+  const handleMarkAsTaken = async (medicationId, time) => {
+    if (!user?.familyId) {
+      toast.error('You must be in a family to mark medications as taken.');
+      return;
+    }
+    try {
+      const medicationRef = doc(db, 'families', user.familyId, 'medications', medicationId);
+      await addDoc(collection(medicationRef, 'taken_log'), {
+        takenAt: serverTimestamp(),
+        takenBy: user.uid,
+        scheduledTime: time,
+      });
+      toast.success('Medication marked as taken! ✅');
+    } catch (error) {
+      toast.error('Failed to mark medication as taken.');
+      console.error('Error marking medication as taken: ', error);
     }
   };
 
@@ -198,15 +260,47 @@ const MedicationPage = () => {
         </div>
       </div>
 
-      {medications.length === 0 ? (
+      {/* --- Filter Bar --- */}
+      <div className="mb-6 flex items-center gap-2 overflow-x-auto custom-scrollbar pb-4 pt-2 px-1">
+        <div className="flex gap-4 shrink-0">
+          <button
+            onClick={() => setActiveFilterId('all')}
+            className={`px-4 py-2 rounded-full font-bold transition-all ${
+              activeFilterId === 'all'
+                ? 'bg-purple-500 text-white shadow-lg'
+                : `bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600`
+            }`}
+          >
+            All
+          </button>
+          {members.map(member => (
+            <button
+              key={member.id}
+              onClick={() => setActiveFilterId(member.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold transition-all ${
+                activeFilterId === member.id
+                  ? 'bg-purple-500 text-white shadow-lg'
+                  : `bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600`
+              }`}
+            >
+              <UserAvatar user={member} size={24} />
+              <span>{member.displayName}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filteredMedications.length === 0 ? (
         <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg border ${theme.colors.border}`}>
           <div className="text-6xl mb-4">💊</div>
-          <p className={`text-xl font-bold ${theme.colors.textMuted}`}>No medications yet</p>
+          <p className={`text-xl font-bold ${theme.colors.textMuted}`}>
+            {activeFilterId === 'all' ? 'No medications yet' : 'No medications for this member'}
+          </p>
           <p className={theme.colors.textMuted}>Add your family's medications to track schedules</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {medications.map((med) => {
+          {filteredMedications.map((med) => {
             const member = members.find(m => m.id === med.assignedTo);
             const info = drugInfos[med.id];
 
@@ -263,6 +357,11 @@ const MedicationPage = () => {
                         <p className={`text-sm font-medium ${theme.colors.text}`}>
                           Take <strong>{med.frequency}</strong> at:
                         </p>
+                        {med.frequency === 'weekly' && med.dayOfWeek && (
+                          <p className={`text-sm font-medium ${theme.colors.text}`}>
+                            On <strong>{med.dayOfWeek}</strong>
+                          </p>
+                        )}
                         <div className="flex flex-wrap gap-1.5 mt-1.5">
                           {med.times.map((time, idx) => (
                             <span key={idx} className="bg-blue-500 text-white px-2 py-0.5 rounded text-xs font-bold">
@@ -488,6 +587,46 @@ const MedicationPage = () => {
                   </div>
                 </div>
 
+                {newMedication.frequency === 'custom' && (
+                  <div>
+                    <label className={`block text-xs font-bold ${theme.colors.textMuted} mb-2`}>Select Custom Days</label>
+                    <div className="grid grid-cols-7 gap-1">
+                      {DAYS_OF_WEEK.map(day => (
+                        <button
+                          key={day}
+                          type="button"
+                          onClick={() => handleCustomDayToggle(day)}
+                          className={`p-2 rounded-lg border-2 text-xs font-bold transition-all ${
+                            newMedication.customDays.includes(day)
+                              ? 'bg-purple-500 text-white border-purple-500'
+                              : `${theme.colors.border} hover:border-purple-300`
+                          }`}
+                        >
+                          {day.substring(0, 3)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {newMedication.frequency === 'weekly' && (
+                  <div>
+                    <label className={`block text-xs font-bold ${theme.colors.textMuted} mb-1`}>Day of Week</label>
+                    <select
+                      name="dayOfWeek"
+                      value={newMedication.dayOfWeek}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-3 rounded-xl border-2 focus:border-purple-500 focus:outline-none font-semibold bg-transparent ${theme.colors.text} ${theme.colors.border}`}
+                      required={newMedication.frequency === 'weekly'}
+                    >
+                      <option value="">Select a day...</option>
+                      {DAYS_OF_WEEK.map(day => (
+                        <option key={day} value={day}>{day}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div>
                   <label className={`block text-xs font-bold ${theme.colors.textMuted} mb-1`}>Schedule Times</label>
                   <div className="space-y-2">
@@ -513,17 +652,10 @@ const MedicationPage = () => {
                   </button>
                 </div>
 
-                <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddModal(false)}
-                    className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-bold hover:bg-gray-200 transition-all"
-                  >
-                    Cancel
-                  </button>
+                <div className="pt-4">
                   <button
                     type="submit"
-                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all"
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all"
                   >
                     Save Prescription
                   </button>

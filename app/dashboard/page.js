@@ -9,13 +9,26 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useTodos, useChores, useMemories, useCalendarEvents } from '@/hooks/useFirestore';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { useState } from 'react';
-import { format, isFuture, isToday, isTomorrow, parseISO } from 'date-fns';
-import { 
-  FaCheckCircle, FaBroom, FaCalendarAlt, FaImages, FaPills, FaClock, 
+import { useState, useEffect, useCallback } from 'react';
+import { format, isFuture, isToday, isTomorrow, parseISO, startOfDay } from 'date-fns';
+import { db } from '../../lib/firebase';
+import { collection, query, where, onSnapshot, addDoc, doc, serverTimestamp } from 'firebase/firestore';
+import toast from 'react-hot-toast';
+import {
+  FaCheckCircle, FaBroom, FaCalendarAlt, FaImages, FaPills, FaClock,
   FaMapMarkerAlt, FaTimes, FaUtensils, FaShoppingCart, FaFileAlt, FaKey,
-  FaFilm // <--- Added FaFilm icon
+  FaFilm
 } from 'react-icons/fa';
+
+// --- HELPER: Convert 24h time (14:25) to 12h (2:25 PM) ---
+const formatTime = (time24) => {
+  if (!time24) return '';
+  const [hours, minutes] = time24.split(':');
+  const h = parseInt(hours, 10);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${minutes} ${suffix}`;
+};
 
 function StatsCard({ icon, title, value, color, href }) {
   return (
@@ -45,23 +58,20 @@ function DashboardContent() {
   const { memories } = useMemories();
   const { events } = useCalendarEvents();
   const [selectedMember, setSelectedMember] = useState(null);
+  const [allMedications, setAllMedications] = useState([]);
+  const [memberMedications, setMemberMedications] = useState([]);
+  const [loadingMedications, setLoadingMedications] = useState(false);
 
   const pendingTodos = todos.filter(t => !t.completed).length;
   const pendingChores = chores.filter(c => c.status !== 'approved').length;
   const recentMemories = memories.length;
 
-  // Get upcoming events (today and future)
   const upcomingEvents = events
     .filter(event => {
       const eventDate = event.start?.toDate ? event.start.toDate() : new Date(event.start);
       return isFuture(eventDate) || isToday(eventDate);
     })
     .slice(0, 5);
-
-  // Mock medications (you can replace this with actual data from Firebase later)
-  const medications = {
-    // memberId: [medications array]
-  };
 
   const getEventDateLabel = (event) => {
     const eventDate = event.start?.toDate ? event.start.toDate() : new Date(event.start);
@@ -79,6 +89,187 @@ function DashboardContent() {
     social: { icon: '🎉', color: 'bg-orange-100', textColor: 'text-orange-800' },
     other: { icon: '📌', color: 'bg-gray-100', textColor: 'text-gray-800' },
   };
+
+  const getScheduleStatus = (time, takenLogs, assignedTo) => {
+    const now = new Date();
+    const [hours, minutes] = time.split(':');
+    const scheduledDateTime = new Date();
+    scheduledDateTime.setHours(hours, minutes, 0, 0);
+
+    const isTaken = takenLogs?.some(
+      (log) => {
+        // Handle both Firestore Timestamp and regular Date objects
+        const logDate = log.takenAt?.toDate ? log.takenAt.toDate() : log.takenAt;
+        return log.scheduledTime === time && log.assignedTo === assignedTo && isToday(logDate);
+      }
+    );
+
+    if (isTaken) {
+      return { status: 'taken', color: 'bg-green-500 text-white cursor-not-allowed opacity-70', icon: <FaCheckCircle /> };
+    }
+
+    if (now > scheduledDateTime) {
+      return { status: 'missed', color: 'bg-red-500 text-white hover:bg-red-600', icon: <FaClock /> };
+    }
+
+    return { status: 'pending', color: 'bg-blue-500 text-white hover:bg-blue-600', icon: <FaClock /> };
+  };
+
+  useEffect(() => {
+    if (!family?.id) return;
+    setLoadingMedications(true);
+    const q = query(collection(db, 'families', family.id, 'medications'));
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const medsList = [];
+      for (const medDoc of snapshot.docs) {
+        const medData = { id: medDoc.id, ...medDoc.data() };
+        const startOfToday = startOfDay(new Date());
+        const takenLogQ = query(
+          collection(db, 'families', family.id, 'medications', medDoc.id, 'taken_log'),
+          where('takenAt', '>=', startOfToday)
+        );
+        const takenLogSnapshot = await new Promise(resolve => {
+            const unsub = onSnapshot(takenLogQ, resolve);
+            setTimeout(() => unsub(), 2000);
+        });
+        medData.takenLogs = takenLogSnapshot.docs.map(logDoc => logDoc.data());
+        medsList.push(medData);
+      }
+      setAllMedications(medsList);
+      setLoadingMedications(false);
+    });
+
+    return () => unsubscribe();
+  }, [family?.id]);
+
+  const handleMarkAsTaken = async (medicationId, scheduledTime) => {
+    if (!family?.id || !userData?.uid || !selectedMember?.id) {
+      toast.error('Missing family, user, or member ID.');
+      return;
+    }
+    try {
+      // Optimistic UI update - immediately update local state
+      setMemberMedications(prevMeds =>
+        prevMeds.map(med => {
+          if (med.id === medicationId) {
+            const newLog = {
+              takenAt: new Date(),
+              takenBy: userData.uid,
+              scheduledTime: scheduledTime,
+              assignedTo: selectedMember.id,
+            };
+            return {
+              ...med,
+              takenLogs: [...(med.takenLogs || []), newLog]
+            };
+          }
+          return med;
+        })
+      );
+
+      const medicationRef = doc(db, 'families', family.id, 'medications', medicationId);
+      await addDoc(collection(medicationRef, 'taken_log'), {
+        takenAt: serverTimestamp(),
+        takenBy: userData.uid,
+        scheduledTime: scheduledTime,
+        assignedTo: selectedMember.id,
+      });
+      toast.success('Medication marked as taken! ✅');
+    } catch (error) {
+      toast.error('Failed to mark medication as taken.');
+      console.error('Error marking medication as taken: ', error);
+      // Revert optimistic update on error by re-fetching
+      if (selectedMember?.id) {
+        fetchMedicationsForMember(selectedMember.id);
+      }
+    }
+  };
+
+  const fetchMedicationsForMember = useCallback(async (memberId) => {
+    if (!family?.id || !memberId) {
+      setMemberMedications([]);
+      return () => {};
+    }
+    setLoadingMedications(true);
+    const q = query(
+      collection(db, 'families', family.id, 'medications'),
+      where('assignedTo', '==', memberId)
+    );
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const medsList = [];
+      for (const medDoc of snapshot.docs) {
+        const medData = { id: medDoc.id, ...medDoc.data() };
+        const startOfToday = startOfDay(new Date());
+        const takenLogQ = query(
+          collection(db, 'families', family.id, 'medications', medDoc.id, 'taken_log'),
+          where('takenAt', '>=', startOfToday),
+          where('assignedTo', '==', memberId)
+        );
+        const takenLogSnapshot = await new Promise(resolve => {
+          const unsub = onSnapshot(takenLogQ, resolve);
+          setTimeout(() => unsub(), 2000);
+        });
+        medData.takenLogs = takenLogSnapshot.docs.map(logDoc => logDoc.data());
+        medsList.push(medData);
+      }
+
+      // Sorting logic - sort by earliest non-taken time
+      const sortedMeds = medsList.sort((a, b) => {
+        const getEarliestPendingTime = (med) => {
+          let earliestMinutes = Infinity;
+          let earliestStatus = 'taken'; // default if all taken
+
+          for (const time of med.times) {
+            const status = getScheduleStatus(time, med.takenLogs, med.assignedTo);
+            if (status.status !== 'taken') {
+              const [hours, minutes] = time.split(':');
+              const totalMinutes = parseInt(hours) * 60 + parseInt(minutes);
+              if (totalMinutes < earliestMinutes) {
+                earliestMinutes = totalMinutes;
+                earliestStatus = status.status;
+              }
+            }
+          }
+
+          // Return priority: missed (0), pending (1), taken (2)
+          // Also include time for secondary sorting
+          const statusPriority = earliestStatus === 'missed' ? 0 : earliestStatus === 'pending' ? 1 : 2;
+          return { priority: statusPriority, time: earliestMinutes };
+        };
+
+        const aTime = getEarliestPendingTime(a);
+        const bTime = getEarliestPendingTime(b);
+
+        // First sort by status priority (missed first, then pending, then taken)
+        if (aTime.priority !== bTime.priority) {
+          return aTime.priority - bTime.priority;
+        }
+        // Then sort by actual time
+        return aTime.time - bTime.time;
+      });
+
+      setMemberMedications(sortedMeds);
+      setLoadingMedications(false);
+    });
+
+    return unsubscribe;
+  }, [family?.id]);
+
+  useEffect(() => {
+    let unsubscribe = () => {};
+    if (selectedMember) {
+      fetchMedicationsForMember(selectedMember.id).then(unsub => {
+        if (unsub) unsubscribe = unsub;
+      });
+    } else {
+      setMemberMedications([]);
+    }
+    return () => {
+      unsubscribe();
+    };
+  }, [selectedMember, fetchMedicationsForMember]);
 
   return (
     <div className="space-y-3 md:space-y-6">
@@ -433,9 +624,9 @@ function DashboardContent() {
             >
               <div className="flex justify-center mb-1 md:mb-2 relative">
                 <UserAvatar user={member} size={48} />
-                {medications[member.id]?.length > 0 && (
+                {allMedications.filter(med => med.assignedTo === member.id && med.times.some(time => getScheduleStatus(time, med.takenLogs, med.assignedTo).status === 'missed')).length > 0 && (
                   <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                    {medications[member.id].length}
+                    {allMedications.filter(med => med.assignedTo === member.id && med.times.some(time => getScheduleStatus(time, med.takenLogs, med.assignedTo).status === 'missed')).length}
                   </div>
                 )}
               </div>
@@ -508,31 +699,45 @@ function DashboardContent() {
                   <h3 className="text-lg font-bold flex items-center gap-2">
                     <FaPills className="text-purple-500" />
                     Medications
+                    {loadingMedications && <span className="ml-2 text-sm text-gray-500">Loading...</span>}
                   </h3>
-                  <Link
-                    href="/medication"
-                    className="text-sm font-bold text-purple-600 hover:text-purple-800"
-                  >
-                    Manage →
-                  </Link>
                 </div>
 
-                {medications[selectedMember.id]?.length > 0 ? (
-                  <div className="space-y-2">
-                    {medications[selectedMember.id].map((med, idx) => (
-                      <div key={idx} className="bg-purple-50 p-3 rounded-xl">
-                        <p className="font-bold text-purple-900">{med.name}</p>
-                        <p className="text-sm text-purple-700">{med.dosage}</p>
-                        <p className="text-xs text-purple-600">
-                          {med.times?.join(', ')}
-                        </p>
+                {memberMedications.length > 0 ? (
+                  <div className="space-y-3">
+                    {memberMedications.map((med) => (
+                      <div key={med.id} className={`${currentTheme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-purple-50 border-purple-100'} p-3 rounded-xl border relative`}>
+                        <p className={`font-bold ${theme.colors.text}`}>{med.name} - {med.dosage}</p>
+                        {med.frequency === 'weekly' && med.dayOfWeek && (
+                          <p className={`text-xs ${theme.colors.textMuted}`}>
+                            Every {med.dayOfWeek}
+                          </p>
+                        )}
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {med.times.map((time) => {
+                            const { status, color, icon } = getScheduleStatus(time, med.takenLogs, med.assignedTo);
+                            return (
+                              <button
+                                key={time}
+                                onClick={() => handleMarkAsTaken(med.id, time)}
+                                disabled={status === 'taken'}
+                                className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all ${color}`}
+                              >
+                                {formatTime(time)} {icon}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {med.notes && (
+                          <p className={`text-xs italic mt-2 ${theme.colors.textMuted}`}>{med.notes}</p>
+                        )}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-6 bg-gray-50 rounded-xl">
+                  <div className="text-center py-6 bg-gray-50 dark:bg-gray-800 rounded-xl">
                     <p className="text-3xl mb-2">💊</p>
-                    <p className="text-sm text-gray-600">No medications assigned</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">No medications assigned or loading.</p>
                   </div>
                 )}
               </div>

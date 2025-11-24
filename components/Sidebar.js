@@ -40,7 +40,7 @@ const navItems = [
   { href: '/calendar', icon: FaCalendarAlt, label: 'Calendar', emoji: '📅' },
   { href: '/groceries', icon: FaShoppingCart, label: 'Groceries', emoji: '🛒' },
   { href: '/recipes', icon: FaUtensils, label: 'Recipes', emoji: '🍳' },
-  { href: '/movies', icon: FaFilm, label: 'Movie Night', emoji: '🎬' }, // <--- NEW ITEM
+  { href: '/movies', icon: FaFilm, label: 'Movie Night', emoji: '🎬' },
   { href: '/memories', icon: FaImages, label: 'Memories', emoji: '📸' },
 ];
 

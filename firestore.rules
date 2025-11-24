@@ -72,6 +72,13 @@ service cloud.firestore {
       match /medications/{medicationId} {
         allow read: if isFamilyMember(familyId);
         allow write: if isParentInFamily(familyId);
+
+        // --- NEW: Rule for taken_log subcollection ---
+        match /taken_log/{logId} {
+          allow read: if isFamilyMember(familyId);
+          allow create: if isFamilyMember(familyId);
+          allow update, delete: if isParentInFamily(familyId);
+        }
       }
       
       match /transactions/{transactionId} {

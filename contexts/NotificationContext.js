@@ -11,6 +11,18 @@ const NotificationContext = createContext({});
 
 export const useNotifications = () => useContext(NotificationContext);
 
+// Generate a unique device ID for this browser/device
+const getDeviceId = () => {
+  if (typeof window === 'undefined') return null;
+
+  let deviceId = localStorage.getItem('deviceId');
+  if (!deviceId) {
+    deviceId = `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem('deviceId', deviceId);
+  }
+  return deviceId;
+};
+
 export function NotificationProvider({ children }) {
   const [permission, setPermission] = useState('default');
   const [fcmToken, setFcmToken] = useState(null);
@@ -60,7 +72,31 @@ export function NotificationProvider({ children }) {
         const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
         
         const messaging = getMessaging();
+
+        // Wait for service worker to be fully ready
         const swRegistration = await navigator.serviceWorker.ready;
+
+        // Extra check: ensure service worker is active
+        if (!swRegistration.active) {
+          console.log('Waiting for service worker to activate...');
+          await new Promise(resolve => {
+            if (swRegistration.installing) {
+              swRegistration.installing.addEventListener('statechange', function() {
+                if (this.state === 'activated') {
+                  resolve(null);
+                }
+              });
+            } else if (swRegistration.waiting) {
+              swRegistration.waiting.addEventListener('statechange', function() {
+                if (this.state === 'activated') {
+                  resolve(null);
+                }
+              });
+            } else {
+              resolve(null);
+            }
+          });
+        }
 
         try {
           const token = await getToken(messaging, {
@@ -70,9 +106,12 @@ export function NotificationProvider({ children }) {
 
           if (token) {
             console.log('FCM token obtained');
+            const deviceId = getDeviceId();
             const userRef = doc(db, 'users', user.uid);
+
+            // Store token in fcmTokens map with deviceId as key
             await updateDoc(userRef, {
-              fcmToken: token,
+              [`fcmTokens.${deviceId}`]: token,
               notificationsEnabled: true,
               updatedAt: new Date(),
             });
@@ -80,6 +119,7 @@ export function NotificationProvider({ children }) {
             setFcmToken(token);
             setNotificationsEnabled(true);
             toast.success('Notifications enabled! 🔔');
+            console.log(`FCM token saved for device: ${deviceId}`);
           } 
         } catch (tokenError) {
           console.error('Error getting FCM token:', tokenError);
@@ -97,15 +137,19 @@ export function NotificationProvider({ children }) {
   const disableNotifications = async () => {
     if (user) {
       try {
+        const deviceId = getDeviceId();
         const userRef = doc(db, 'users', user.uid);
+
+        // Remove only this device's token from fcmTokens map
         await updateDoc(userRef, {
-          fcmToken: null,
-          notificationsEnabled: false,
+          [`fcmTokens.${deviceId}`]: null,
           updatedAt: new Date(),
         });
+
         setFcmToken(null);
         setNotificationsEnabled(false);
-        toast.success('Notifications disabled');
+        toast.success('Notifications disabled for this device');
+        console.log(`FCM token removed for device: ${deviceId}`);
       } catch (error) {
         toast.error('Failed to disable notifications');
       }
@@ -124,8 +168,11 @@ export function NotificationProvider({ children }) {
   // Sync state
   useEffect(() => {
     if (userData) {
-      setNotificationsEnabled(userData.notificationsEnabled || false);
-      setFcmToken(userData.fcmToken || null);
+      const deviceId = getDeviceId();
+      const deviceToken = userData.fcmTokens?.[deviceId] || null;
+
+      setNotificationsEnabled(!!deviceToken);
+      setFcmToken(deviceToken);
     }
   }, [userData]);
 
