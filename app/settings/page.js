@@ -5,14 +5,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { motion } from 'framer-motion';
-import { FaMoon, FaSun, FaBell, FaBellSlash, FaSpinner, FaUser, FaPalette, FaKey, FaTrash, FaSignOutAlt } from 'react-icons/fa';
+import { FaMoon, FaSun, FaBell, FaBellSlash, FaSpinner, FaUser, FaPalette, FaKey, FaTrash, FaSignOutAlt, FaCopy, FaUserPlus } from 'react-icons/fa';
 import UserAvatar from '@/components/UserAvatar';
 import Link from 'next/link'; // Added Link import
 import toast from 'react-hot-toast';
 import { useState } from 'react'; // Added useState import
+import { useFamily } from '@/contexts/FamilyContext';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '@/lib/firebase';
 
 function SettingsContent() {
   const { user, userData, signOut } = useAuth();
+  const { family, members, isParent } = useFamily();
   const { theme, toggleTheme, currentTheme } = useTheme();
   const { 
     notificationsSupported, 
@@ -42,17 +46,17 @@ function SettingsContent() {
       <div className="flex flex-col gap-3 p-4 bg-white rounded-lg shadow-lg">
         <p className="font-bold text-gray-800">Are you sure you want to sign out?</p>
         <div className="flex justify-end gap-2">
-          <button 
-            onClick={() => toast.dismiss(t.id)} 
+          <button
+            onClick={() => toast.dismiss(t.id)}
             className="text-gray-500 hover:text-gray-800 font-semibold"
           >
             Cancel
           </button>
-          <button 
+          <button
             onClick={() => {
-              signOut(); 
+              signOut();
               toast.dismiss(t.id);
-            }} 
+            }}
             className="bg-red-500 text-white py-1 px-3 rounded-md hover:bg-red-600"
           >
             Sign Out
@@ -60,6 +64,58 @@ function SettingsContent() {
         </div>
       </div>
     ), { duration: 9000, position: 'top-center' });
+  };
+
+  const copyToClipboard = async (text, label) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label} copied to clipboard!`);
+    } catch (err) {
+      toast.error('Failed to copy to clipboard');
+    }
+  };
+
+  const getInviteUrl = () => {
+    if (typeof window !== 'undefined' && userData?.familyId) {
+      return `${window.location.origin}/join?code=${userData.familyId}`;
+    }
+    return '';
+  };
+
+  const handleDeleteAccount = async (userId, userName) => {
+    toast((t) => (
+      <div className="flex flex-col gap-3 p-4 bg-white rounded-lg shadow-lg">
+        <p className="font-bold text-gray-800">Delete {userName}'s account?</p>
+        <p className="text-sm text-gray-600">This action cannot be undone. All data will be permanently deleted.</p>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="text-gray-500 hover:text-gray-800 font-semibold px-3 py-1"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={async () => {
+              toast.dismiss(t.id);
+              try {
+                toast.loading('Deleting account...');
+                const deleteUserAccount = httpsCallable(functions, 'deleteUserAccount');
+                await deleteUserAccount({ userId });
+                toast.dismiss();
+                toast.success(`${userName}'s account has been deleted`);
+              } catch (error) {
+                toast.dismiss();
+                toast.error(`Failed to delete account: ${error.message}`);
+                console.error('Delete error:', error);
+              }
+            }}
+            className="bg-red-500 text-white py-1 px-3 rounded-md hover:bg-red-600 font-semibold"
+          >
+            Delete Account
+          </button>
+        </div>
+      </div>
+    ), { duration: 10000, position: 'top-center' });
   };
 
   const Card = ({ title, description, children }) => (
@@ -96,6 +152,110 @@ function SettingsContent() {
           <FaSignOutAlt /> Sign Out
         </button>
       </Card>
+
+      {/* Invite Family Members Card */}
+      {userData?.familyId && family && (
+        <Card
+          title="Invite Family Members"
+          description={`Share this code or link to invite others to join ${family.name || 'your family'}!`}
+        >
+          <div className="space-y-4">
+            {/* Family Code */}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                Family Code
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={userData.familyId}
+                  readOnly
+                  className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 bg-gray-50 font-mono text-center text-lg font-bold"
+                />
+                <button
+                  onClick={() => copyToClipboard(userData.familyId, 'Family code')}
+                  className="bg-purple-500 hover:bg-purple-600 text-white font-bold px-6 rounded-xl transition-all flex items-center gap-2"
+                >
+                  <FaCopy /> Copy
+                </button>
+              </div>
+            </div>
+
+            {/* Invite Link */}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                Invite Link
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={getInviteUrl()}
+                  readOnly
+                  className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 bg-gray-50 text-sm truncate"
+                />
+                <button
+                  onClick={() => copyToClipboard(getInviteUrl(), 'Invite link')}
+                  className="bg-blue-500 hover:bg-blue-600 text-white font-bold px-6 rounded-xl transition-all flex items-center gap-2"
+                >
+                  <FaCopy /> Copy
+                </button>
+              </div>
+            </div>
+
+            {/* Instructions */}
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+              <p className="text-sm text-blue-800 font-semibold flex items-start gap-2">
+                <FaUserPlus className="mt-1 flex-shrink-0" />
+                <span>
+                  Share the code or link with family members. They can visit the invite link or enter the code at{' '}
+                  <Link href="/join" className="underline font-bold">
+                    /join
+                  </Link>
+                  {' '}to join your family!
+                </span>
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Manage Family Members Card (Parents Only) */}
+      {isParent() && members.length > 0 && (
+        <Card
+          title="Manage Family Members"
+          description="View and manage all family member accounts."
+        >
+          <div className="space-y-3">
+            {members.map((member) => (
+              <div
+                key={member.id}
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border-2 border-gray-200"
+              >
+                <div className="flex items-center gap-3">
+                  <UserAvatar user={member} size={48} />
+                  <div>
+                    <p className="font-bold text-gray-800">{member.displayName}</p>
+                    <p className="text-sm text-gray-500">
+                      {member.email} • {member.role} • {member.points || 0} pts
+                    </p>
+                  </div>
+                </div>
+                {member.id !== user?.uid && (
+                  <button
+                    onClick={() => handleDeleteAccount(member.id, member.displayName)}
+                    className="bg-red-100 hover:bg-red-200 text-red-700 font-bold px-4 py-2 rounded-lg transition-all flex items-center gap-2"
+                  >
+                    <FaTrash /> Delete
+                  </button>
+                )}
+                {member.id === user?.uid && (
+                  <span className="text-sm text-gray-500 font-semibold">(You)</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Theme Card */}
       <Card title="App Theme" description="Switch between Family-Friendly Light mode and Dark Mode.">

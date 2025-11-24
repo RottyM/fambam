@@ -753,12 +753,105 @@ export const deleteMemory = onCall(async (request) => {
   }
 });
 
+/**
+ * Delete a user account completely
+ * Only allows:
+ * - Users to delete their own account
+ * - Parents to delete accounts in their family
+ */
+export const deleteUserAccount = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be authenticated");
+  }
+
+  const { userId } = request.data;
+
+  if (!userId) {
+    throw new HttpsError("invalid-argument", "userId is required");
+  }
+
+  const requestingUserId = request.auth.uid;
+
+  try {
+    // Get the user to be deleted
+    const userToDeleteRef = db.collection("users").doc(userId);
+    const userToDeleteDoc = await userToDeleteRef.get();
+
+    if (!userToDeleteDoc.exists) {
+      throw new HttpsError("not-found", "User not found");
+    }
+
+    const userToDeleteData = userToDeleteDoc.data();
+
+    // Authorization check: can only delete own account OR parent can delete family member
+    const isSelfDelete = requestingUserId === userId;
+    let isParentDeleteInFamily = false;
+
+    if (!isSelfDelete) {
+      // Check if requesting user is a parent in the same family
+      const requestingUserDoc = await db.collection("users").doc(requestingUserId).get();
+      const requestingUserData = requestingUserDoc.data();
+
+      isParentDeleteInFamily =
+        requestingUserData?.role === "parent" &&
+        requestingUserData?.familyId === userToDeleteData?.familyId &&
+        requestingUserData?.familyId != null;
+    }
+
+    if (!isSelfDelete && !isParentDeleteInFamily) {
+      throw new HttpsError(
+        "permission-denied",
+        "You can only delete your own account or family members if you are a parent"
+      );
+    }
+
+    // Step 1: Remove user from family members array
+    if (userToDeleteData?.familyId) {
+      const familyRef = db.collection("families").doc(userToDeleteData.familyId);
+      const familyDoc = await familyRef.get();
+
+      if (familyDoc.exists) {
+        const familyData = familyDoc.data();
+        const updatedMembers = (familyData?.members || []).filter((id: string) => id !== userId);
+
+        await familyRef.update({
+          members: updatedMembers
+        });
+        logger.info(`Removed user ${userId} from family ${userToDeleteData.familyId}`);
+      }
+    }
+
+    // Step 2: Delete user document from Firestore
+    await userToDeleteRef.delete();
+    logger.info(`Deleted Firestore document for user ${userId}`);
+
+    // Step 3: Delete from Firebase Authentication
+    try {
+      await admin.auth().deleteUser(userId);
+      logger.info(`Deleted Firebase Auth user ${userId}`);
+    } catch (authError) {
+      // User might not exist in Auth, log but don't fail
+      logger.warn(`Could not delete auth user ${userId}:`, authError);
+    }
+
+    return {
+      success: true,
+      message: "User account deleted successfully"
+    };
+
+  } catch (error) {
+    logger.error("Error deleting user account:", error);
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError("internal", "Failed to delete user account");
+  }
+});
+
 export const sendMedicationReminders = onSchedule(
-  { 
+  {
     // FIX: Changed from "* * * * *" (every minute) to every 5 minutes
-    schedule: "*/5 * * * *", 
-    timeZone: "America/New_York" 
-  }, 
+    schedule: "*/5 * * * *",
+    timeZone: "America/New_York"
+  },
   async () => {
     const now = new Date();
     const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
