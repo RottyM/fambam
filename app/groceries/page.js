@@ -170,7 +170,7 @@ function GroceriesContent() {
                           {item.name}
                         </p>
                         {item.quantity && (
-                          <p className="text-sm text-gray-500 dark:text-gray-400">{item.quantity}</p>
+                          <p className="text-base text-gray-700 dark:text-gray-300">{item.quantity}</p>
                         )}
                       </div>
 

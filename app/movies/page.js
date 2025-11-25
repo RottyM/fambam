@@ -500,7 +500,9 @@ function MoviesContent() {
                         </button>
                       )}
                       <div className="mb-3 flex-1">
-                        <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-4">{movie.overview}</p>
+                        <p className="text-base text-gray-700 dark:text-gray-200 leading-relaxed line-clamp-4">
+                          {movie.overview}
+                        </p>
                       </div>
 
                       <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
