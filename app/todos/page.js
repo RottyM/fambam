@@ -100,7 +100,7 @@ function TodosContent() {
           <div className="flex items-center gap-3 self-end sm:self-auto">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 md:px-5 py-3 rounded-2xl text-sm font-bold transition-all shadow-sm border ${
+              className={`flex items-center gap-2 px-4 md:px-5 py-3 rounded-2xl text-base font-bold transition-all shadow-sm border ${
                 showFilters
                   ? 'bg-purple-500 border-purple-500 text-white'
                   : currentTheme === 'dark'
@@ -142,7 +142,7 @@ function TodosContent() {
                     <select
                       value={filterMember}
                       onChange={(e) => setFilterMember(e.target.value)}
-                      className={`w-full px-3 py-2 text-sm rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
+                      className={`w-full px-3 py-2 text-base rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
                     >
                       <option value="all">All Members</option>
                       {members.map(member => (
@@ -158,7 +158,7 @@ function TodosContent() {
                     <select
                       value={filterPriority}
                       onChange={(e) => setFilterPriority(e.target.value)}
-                      className={`w-full px-3 py-2 text-sm rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
+                      className={`w-full px-3 py-2 text-base rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
                     >
                       <option value="all">All Priorities</option>
                       <option value="high">High</option>
@@ -172,7 +172,7 @@ function TodosContent() {
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
-                      className={`w-full px-3 py-2 text-sm rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
+                      className={`w-full px-3 py-2 text-base rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
                     >
                       <option value="date">Newest First</option>
                       <option value="priority">Priority</option>

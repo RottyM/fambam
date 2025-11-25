@@ -176,7 +176,7 @@ function CalendarContent() {
             <h1 className="text-2xl md:text-3xl font-display font-bold">
               <span className="gradient-text">Family Calendar</span>
             </h1>
-            <p className={`text-sm ${theme.colors.textMuted}`}>
+            <p className={`text-base ${theme.colors.textMuted}`}>
               {format(currentMonth, 'MMMM yyyy')} • {filteredEvents.length} events
             </p>
           </div>
@@ -246,7 +246,7 @@ function CalendarContent() {
                     <select
                       value={filterCategory}
                       onChange={(e) => setFilterCategory(e.target.value)}
-                      className={`w-full px-3 py-2 text-sm rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
+                      className={`w-full px-3 py-2 text-base rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
                     >
                       <option value="all">All Categories</option>
                       {EVENT_CATEGORIES.map(cat => <option key={cat.value} value={cat.value}>{cat.icon} {cat.label}</option>)}
@@ -257,7 +257,7 @@ function CalendarContent() {
                     <select
                       value={filterMember}
                       onChange={(e) => setFilterMember(e.target.value)}
-                      className={`w-full px-3 py-2 text-sm rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
+                      className={`w-full px-3 py-2 text-base rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
                     >
                       <option value="all">All Members</option>
                       {members.map(m => <option key={m.id} value={m.id}>{m.displayName}</option>)}
@@ -291,7 +291,7 @@ function CalendarContent() {
           {/* Days Header */}
           <div className="grid grid-cols-7 gap-1 md:gap-2 mb-2">
             {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
-              <div key={day} className={`text-center font-bold text-xs md:text-sm py-2 ${theme.colors.textMuted}`}>{day}</div>
+              <div key={day} className={`text-center font-bold text-sm md:text-base py-2 ${theme.colors.text}`}>{day}</div>
             ))}
           </div>
           {/* Calendar Grid */}

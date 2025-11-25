@@ -92,7 +92,7 @@ function ChoresContent() {
             <h1 className="text-2xl md:text-4xl font-display font-bold mb-2">
               <span className="gradient-text">Chore Tracker</span>
             </h1>
-          <p className="text-sm md:text-base text-gray-600 font-semibold">
+          <p className="text-base md:text-lg text-gray-800 font-semibold">
             {pendingChores.length} pending • {submittedChores.length} submitted • {approvedChores.length} completed
           </p>
         </div>
@@ -153,7 +153,7 @@ function ChoresContent() {
                   <select
                     value={filterMember}
                     onChange={(e) => setFilterMember(e.target.value)}
-                    className={`w-full px-3 py-2 text-sm rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
+                    className={`w-full px-3 py-2 text-base rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
                   >
                     <option value="all">All Members</option>
                     {members.map(member => (
@@ -169,7 +169,7 @@ function ChoresContent() {
                   <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
-                    className={`w-full px-3 py-2 text-sm rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
+                    className={`w-full px-3 py-2 text-base rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
                   >
                     <option value="all">All</option>
                     <option value="pending">Pending</option>
