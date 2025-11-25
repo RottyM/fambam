@@ -76,10 +76,10 @@ export default function DashboardLayout({ children }) {
       {/* Mobile hamburger button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`lg:hidden fixed top-4 left-4 z-50 bg-gradient-to-r ${theme.colors.sidebarHeader} text-white p-3 rounded-xl shadow-lg hover:shadow-xl transition-all`}
+        className={`lg:hidden fixed top-4 left-4 z-50 bg-gradient-to-r ${theme.colors.sidebarHeader} text-white p-2 rounded-lg shadow-lg hover:shadow-xl transition-all`}
         aria-label="Toggle menu"
       >
-        {isOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
+        {isOpen ? <FaTimes size={18} /> : <FaBars size={18} />}
       </button>
 
       {/* Backdrop overlay for mobile */}
@@ -234,7 +234,7 @@ export default function DashboardLayout({ children }) {
 
       {/* Main content area - Pushed to the right */}
       <div className="lg:pl-72 min-h-screen transition-all duration-300 ease-in-out">
-        <div className="pl-16 pr-4 py-4 md:p-8 lg:p-12 max-w-7xl mx-auto">
+        <div className="pt-16 px-4 pb-4 md:p-8 lg:p-12 max-w-7xl mx-auto">
           {children}
         </div>
       </div>
