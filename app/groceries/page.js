@@ -81,15 +81,15 @@ function GroceriesContent() {
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div className="flex gap-2">
             {groceries.length > 0 && (
               <>
                 {checkedCount > 0 && (
                   <button
                     onClick={clearCheckedItems}
-                    className="bg-gradient-to-r from-red-500 to-rose-500 text-white px-4 sm:px-5 py-3 rounded-2xl font-bold hover:from-red-600 hover:to-rose-600 active:from-red-700 active:to-rose-700 transition-all shadow-lg flex items-center justify-center gap-2 w-full sm:w-auto touch-manipulation min-h-[44px]"
+                    className="bg-gradient-to-r from-red-500 to-rose-500 text-white px-4 py-2 rounded-xl font-bold hover:from-red-600 hover:to-rose-600 transition-all shadow-md flex items-center gap-2"
                   >
-                    <FaTrash /> Clear Checked ({checkedCount})
+                    <FaTrash size={14} /> <span className="hidden md:inline">Clear Checked ({checkedCount})</span>
                   </button>
                 )}
                 <button
@@ -98,17 +98,18 @@ function GroceriesContent() {
                       clearAllItems();
                     }
                   }}
-                  className="bg-gradient-to-r from-slate-600 to-gray-700 text-white px-4 sm:px-5 py-3 rounded-2xl font-bold hover:from-slate-700 hover:to-gray-800 active:from-slate-800 active:to-gray-900 transition-all shadow-lg flex items-center justify-center gap-2 w-full sm:w-auto touch-manipulation min-h-[44px]"
+                  className="bg-gradient-to-r from-slate-600 to-gray-700 text-white px-4 py-2 rounded-xl font-bold hover:from-slate-700 hover:to-gray-800 transition-all shadow-md flex items-center gap-2"
                 >
-                  <FaTrash /> Clear All ({groceries.length})
+                  <FaTrash size={14} /> <span className="hidden md:inline">Clear All ({groceries.length})</span>
                 </button>
               </>
             )}
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-4 sm:px-6 py-3 rounded-2xl font-bold hover:from-green-600 hover:to-blue-600 active:from-green-700 active:to-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 w-full sm:w-auto touch-manipulation min-h-[44px]"
+              className="bg-gradient-to-r from-green-500 to-blue-500 text-white w-10 h-10 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center"
+              aria-label="Add Item"
             >
-              <FaPlus /> Add Item
+              <FaPlus size={14} />
             </button>
           </div>
         </div>

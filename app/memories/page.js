@@ -379,6 +379,18 @@ function MemoriesContent() {
         </div>
       </div>
 
+      {/* Upload toggle - moved to top */}
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={() => setUploadAreaExpanded(!uploadAreaExpanded)}
+          className="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-purple-600 transition-colors px-4 py-3 rounded-xl border-2 border-gray-200 bg-white shadow-sm hover:border-purple-300"
+        >
+          <FaUpload className="text-purple-500" />
+          {uploadAreaExpanded ? 'Hide upload' : 'Show upload'}
+          {uploadAreaExpanded ? <FaChevronUp /> : <FaChevronDown />}
+        </button>
+      </div>
+
       {/* Folders List - Horizontal Scrollable */}
       <div className="mb-6">
         <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-3 flex items-center gap-2">
@@ -475,18 +487,6 @@ function MemoriesContent() {
             </div>
           </motion.div>
         )}
-
-        {/* Upload toggle */}
-        <div className="flex justify-end mb-2">
-          <button
-            onClick={() => setUploadAreaExpanded(!uploadAreaExpanded)}
-            className="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-purple-600 transition-colors px-4 py-3 rounded-xl border-2 border-gray-200 bg-white shadow-sm hover:border-purple-300"
-          >
-            <FaUpload className="text-purple-500" />
-            {uploadAreaExpanded ? 'Hide upload' : 'Show upload'}
-            {uploadAreaExpanded ? <FaChevronUp /> : <FaChevronDown />}
-          </button>
-        </div>
 
         {/* Upload Area - compressed by default, expand for options */}
         {uploadAreaExpanded && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useDocuments } from '@/hooks/useFirestore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,7 +21,17 @@ function DocumentsContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleting, setDeleting] = useState(false);
-  const [uploadExpanded, setUploadExpanded] = useState(true);
+  const [uploadExpanded, setUploadExpanded] = useState(false);
+
+  // Show upload on desktop by default, hidden on mobile
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setUploadExpanded(window.innerWidth >= 768);
+    };
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   const onDrop = async (acceptedFiles) => {
     if (!userData?.familyId) return;

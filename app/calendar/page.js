@@ -173,7 +173,7 @@ function CalendarContent() {
       <div className="mb-4">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-display font-bold">
+            <h1 className="text-4xl md:text-5xl font-display font-bold">
               <span className="gradient-text">Family Calendar</span>
             </h1>
             <p className={`text-base ${theme.colors.textMuted}`}>

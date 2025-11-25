@@ -637,14 +637,14 @@ function RecipesContent() {
                   onClick={() => {
                     startEditingRecipe(selectedRecipe);
                   }}
-                  className="bg-blue-100 text-blue-600 px-3 py-2 rounded-full font-bold hover:bg-blue-200 transition-all"
+                  className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-3 py-2 rounded-full font-bold hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-all"
                   title="Edit recipe"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => setSelectedRecipe(null)}
-                  className="bg-gray-100 text-gray-600 px-3 py-2 rounded-full font-bold hover:bg-gray-200 transition-all"
+                  className={`${theme.colors.bgSecondary} ${theme.colors.text} px-3 py-2 rounded-full font-bold hover:opacity-80 transition-all`}
                   title="Close"
                 >
                       <FaTimes />
@@ -670,11 +670,11 @@ function RecipesContent() {
                   )}
                 </div>
 
-                <h3 className="text-xl font-bold text-gray-800 mb-2">Ingredients</h3>
+                <h3 className={`text-xl font-bold ${theme.colors.text} mb-2`}>Ingredients</h3>
                 <div className="space-y-2 mb-6">
                   {selectedRecipe.ingredients?.map((ing, i) => (
-                    <div key={i} className="flex items-center gap-2 text-gray-700">
-                      <span className="text-purple-500 font-bold">•</span>
+                    <div key={i} className={`flex items-center gap-2 ${theme.colors.text}`}>
+                      <span className="text-purple-500 dark:text-purple-400 font-bold">•</span>
                       <span>
                         {ing.amount && `${ing.amount} `}
                         {ing.name}
@@ -685,8 +685,8 @@ function RecipesContent() {
 
                 {selectedRecipe.instructions && (
                   <>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Instructions</h3>
-                    <p className="text-gray-700 whitespace-pre-line mb-6">
+                    <h3 className={`text-xl font-bold ${theme.colors.text} mb-2`}>Instructions</h3>
+                    <p className={`${theme.colors.text} whitespace-pre-line mb-6`}>
                       {selectedRecipe.instructions}
                     </p>
                   </>
@@ -715,7 +715,7 @@ function RecipesContent() {
                             href={selectedRecipe.videoUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="block w-full h-full bg-gray-100 flex items-center justify-center text-blue-600 font-bold"
+                            className={`block w-full h-full ${theme.colors.bgSecondary} flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold`}
                           >
                             Open Video
                           </a>
@@ -773,7 +773,7 @@ function RecipesContent() {
                     setShowAddModal(false);
                     setEditingRecipeId(null);
                   }}
-                  className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  className={`${theme.colors.textMuted} hover:${theme.colors.text} p-2 rounded-full hover:opacity-80 transition-colors`}
                   aria-label="Close"
                 >
                   <FaTimes />
@@ -914,7 +914,7 @@ function RecipesContent() {
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 transition-all"
+                    className={`flex-1 ${theme.colors.bgSecondary} ${theme.colors.text} py-3 rounded-xl font-bold hover:opacity-80 transition-all`}
                     disabled={uploading}
                   >
                     Cancel
@@ -1061,22 +1061,22 @@ function RecipesContent() {
 
                       {/* Enrichment Progress */}
                       {isEnriching && enrichmentProgress && (
-                        <div className="mb-4 p-4 bg-white rounded-xl">
+                        <div className={`mb-4 p-4 ${theme.colors.bgCard} rounded-xl border ${theme.colors.border}`}>
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-bold text-gray-700">
+                            <span className={`text-sm font-bold ${theme.colors.text}`}>
                               Looking up ingredients in USDA database...
                             </span>
-                            <span className="text-sm font-bold text-green-600">
+                            <span className="text-sm font-bold text-green-600 dark:text-green-400">
                               {enrichmentProgress.current} / {enrichmentProgress.total}
                             </span>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                          <div className={`w-full ${theme.colors.bgSecondary} rounded-full h-2 mb-2`}>
                             <div
                               className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all"
                               style={{ width: `${(enrichmentProgress.current / enrichmentProgress.total) * 100}%` }}
                             ></div>
                           </div>
-                          <p className="text-xs text-gray-600">
+                          <p className={`text-xs ${theme.colors.textMuted}`}>
                             Current: {enrichmentProgress.ingredient}
                           </p>
                         </div>
@@ -1088,11 +1088,11 @@ function RecipesContent() {
                           ? usdaNutrition.totalNutrition.nutrients
                           : selectedSearchRecipe.nutrition.nutrients
                         )?.slice(0, 12).map((nutrient, i) => (
-                          <div key={i} className="bg-white p-2 md:p-3 rounded-xl">
-                            <div className="text-xs text-gray-600 mb-1 line-clamp-2">
+                          <div key={i} className={`${theme.colors.bgCard} border ${theme.colors.border} p-2 md:p-3 rounded-xl`}>
+                            <div className={`text-xs ${theme.colors.textMuted} mb-1 line-clamp-2`}>
                               {nutritionSource === 'usda' ? formatNutrientName(nutrient.name) : nutrient.name}
                             </div>
-                            <div className="text-base md:text-lg font-bold text-gray-900">
+                            <div className={`text-base md:text-lg font-bold ${theme.colors.text}`}>
                               {(nutrient.amount ? nutrient.amount.toFixed(1) : 'N/A')}{nutrient.unit}
                             </div>
                           </div>
@@ -1123,8 +1123,8 @@ function RecipesContent() {
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         {selectedSearchRecipe.extendedIngredients.map((ing, i) => (
-                          <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                            <span className="text-gray-700">{ing.original}</span>
+                          <div key={i} className={`flex items-center gap-3 p-3 ${theme.colors.bgSecondary} rounded-xl`}>
+                            <span className={theme.colors.text}>{ing.original}</span>
                           </div>
                         ))}
                       </div>
@@ -1139,11 +1139,11 @@ function RecipesContent() {
                       </h3>
                       <div className="space-y-3">
                         {selectedSearchRecipe.analyzedInstructions[0].steps.map((step, i) => (
-                          <div key={i} className="flex gap-4 p-4 bg-gray-50 rounded-xl">
-                            <div className="flex-shrink-0 w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">
+                          <div key={i} className={`flex gap-4 p-4 ${theme.colors.bgSecondary} rounded-xl`}>
+                            <div className="flex-shrink-0 w-8 h-8 bg-purple-500 dark:bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">
                               {step.number}
                             </div>
-                            <p className="text-gray-700 flex-1">{step.step}</p>
+                            <p className={`${theme.colors.text} flex-1`}>{step.step}</p>
                           </div>
                         ))}
                       </div>
