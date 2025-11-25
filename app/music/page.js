@@ -24,6 +24,7 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { TouchBackend } from 'react-dnd-touch-backend';
 import { MultiBackend, TouchTransition } from 'react-dnd-multi-backend';
+import PlaylistFolder from '@/components/PlaylistFolder';
 
 // --- DND Backend Pipeline ---
 const HTML5toTouch = {
@@ -61,6 +62,8 @@ function MusicContent() {
       jams, folders, loading, addJam, deleteJam, 
       toggleLike, createFolder, deleteFolder, assignJamToFolder
   } = useMusicJams(activeFilterId);
+  const countForFolder = (folderId) =>
+    folderId === 'all' ? jams.length : jams.filter(j => j.folderId === folderId).length;
 
   // --- PLAYBACK HANDLERS ---
   
@@ -172,6 +175,11 @@ function MusicContent() {
       }
   };
 
+  const handleMoveJam = async (jamId, targetFolderId) => {
+    const destination = targetFolderId === 'all' ? null : targetFolderId;
+    await assignJamToFolder(jamId, destination);
+  };
+
   if (loading && folders.length === 0) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -214,61 +222,35 @@ function MusicContent() {
         </div>
       </div>
 
-      {/* --- PLAYLIST BAR --- */}
+      {/* --- PLAYLIST BAR (Droppable) --- */}
       <div className="mb-6 flex items-center gap-2 overflow-x-auto custom-scrollbar pb-4 pt-2 px-1">
-        <div className="flex gap-3 shrink-0">
-          {/* 'All' Folder */}
-          <button
+        <div className="flex gap-3 shrink-0 items-center">
+          <PlaylistFolder
+            folder={{ id: 'all', name: 'All Jams' }}
+            isActive={activeFilterId === 'all'}
             onClick={() => setActiveFilterId('all')}
-            className={`flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-sm md:text-base ${
-              activeFilterId === 'all'
-                ? 'border-purple-500 bg-purple-50 text-purple-700'
-                : `border-dashed ${currentTheme === 'dark' ? 'border-gray-700 bg-gray-900 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} hover:border-purple-300`
-            }`}
-          >
-            <FaFolderPlus /> All Jams
-          </button>
+            onDropJam={handleMoveJam}
+            onDelete={() => {}}
+            onPlay={() => handlePlayFolder()}
+            count={countForFolder('all')}
+          />
 
-          {/* Dynamic Folders */}
           {folders.map(folder => (
-            <button
+            <PlaylistFolder
               key={folder.id}
+              folder={folder}
+              isActive={activeFilterId === folder.id}
               onClick={() => setActiveFilterId(folder.id)}
-              className={`relative group flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-sm md:text-base ${
-                activeFilterId === folder.id
-                  ? 'border-purple-500 bg-purple-50 text-purple-700'
-                  : `border-dashed ${currentTheme === 'dark' ? 'border-gray-700 bg-gray-900 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} hover:border-purple-300`
-              }`}
-            >
-              <FaFolderPlus /> {folder.name}
-              <span className="text-xs opacity-70">{/* count placeholder if needed */}</span>
-              <div className="flex items-center gap-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveFilterId(folder.id);
-                    handlePlayFolder();
-                  }}
-                  title="Play playlist"
-                  className="text-green-500 hover:text-green-600"
-                >
-                  <FaPlay />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteFolder(folder.id);
-                  }}
-                  title="Delete playlist"
-                  className="text-red-500 hover:text-red-600"
-                >
-                  <FaTimes />
-                </button>
-              </div>
-            </button>
+              onDropJam={handleMoveJam}
+              onDelete={handleDeleteFolder}
+              onPlay={() => {
+                setActiveFilterId(folder.id);
+                handlePlayFolder();
+              }}
+              count={countForFolder(folder.id)}
+            />
           ))}
 
-          {/* Add Button */}
           <button
             onClick={handleCreateFolder}
             className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed text-gray-400 hover:text-purple-500 hover:border-purple-400 transition-colors font-bold whitespace-nowrap shrink-0 ${
@@ -278,7 +260,6 @@ function MusicContent() {
             <FaFolderPlus /> Add Playlist
           </button>
 
-          {/* Export Button */}
           <button
             onClick={handleExport}
             className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed text-gray-400 hover:text-green-500 hover:border-green-400 transition-colors font-bold whitespace-nowrap shrink-0 ${

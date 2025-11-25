@@ -60,13 +60,13 @@ export default function PlaylistFolder({ folder, isActive, onClick, onDropJam, o
         </button>
       )}
 
-      {/* QUICK PLAY BUTTON (Small Play icon on hover) */}
+      {/* QUICK PLAY BUTTON - top left, matched sizing to delete */}
       <button
-          onClick={(e) => { e.stopPropagation(); onPlay(folder.id); }}
-          className={`absolute -bottom-2 right-1/2 translate-x-1/2 bg-green-500 text-white rounded-full p-1.5 shadow-md opacity-0 ${isActive ? 'opacity-100' : 'group-hover:opacity-100'} transition-opacity hover:scale-110 z-10 scale-0 group-hover:scale-100`}
-          title="Play This Folder"
+        onClick={(e) => { e.stopPropagation(); onPlay(folder.id); }}
+        className={`absolute -top-1 -left-1 bg-green-500 text-white rounded-full p-1 shadow-md opacity-0 ${isActive ? 'opacity-100' : 'group-hover:opacity-100'} transition-all hover:scale-110 z-10`}
+        title="Play This Folder"
       >
-          <FaPlay size={8} className="ml-0.5" />
+        <FaPlay size={10} className="ml-[1px]" />
       </button>
     </div>
   );
