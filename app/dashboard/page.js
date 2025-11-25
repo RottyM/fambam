@@ -66,6 +66,41 @@ function DashboardContent() {
   const pendingChores = chores.filter(c => c.status !== 'approved').length;
   const recentMemories = memories.length;
 
+  // Get spotlight memory - prioritize revealed time capsules, otherwise latest memory
+  const getSpotlightMemory = () => {
+    const today = new Date();
+
+    // Check for revealed time capsules (past reveal date)
+    const revealedCapsules = memories.filter(m => {
+      if (!m.isTimeCapsule || !m.revealDate) return false;
+      const revealDate = m.revealDate.toDate ? m.revealDate.toDate() : new Date(m.revealDate.seconds * 1000);
+      return revealDate <= today;
+    });
+
+    // If we have revealed capsules, return the most recently revealed one
+    if (revealedCapsules.length > 0) {
+      return revealedCapsules.sort((a, b) => {
+        const dateA = a.revealDate.toDate ? a.revealDate.toDate() : new Date(a.revealDate.seconds * 1000);
+        const dateB = b.revealDate.toDate ? b.revealDate.toDate() : new Date(b.revealDate.seconds * 1000);
+        return dateB - dateA;
+      })[0];
+    }
+
+    // Otherwise return the most recent regular memory
+    const regularMemories = memories.filter(m => !m.isTimeCapsule || !m.revealDate);
+    if (regularMemories.length > 0) {
+      return regularMemories.sort((a, b) => {
+        const dateA = a.uploadedAt?.toDate ? a.uploadedAt.toDate() : new Date();
+        const dateB = b.uploadedAt?.toDate ? b.uploadedAt.toDate() : new Date();
+        return dateB - dateA;
+      })[0];
+    }
+
+    return null;
+  };
+
+  const spotlightMemory = getSpotlightMemory();
+
   const upcomingEvents = events
     .filter(event => {
       const eventDate = event.start?.toDate ? event.start.toDate() : new Date(event.start);
@@ -644,6 +679,74 @@ function DashboardContent() {
               )}
             </div>
           </motion.div>
+
+          {/* Memory Spotlight */}
+          {spotlightMemory && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+              className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl overflow-hidden shadow-xl border ${currentTheme === 'dark' ? 'border-purple-900/50' : 'border-purple-100'}`}
+            >
+              <Link href="/memories" className="block group">
+                <div className="relative h-48 md:h-64">
+                  {spotlightMemory.mimeType?.startsWith('video/') ? (
+                    <video
+                      src={spotlightMemory.downloadURL}
+                      className="w-full h-full object-cover"
+                      muted
+                      loop
+                      playsInline
+                    />
+                  ) : (
+                    <img
+                      src={spotlightMemory.downloadURL}
+                      alt="Memory spotlight"
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                  <div className={`absolute inset-0 ${currentTheme === 'dark' ? 'bg-gradient-to-t from-black/80 via-black/40 to-transparent' : 'bg-gradient-to-t from-black/70 via-black/30 to-transparent'}`} />
+
+                  {/* Time Capsule Badge */}
+                  {spotlightMemory.isTimeCapsule && (
+                    <div className={`absolute top-3 right-3 ${currentTheme === 'dark' ? 'bg-purple-600' : 'bg-purple-500'} text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg animate-pulse`}>
+                      {currentTheme === 'dark' ? '🔮' : '🔓'} {currentTheme === 'dark' ? 'Capsule Unlocked!' : 'Time Capsule Revealed!'}
+                    </div>
+                  )}
+
+                  {/* Bottom Info */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-2xl">
+                        {spotlightMemory.isTimeCapsule ? (currentTheme === 'dark' ? '🔮' : '🔓') : (currentTheme === 'dark' ? '💀' : '📸')}
+                      </span>
+                      <h3 className="text-white font-bold text-lg">
+                        {spotlightMemory.isTimeCapsule
+                          ? (currentTheme === 'dark' ? 'Archive Unlocked' : 'Memory Unlocked')
+                          : (currentTheme === 'dark' ? 'Latest Archive' : 'Latest Memory')}
+                      </h3>
+                    </div>
+                    {spotlightMemory.caption && (
+                      <p className="text-white/90 text-sm line-clamp-2 mb-2">
+                        {spotlightMemory.caption}
+                      </p>
+                    )}
+                    <p className="text-white/70 text-xs">
+                      {spotlightMemory.uploadedAt?.toDate
+                        ? format(spotlightMemory.uploadedAt.toDate(), 'MMM d, yyyy')
+                        : 'Recently'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className={`p-4 ${currentTheme === 'dark' ? 'bg-purple-900/30 border-t border-purple-800/50' : 'bg-purple-50'}`}>
+                  <p className={`${currentTheme === 'dark' ? 'text-purple-400' : 'text-purple-600'} font-bold text-sm text-center group-hover:underline`}>
+                    {currentTheme === 'dark' ? 'View Archives →' : 'View All Memories →'}
+                  </p>
+                </div>
+              </Link>
+            </motion.div>
+          )}
 
           {/* Daily Meme */}
           <DailyMeme />
