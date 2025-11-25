@@ -84,11 +84,11 @@ export default function TodoItem({ todo }) {
 
     const colors = {
       high:
-        'bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/40 dark:text-red-200 dark:border-red-700',
+        'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700/50',
       medium:
-        'bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-700',
+        'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700/50',
       low:
-        'bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-700',
+        'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700/50',
     };
 
     const icons = {
@@ -99,7 +99,7 @@ export default function TodoItem({ todo }) {
 
     const priority = todo.priority || 'medium';
     return (
-      <span className={`${colors[priority] || colors.medium} px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1`}>
+      <span className={`${colors[priority] || colors.medium} px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1`}>
         {icons[priority]} {priority}
       </span>
     );
@@ -134,13 +134,17 @@ export default function TodoItem({ todo }) {
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <h4 className={`font-bold text-lg ${todo.completed ? 'line-through opacity-60' : ''} ${theme.colors.text}`}>
-              {todo.title}
-            </h4>
+          {/* Priority badge on its own line at top */}
+          <div className="mb-2">
             {getPriorityBadge()}
           </div>
 
+          {/* Title taking full width */}
+          <h4 className={`font-bold text-lg mb-3 ${todo.completed ? 'line-through opacity-60' : ''} ${theme.colors.text}`}>
+            {todo.title}
+          </h4>
+
+          {/* Meta info: assigned member and due date */}
           <div className="flex flex-wrap items-center gap-3">
             {assignedMember && (
               <div className="flex items-center gap-2">
