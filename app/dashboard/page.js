@@ -689,11 +689,11 @@ function DashboardContent() {
               className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl overflow-hidden shadow-xl border ${currentTheme === 'dark' ? 'border-purple-900/50' : 'border-purple-100'}`}
             >
               <Link href="/memories" className="block group">
-                <div className="relative h-48 md:h-64">
+                <div className="relative h-64 md:h-80">
                   {spotlightMemory.mimeType?.startsWith('video/') ? (
                     <video
                       src={spotlightMemory.downloadURL}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       muted
                       loop
                       playsInline
@@ -702,10 +702,9 @@ function DashboardContent() {
                     <img
                       src={spotlightMemory.downloadURL}
                       alt="Memory spotlight"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   )}
-                  <div className={`absolute inset-0 ${currentTheme === 'dark' ? 'bg-gradient-to-t from-black/80 via-black/40 to-transparent' : 'bg-gradient-to-t from-black/70 via-black/30 to-transparent'}`} />
 
                   {/* Time Capsule Badge */}
                   {spotlightMemory.isTimeCapsule && (
@@ -714,35 +713,28 @@ function DashboardContent() {
                     </div>
                   )}
 
-                  {/* Bottom Info */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-2xl">
-                        {spotlightMemory.isTimeCapsule ? (currentTheme === 'dark' ? '🔮' : '🔓') : (currentTheme === 'dark' ? '💀' : '📸')}
-                      </span>
-                      <h3 className="text-white font-bold text-lg">
-                        {spotlightMemory.isTimeCapsule
-                          ? (currentTheme === 'dark' ? 'Archive Unlocked' : 'Memory Unlocked')
-                          : (currentTheme === 'dark' ? 'Latest Archive' : 'Latest Memory')}
-                      </h3>
-                    </div>
-                    {spotlightMemory.caption && (
-                      <p className="text-white/90 text-sm line-clamp-2 mb-2">
+                  {/* Caption Overlay (if exists) */}
+                  {spotlightMemory.caption && (
+                    <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/60 to-transparent p-4">
+                      <p className="text-white text-sm line-clamp-2">
                         {spotlightMemory.caption}
                       </p>
-                    )}
-                    <p className="text-white/70 text-xs">
-                      {spotlightMemory.uploadedAt?.toDate
-                        ? format(spotlightMemory.uploadedAt.toDate(), 'MMM d, yyyy')
-                        : 'Recently'}
-                    </p>
-                  </div>
-                </div>
+                    </div>
+                  )}
 
-                <div className={`p-4 ${currentTheme === 'dark' ? 'bg-purple-900/30 border-t border-purple-800/50' : 'bg-purple-50'}`}>
-                  <p className={`${currentTheme === 'dark' ? 'text-purple-400' : 'text-purple-600'} font-bold text-sm text-center group-hover:underline`}>
-                    {currentTheme === 'dark' ? 'View Archives →' : 'View All Memories →'}
-                  </p>
+                  {/* Bottom Info - Icon and Date */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-3xl">
+                        {spotlightMemory.isTimeCapsule ? (currentTheme === 'dark' ? '🔮' : '🔓') : (currentTheme === 'dark' ? '💀' : '📸')}
+                      </span>
+                      <p className="text-white font-semibold text-sm">
+                        {spotlightMemory.uploadedAt?.toDate
+                          ? format(spotlightMemory.uploadedAt.toDate(), 'MMM d, yyyy')
+                          : 'Recently'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </Link>
             </motion.div>
