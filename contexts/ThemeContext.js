@@ -24,9 +24,9 @@ export const themes = {
       bgGradient: 'bg-gradient-to-br from-pink-500 via-purple-500 to-blue-500',
 
       // Text
-      text: 'text-gray-800',
-      textMuted: 'text-gray-600',
-      textLight: 'text-gray-500',
+      text: 'text-gray-900',
+      textMuted: 'text-gray-800',
+      textLight: 'text-gray-700',
 
       // Borders
       border: 'border-purple-200',
