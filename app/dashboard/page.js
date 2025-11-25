@@ -71,7 +71,7 @@ function DashboardContent() {
       const eventDate = event.start?.toDate ? event.start.toDate() : new Date(event.start);
       return isFuture(eventDate) || isToday(eventDate);
     })
-    .slice(0, 5);
+    .slice(0, 4);
 
   const getEventDateLabel = (event) => {
     const eventDate = event.start?.toDate ? event.start.toDate() : new Date(event.start);
@@ -81,13 +81,55 @@ function DashboardContent() {
   };
 
   const EVENT_CATEGORIES = {
-    appointment: { icon: '🏥', color: 'bg-blue-100', textColor: 'text-blue-800' },
-    birthday: { icon: '🎂', color: 'bg-pink-100', textColor: 'text-pink-800' },
-    activity: { icon: '⚽', color: 'bg-green-100', textColor: 'text-green-800' },
-    school: { icon: '📚', color: 'bg-yellow-100', textColor: 'text-yellow-800' },
-    reminder: { icon: '⏰', color: 'bg-purple-100', textColor: 'text-purple-800' },
-    social: { icon: '🎉', color: 'bg-orange-100', textColor: 'text-orange-800' },
-    other: { icon: '📌', color: 'bg-gray-100', textColor: 'text-gray-800' },
+    appointment: {
+      icon: '🏥',
+      bgLight: 'bg-blue-50 border-blue-200',
+      bgDark: 'bg-blue-900/30 border-blue-700/70',
+      textLight: 'text-blue-900',
+      textDark: 'text-blue-100',
+    },
+    birthday: {
+      icon: '🎂',
+      bgLight: 'bg-pink-50 border-pink-200',
+      bgDark: 'bg-pink-900/30 border-pink-700/70',
+      textLight: 'text-pink-900',
+      textDark: 'text-pink-100',
+    },
+    activity: {
+      icon: '⚽',
+      bgLight: 'bg-green-50 border-green-200',
+      bgDark: 'bg-green-900/30 border-green-700/70',
+      textLight: 'text-green-900',
+      textDark: 'text-green-100',
+    },
+    school: {
+      icon: '📚',
+      bgLight: 'bg-amber-50 border-amber-200',
+      bgDark: 'bg-amber-900/30 border-amber-700/70',
+      textLight: 'text-amber-900',
+      textDark: 'text-amber-100',
+    },
+    reminder: {
+      icon: '⏰',
+      bgLight: 'bg-purple-50 border-purple-200',
+      bgDark: 'bg-purple-900/30 border-purple-700/70',
+      textLight: 'text-purple-900',
+      textDark: 'text-purple-100',
+    },
+    social: {
+      icon: '🎉',
+      bgLight: 'bg-orange-50 border-orange-200',
+      bgDark: 'bg-orange-900/30 border-orange-700/70',
+      textLight: 'text-orange-900',
+      textDark: 'text-orange-100',
+    },
+    other: {
+      icon: '📌',
+      bgLight: 'bg-slate-50 border-slate-200',
+      bgDark: 'bg-slate-800/60 border-slate-700',
+      textLight: 'text-slate-900',
+      textDark: 'text-slate-100',
+    },
   };
 
   const getScheduleStatus = (time, takenLogs, assignedTo) => {
@@ -389,31 +431,33 @@ function DashboardContent() {
                 {upcomingEvents.map(event => {
                   const category = EVENT_CATEGORIES[event.category] || EVENT_CATEGORIES.other;
                   const assignedMembers = members.filter(m => event.assignedTo?.includes(m.id));
+                  const bgClass = currentTheme === 'dark' ? category.bgDark : category.bgLight;
+                  const textClass = currentTheme === 'dark' ? category.textDark : category.textLight;
 
                   return (
                     <motion.div
                       key={event.id}
                       whileHover={{ scale: 1.02 }}
-                      className={`${category.color} p-3 md:p-4 rounded-xl md:rounded-2xl transition-all cursor-pointer`}
+                      className={`${bgClass} p-3 md:p-4 rounded-xl md:rounded-2xl transition-all cursor-pointer`}
                     >
                       <div className="flex items-start gap-2 md:gap-4">
                         <div className="flex-shrink-0">
-                          <div className={`${category.textColor} text-2xl md:text-3xl`}>
+                          <div className={`${textClass} text-2xl md:text-3xl`}>
                             {category.icon}
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2 mb-1 md:mb-2">
-                            <h3 className={`font-bold ${category.textColor} text-sm md:text-lg`}>
+                            <h3 className={`font-bold ${textClass} text-sm md:text-lg`}>
                               {event.title}
                             </h3>
-                            <span className={`${category.textColor} text-xs md:text-sm font-bold whitespace-nowrap`}>
+                            <span className={`${textClass} text-xs md:text-sm font-bold whitespace-nowrap`}>
                               {getEventDateLabel(event)}
                             </span>
                           </div>
 
                           <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs md:text-sm">
-                            <div className={`flex items-center gap-1 ${category.textColor}`}>
+                            <div className={`flex items-center gap-1 ${textClass}`}>
                               <FaClock className="text-xs md:text-sm" />
                               <span className="font-semibold">
                                 {format(
@@ -424,7 +468,7 @@ function DashboardContent() {
                             </div>
 
                             {event.location && (
-                              <div className={`flex items-center gap-1 ${category.textColor}`}>
+                              <div className={`flex items-center gap-1 ${textClass}`}>
                                 <FaMapMarkerAlt className="text-xs md:text-sm" />
                                 <span className="font-semibold truncate">{event.location}</span>
                               </div>
@@ -436,7 +480,7 @@ function DashboardContent() {
                                   <UserAvatar key={member.id} user={member} size={20} />
                                 ))}
                                 {assignedMembers.length > 3 && (
-                                  <span className={`${category.textColor} text-xs font-bold`}>
+                                  <span className={`${textClass} text-xs font-bold`}>
                                     +{assignedMembers.length - 3}
                                   </span>
                                 )}

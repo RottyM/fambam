@@ -5,6 +5,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { useMovies } from '@/hooks/useFirestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import UserAvatar from '@/components/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaFilm, FaPlus, FaCheck, FaTrash, FaRandom, FaHeart, FaSearch, FaTimes, FaSpinner, FaList, FaTh } from 'react-icons/fa';
@@ -191,6 +192,7 @@ function MoviesContent() {
   
   const { user } = useAuth();
   const { getMemberById } = useFamily();
+  const { theme } = useTheme();
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
@@ -276,63 +278,65 @@ function MoviesContent() {
 
       {/* Filters, Randomizer & View Mode Toggle */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
-        <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-2 pt-1 px-1">
-          <div className="flex gap-3 shrink-0">
+        <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2 pt-1 px-1">
+          <div className="flex gap-2 shrink-0 flex-nowrap">
             <button
               onClick={() => setView('active')}
-              className={`flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-sm md:text-base ${
+              className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
                 view === 'active'
                   ? 'border-purple-500 bg-purple-50 text-purple-700'
                   : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
               }`}
             >
-              Watchlist ({activeMovies.length})
+              <FaList className="hidden md:inline" /> Watchlist ({activeMovies.length})
             </button>
             <button
               onClick={() => setView('watched')}
-              className={`flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-sm md:text-base ${
+              className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
                 view === 'watched'
                   ? 'border-green-500 bg-green-50 text-green-700'
                   : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-green-300'
               }`}
             >
-              Watched ({watchedMovies.length})
+              <FaCheck className="hidden md:inline" /> Watched ({watchedMovies.length})
             </button>
 
             {view === 'active' && activeMovies.length > 0 && (
               <button
                 onClick={pickRandomMovie}
-                className="flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 border-yellow-400 bg-yellow-50 text-yellow-900 font-bold shadow-sm whitespace-nowrap hover:bg-yellow-100 transition-all"
+                className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 border-yellow-400 bg-yellow-50 text-yellow-900 font-bold shadow-sm whitespace-nowrap hover:bg-yellow-100 transition-all text-xs md:text-sm"
+                title="Spin random pick"
               >
-                <FaRandom /> <span className="hidden sm:inline">Spin</span>
+                <FaRandom />
+                <span className="hidden sm:inline">Spin</span>
               </button>
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-2 pt-1 px-1 md:justify-end">
-          <div className="flex gap-3 shrink-0">
+        <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2 pt-1 px-1 md:justify-end">
+          <div className="flex gap-2 shrink-0 flex-nowrap">
             <button
               onClick={() => setViewMode('detail')}
-              className={`flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-sm md:text-base ${
+              className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
                 viewMode === 'detail'
                   ? 'border-purple-500 bg-purple-50 text-purple-700'
                   : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
               }`}
               title="Detail View"
             >
-              <FaList /> Detail View
+              <FaList />
             </button>
             <button
               onClick={() => setViewMode('poster')}
-              className={`flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-sm md:text-base ${
+              className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
                 viewMode === 'poster'
                   ? 'border-purple-500 bg-purple-50 text-purple-700'
                   : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
               }`}
               title="Poster View"
             >
-              <FaTh /> Poster Grid
+              <FaTh />
             </button>
           </div>
         </div>
@@ -366,7 +370,7 @@ function MoviesContent() {
                   exit={{ opacity: 0, scale: 0.9 }}
                   className="relative group"
                 >
-                  <div className="aspect-[2/3] relative rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all">
+                  <div className="aspect-[2/3] relative rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 max-h-[260px]">
                     {movie.posterUrl ? (
                       <Image
                         src={movie.posterUrl}
@@ -424,18 +428,11 @@ function MoviesContent() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-100 overflow-hidden relative"
+                  className={`${theme.colors.bgCard} rounded-2xl shadow-md hover:shadow-xl transition-all border ${theme.colors.border} overflow-hidden relative`}
                 >
-                  <button
-                    onClick={() => deleteMovie(movie.id)}
-                    className="absolute top-3 right-3 z-10 bg-white/90 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors p-2 rounded-full shadow-md"
-                  >
-                    <FaTrash size={14} />
-                  </button>
-
                   <div className="flex flex-col sm:flex-row h-full">
                     {movie.posterUrl && (
-                      <div className="flex-shrink-0 w-full sm:w-[200px] h-[300px] relative">
+                      <div className="flex-shrink-0 w-full sm:w-[160px] h-[230px] relative border-b sm:border-b-0 sm:border-r border-gray-200 dark:border-gray-700">
                         <Image
                           src={movie.posterUrl}
                           alt={movie.title}
@@ -446,12 +443,14 @@ function MoviesContent() {
                       </div>
                     )}
 
-                    <div className="flex-1 p-5 flex flex-col">
-                      <h3 className="text-2xl font-bold text-gray-800 mb-2">
-                        {movie.title} {year && <span className="text-gray-500">({year})</span>}
-                      </h3>
+                      <div className="flex-1 p-5 flex flex-col">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <h3 className={`text-2xl font-bold ${theme.colors.text}`}>
+                            {movie.title} {year && <span className="text-gray-500 dark:text-gray-400">({year})</span>}
+                          </h3>
+                        </div>
 
-                      <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 mb-3">
+                      <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
                         {movie.certification && (
                           <span className="border border-gray-400 px-1.5 py-0.5 rounded text-xs font-semibold">
                             {movie.certification}
@@ -490,32 +489,27 @@ function MoviesContent() {
                       )}
 
                       {movie.tagline && (
-                        <p className="text-sm italic text-gray-500 mb-3">{movie.tagline}</p>
+                        <p className="text-sm italic text-gray-500 dark:text-gray-400 mb-2">{movie.tagline}</p>
+                      )}
+                      {movie.trailerKey && (
+                        <button
+                          onClick={() => setTrailerKeyToPlay(movie.trailerKey)}
+                          className="text-sm font-bold text-purple-600 hover:text-purple-800 mb-2 text-left"
+                        >
+                          ▶ Watch Trailer
+                        </button>
                       )}
                       <div className="mb-3 flex-1">
-                        <p className="text-sm text-gray-600 line-clamp-4">{movie.overview}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-4">{movie.overview}</p>
                       </div>
 
-                      {/* --- MODAL TRIGGER: Play Trailer Button --- */}
-                      {movie.trailerKey && (
-                        <div className="flex gap-2 mb-3 mt-auto">
-                          <button
-                            // Clicking sets the state to this movie's key, opens modal
-                            onClick={() => setTrailerKeyToPlay(movie.trailerKey)}
-                            className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-bold text-sm text-center transition-colors flex items-center justify-center gap-2"
-                          >
-                            ▶ Play Trailer
-                          </button>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                        <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
                           <UserAvatar user={uploader} size={20} />
                           <span className="truncate">{uploader?.displayName?.split(' ')[0]}</span>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={() => toggleWatched(movie.id, movie.watched)}
                             className={`p-2 rounded-full transition-colors ${
@@ -532,14 +526,27 @@ function MoviesContent() {
                               className={`flex items-center gap-1 px-3 py-1.5 rounded-full font-bold transition-all ${
                                 hasVoted ? 'bg-red-50 text-red-500 ring-2 ring-red-100' : 'bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-400'
                               }`}
+                              title="Like"
                             >
                               <FaHeart className={hasVoted ? 'fill-current' : ''} />
                               <span>{voteCount}</span>
                             </button>
                           )}
+
+                          <button
+                            onClick={() => deleteMovie(movie.id)}
+                          className="flex items-center gap-1 text-gray-400 hover:text-red-500 px-2 py-2 rounded-lg transition-colors bg-transparent hover:bg-red-50 dark:hover:bg-transparent text-sm font-bold"
+                            title="Delete movie"
+                          >
+                            <FaTrash size={14} />
+                          </button>
                         </div>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="flex justify-end items-center gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex-1" />
                   </div>
                 </motion.div>
               );

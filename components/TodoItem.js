@@ -80,21 +80,27 @@ export default function TodoItem({ todo }) {
   };
 
   const getPriorityBadge = () => {
-    if (!todo.priority || todo.priority === 'medium') return null;
+    if (!todo.priority) return null;
 
     const colors = {
-      high: 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300',
-      low: 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300',
+      high:
+        'bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/40 dark:text-red-200 dark:border-red-700',
+      medium:
+        'bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-700',
+      low:
+        'bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-700',
     };
 
     const icons = {
       high: '🔴',
+      medium: '⬤',
       low: '🔵',
     };
 
+    const priority = todo.priority || 'medium';
     return (
-      <span className={`${colors[todo.priority]} px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1`}>
-        {icons[todo.priority]} {todo.priority}
+      <span className={`${colors[priority] || colors.medium} px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1`}>
+        {icons[priority]} {priority}
       </span>
     );
   };
@@ -153,16 +159,20 @@ export default function TodoItem({ todo }) {
           </div>
         </div>
 
-        {/* Delete button for parents */}
-        {isParent() && (
+      </div>
+
+      {/* Delete button for parents - bottom right, muted style */}
+      {isParent() && (
+        <div className="flex justify-end mt-4">
           <button
             onClick={handleDelete}
-            className="flex-shrink-0 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all p-2 rounded-lg"
+            className="p-2 text-gray-300 hover:text-red-400 transition-colors"
+            title="Delete todo"
           >
             <FaTrash size={16} />
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </motion.div>
   );
 }

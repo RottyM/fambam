@@ -38,7 +38,7 @@ const customDnDOptions = {
         ...HTML5toTouch.backends[1].options,
         enableTouchEvents: true,
         enableMouseEvents: true,
-        delayTouchStart: 1100, // Increase press-and-hold to ~1.1s for drag start
+        delayTouchStart: 100, // Make touch drag start quickly to avoid scroll stealing
         ignoreContextMenu: true, // <--- ADDED: Prevents system menus from interfering
       },
     },
@@ -67,8 +67,11 @@ function MemoriesContent() {
     ? null
     : folders.find(f => f.id === activeFilterId) || null;
   const [folderView, setFolderView] = useState({ isOpen: false, memories: [], initialIndex: 0, detailsOpen: false });
-  const [uploadAreaExpanded, setUploadAreaExpanded] = useState(true);
-  const [showMobileTip, setShowMobileTip] = useState(true);
+  const [uploadAreaExpanded, setUploadAreaExpanded] = useState(false);
+  const [showMobileTip, setShowMobileTip] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return sessionStorage.getItem('memoriesTipHidden') !== 'true';
+  });
 
   // Combine loading states
   const loading = loadingMemories || loadingFolders;
@@ -170,6 +173,21 @@ function MemoriesContent() {
     },
   });
 
+  // Allow dropping files directly onto the memories grid/cards (no click handling here)
+  const {
+    getRootProps: getGridDropProps,
+    isDragActive: isGridDragActive,
+  } = useDropzone({
+    onDrop,
+    noClick: true,
+    noKeyboard: true,
+    noDragEventsBubbling: true,
+    accept: {
+      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'],
+      'video/*': ['.mp4', '.mov', '.avi'],
+    },
+  });
+
   const toggleLike = async (memoryId, currentLikes) => {
     const userId = user.uid;
     const isLiked = currentLikes?.includes(userId);
@@ -206,6 +224,13 @@ function MemoriesContent() {
     } catch (error) {
       console.error('Error adding comment:', error);
       toast.error('Failed to add comment');
+    }
+  };
+
+  const hideMobileTip = () => {
+    setShowMobileTip(false);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('memoriesTipHidden', 'true');
     }
   };
 
@@ -431,102 +456,86 @@ function MemoriesContent() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-6"
       >
-        {/* Mobile: Compact Header with Expand Button */}
-        <div className="md:hidden">
-          <button
-            onClick={() => setUploadAreaExpanded(!uploadAreaExpanded)}
-            className="w-full flex items-center justify-between bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-2xl shadow-lg mb-2"
+        {/* Mobile Drag & Drop Instructions */}
+        {displayMemories.length > 0 && folders.length > 0 && showMobileTip && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-3 md:hidden bg-gradient-to-r from-blue-500 to-teal-500 text-white rounded-2xl p-4"
           >
-            <div className="flex items-center gap-2">
-              <FaUpload className="text-2xl" />
-              <span className="font-bold">Upload Photos/Videos</span>
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-sm font-bold text-left">💡 Tip: Press and hold (0.1s) a memory, then drag it to a folder!</p>
+              <button
+                aria-label="Dismiss tip"
+                onClick={hideMobileTip}
+                className="text-white/80 hover:text-white p-1 -mr-1"
+              >
+                <FaTimes />
+              </button>
             </div>
-            {uploadAreaExpanded ? <FaChevronUp /> : <FaChevronDown />}
-          </button>
-        </div>
+          </motion.div>
+        )}
 
-        {/* Desktop: Collapse/expand toggle to mirror mobile */}
-        <div className="hidden md:flex justify-end mb-2">
+        {/* Upload toggle */}
+        <div className="flex justify-end mb-2">
           <button
             onClick={() => setUploadAreaExpanded(!uploadAreaExpanded)}
-            className="flex items-center gap-2 text-sm font-bold text-purple-600 hover:text-purple-800 transition-colors px-3 py-2 rounded-full bg-purple-50 hover:bg-purple-100"
+            className="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-purple-600 transition-colors px-4 py-3 rounded-xl border-2 border-gray-200 bg-white shadow-sm hover:border-purple-300"
           >
-            <FaUpload />
+            <FaUpload className="text-purple-500" />
             {uploadAreaExpanded ? 'Hide upload' : 'Show upload'}
             {uploadAreaExpanded ? <FaChevronUp /> : <FaChevronDown />}
           </button>
         </div>
 
-        {/* Upload Area - Always visible on desktop, collapsible on mobile */}
-        <div className={`${uploadAreaExpanded ? 'block' : 'hidden'} overflow-hidden transition-all duration-300`}>
-          <div
-            {...getRootProps()}
-            className={`p-4 md:p-8 lg:p-12 border-4 border-dashed rounded-3xl text-center cursor-pointer transition-all ${
-              isDragActive
-                ? 'border-purple-500 bg-purple-50'
-                : 'border-gray-300 hover:border-purple-400 hover:bg-purple-50'
-            }`}
-          >
-            <input {...getInputProps()} />
-            <FaUpload className="text-4xl md:text-6xl text-purple-400 mx-auto mb-2 md:mb-4" />
-            <p className="text-lg md:text-xl font-bold text-gray-700 mb-1 md:mb-2">
-              {uploading ? 'Uploading...' : isDragActive ? 'Drop it here!' : 'Drop photos/videos or click to upload'}
-            </p>
-            <p className="text-sm md:text-base text-gray-500">Share your family moments 📸</p>
+        {/* Upload Area - compressed by default, expand for options */}
+        {uploadAreaExpanded && (
+          <div className="overflow-hidden transition-all duration-300">
+            <div
+              {...getRootProps()}
+              className="p-4 md:p-8 lg:p-12 border-4 border-dashed rounded-3xl text-center cursor-pointer transition-all hover:border-purple-400 hover:bg-purple-50"
+            >
+              <input {...getInputProps()} />
+              <FaUpload className="text-4xl md:text-6xl text-purple-400 mx-auto mb-2 md:mb-4" />
+              <p className="text-lg md:text-xl font-bold text-gray-700 mb-1 md:mb-2">
+                {uploading ? 'Uploading...' : isDragActive ? 'Drop it here!' : 'Drop photos/videos or tap to upload'}
+              </p>
+              <p className="text-sm md:text-base text-gray-500">Share your family moments 📸</p>
 
-            {/* Time Capsule Option */}
-            <div className="mt-4 md:mt-6 space-y-3 md:space-y-4">
-              <div className="flex items-center justify-center gap-2 md:gap-3">
-                <input
-                  type="checkbox"
-                  id="timecapsule"
-                  checked={isTimeCapsule}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    setIsTimeCapsule(e.target.checked);
-                  }}
-                  className="w-4 h-4 md:w-5 md:h-5 rounded"
-                />
-                <label htmlFor="timecapsule" className="font-bold text-purple-600 cursor-pointer text-sm md:text-base">
-                  🔒 Create Time Capsule (reveal on future date)
-                </label>
-              </div>
-
-              {isTimeCapsule && (
-                <div onClick={(e) => e.stopPropagation()}>
+              {/* Time Capsule Option */}
+              <div className="mt-4 md:mt-6 space-y-3 md:space-y-4">
+                <div className="flex items-center justify-center gap-2 md:gap-3">
                   <input
-                    type="date"
-                    value={revealDate}
-                    onChange={(e) => setRevealDate(e.target.value)}
-                    min={format(new Date(), 'yyyy-MM-dd')}
-                    className="px-3 py-2 md:px-4 md:py-2 rounded-xl border-2 border-purple-300 focus:border-purple-500 focus:outline-none font-semibold text-sm md:text-base"
+                    type="checkbox"
+                    id="timecapsule"
+                    checked={isTimeCapsule}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setIsTimeCapsule(e.target.checked);
+                    }}
+                    className="w-4 h-4 md:w-5 md:h-5 rounded"
                   />
+                  <label htmlFor="timecapsule" className="font-bold text-purple-600 cursor-pointer text-sm md:text-base">
+                    🔒 Create Time Capsule (reveal on future date)
+                  </label>
                 </div>
-              )}
+
+                {isTimeCapsule && (
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="date"
+                      value={revealDate}
+                      onChange={(e) => setRevealDate(e.target.value)}
+                      min={format(new Date(), 'yyyy-MM-dd')}
+                      className="px-3 py-2 md:px-4 md:py-2 rounded-xl border-2 border-purple-300 focus:border-purple-500 focus:outline-none font-semibold text-sm md:text-base"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </motion.div>
-
-      {/* Mobile Drag & Drop Instructions */}
-      {displayMemories.length > 0 && folders.length > 0 && showMobileTip && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-4 md:hidden bg-gradient-to-r from-blue-500 to-teal-500 text-white rounded-2xl p-4"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-sm font-bold text-left">💡 Tip: Press and hold (0.1s) a memory, then drag it to a folder!</p>
-            <button
-              aria-label="Dismiss tip"
-              onClick={() => setShowMobileTip(false)}
-              className="text-white/80 hover:text-white p-1 -mr-1"
-            >
-              <FaTimes />
-            </button>
-          </div>
-        </motion.div>
-      )}
 
       {/* Time Capsule View Banner */}
       {showTimeCapsules && (
@@ -554,7 +563,7 @@ function MemoriesContent() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayMemories.map(memory => {
             const uploader = getMemberById(memory.uploadedBy);
             const isLiked = memory.likes?.includes(user.uid);

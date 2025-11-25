@@ -39,7 +39,7 @@ function CalendarContent() {
   // UI States
   const [showAddModal, setShowAddModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false); 
-  const [viewMode, setViewMode] = useState('month'); 
+  const [viewMode, setViewMode] = useState('list'); 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
   

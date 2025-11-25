@@ -468,24 +468,6 @@ function RecipesContent() {
                         className="object-cover"
                         unoptimized
                       />
-                      {recipe.videoUrl && (
-                        <div className="absolute inset-0 flex items-end justify-start pointer-events-none">
-                          <button
-                            className="m-3 bg-black/60 backdrop-blur-md text-white rounded-full p-2.5 shadow-lg hover:bg-black/70 transition-colors flex items-center justify-center pointer-events-auto"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const videoId = getYouTubeId(recipe.videoUrl);
-                              window.open(
-                                videoId ? `https://www.youtube.com/watch?v=${videoId}` : recipe.videoUrl,
-                                '_blank'
-                              );
-                            }}
-                            title="Watch on YouTube"
-                          >
-                            <FaYoutube className="text-red-500" />
-                          </button>
-                        </div>
-                      )}
                     </div>
                   ) : (
                     <div className="h-48 bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center">

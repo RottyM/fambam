@@ -33,6 +33,7 @@ import {
   FaTrash,
   FaKey,
   FaUserPlus,
+  FaUndo,
 } from 'react-icons/fa';
 
 function SettingsContent() {
@@ -50,12 +51,18 @@ function SettingsContent() {
   const [isToggling, setIsToggling] = useState(false);
   const [isEditingAvatar, setIsEditingAvatar] = useState(false);
   const [savingAvatar, setSavingAvatar] = useState(false);
+  const [resetTarget, setResetTarget] = useState('all');
+  const [resettingPoints, setResettingPoints] = useState(false);
 
   // ── Handlers ─────────────────────────────────────
   const handleNotificationToggle = async () => {
     setIsToggling(true);
     try {
-      notificationsEnabled ? await disableNotifications() : await requestPermission();
+      if (notificationsEnabled) {
+        await disableNotifications();
+      } else {
+        await requestPermission();
+      }
     } finally {
       setIsToggling(false);
     }
@@ -89,6 +96,35 @@ function SettingsContent() {
       toast.success(`${label} copied!`);
     } catch {
       toast.error('Copy failed');
+    }
+  };
+
+  const handleResetChorePoints = async () => {
+    if (!isParent() || !userData?.familyId) return;
+    const targets = resetTarget === 'all'
+      ? members
+      : members.filter(m => m.id === resetTarget);
+    if (targets.length === 0) {
+      toast.error('No members to reset');
+      return;
+    }
+
+    const names = resetTarget === 'all' ? 'all members' : targets[0]?.displayName || 'member';
+    if (!confirm(`Reset points for ${names}? This cannot be undone.`)) return;
+
+    setResettingPoints(true);
+    try {
+      await Promise.all(
+        targets.map(member =>
+          updateDoc(firestoreDoc(db, 'users', member.id), { points: 0 })
+        )
+      );
+      toast.success(`Points reset for ${names}`);
+    } catch (e) {
+      console.error('Reset points error:', e);
+      toast.error('Failed to reset points');
+    } finally {
+      setResettingPoints(false);
     }
   };
 
@@ -283,6 +319,40 @@ function SettingsContent() {
                 Send the code or link → they go to <Link href="/join" className="underline font-bold">/join</Link>
               </p>
             </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Chore Points Reset */}
+      {isParent() && (
+        <Card title="Chore Points" description="Reset chore points for any family member.">
+          <div className="space-y-4">
+            <div>
+              <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>Choose member</label>
+              <select
+                value={resetTarget}
+                onChange={(e) => setResetTarget(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+              >
+                <option value="all">All members</option>
+                {members.map(member => (
+                  <option key={member.id} value={member.id}>
+                    {member.displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={handleResetChorePoints}
+              disabled={resettingPoints}
+              className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-3 rounded-xl font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <FaUndo />
+              {resettingPoints ? 'Resetting...' : 'Reset Points'}
+            </button>
+            <p className={theme.colors.textMuted}>
+              This sets selected member points to 0 for chores. Action cannot be undone.
+            </p>
           </div>
         </Card>
       )}

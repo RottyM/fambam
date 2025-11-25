@@ -81,36 +81,37 @@ function GroceriesContent() {
             </p>
           </div>
 
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-4 sm:px-6 py-3 rounded-2xl font-bold hover:from-green-600 hover:to-blue-600 active:from-green-700 active:to-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 w-full sm:w-auto touch-manipulation min-h-[48px]"
-          >
-            <FaPlus /> Add Item
-          </button>
-        </div>
-
-        {groceries.length > 0 && (
-          <div className="flex flex-col sm:flex-row gap-3">
-            {checkedCount > 0 && (
-              <button
-                onClick={clearCheckedItems}
-                className="bg-red-500 hover:bg-red-600 active:bg-red-700 text-white px-4 py-3 rounded-2xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 w-full sm:w-auto touch-manipulation min-h-[48px]"
-              >
-                <FaTrash /> Clear Checked ({checkedCount})
-              </button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            {groceries.length > 0 && (
+              <>
+                {checkedCount > 0 && (
+                  <button
+                    onClick={clearCheckedItems}
+                    className="bg-gradient-to-r from-red-500 to-rose-500 text-white px-4 sm:px-5 py-3 rounded-2xl font-bold hover:from-red-600 hover:to-rose-600 active:from-red-700 active:to-rose-700 transition-all shadow-lg flex items-center justify-center gap-2 w-full sm:w-auto touch-manipulation min-h-[44px]"
+                  >
+                    <FaTrash /> Clear Checked ({checkedCount})
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    if (confirm(`Clear ALL ${groceries.length} items? This cannot be undone.`)) {
+                      clearAllItems();
+                    }
+                  }}
+                  className="bg-gradient-to-r from-slate-600 to-gray-700 text-white px-4 sm:px-5 py-3 rounded-2xl font-bold hover:from-slate-700 hover:to-gray-800 active:from-slate-800 active:to-gray-900 transition-all shadow-lg flex items-center justify-center gap-2 w-full sm:w-auto touch-manipulation min-h-[44px]"
+                >
+                  <FaTrash /> Clear All ({groceries.length})
+                </button>
+              </>
             )}
             <button
-              onClick={() => {
-                if (confirm(`Are you sure you want to clear ALL ${groceries.length} items? This cannot be undone.`)) {
-                  clearAllItems();
-                }
-              }}
-              className="bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white px-4 py-3 rounded-2xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 w-full sm:w-auto touch-manipulation min-h-[48px]"
+              onClick={() => setShowAddModal(true)}
+              className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-4 sm:px-6 py-3 rounded-2xl font-bold hover:from-green-600 hover:to-blue-600 active:from-green-700 active:to-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 w-full sm:w-auto touch-manipulation min-h-[44px]"
             >
-              <FaTrash /> Clear All ({groceries.length})
+              <FaPlus /> Add Item
             </button>
           </div>
-        )}
+        </div>
       </div>
 
       {groceries.length === 0 ? (
@@ -130,7 +131,7 @@ function GroceriesContent() {
                 key={categoryKey}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`${theme.colors.bgCard} rounded-3xl p-6 shadow-lg`}
+                className={`${theme.colors.bgCard} rounded-3xl p-6 shadow-lg border ${theme.colors.border}`}
               >
                 <div className={`inline-flex items-center gap-2 bg-gradient-to-r ${categoryInfo.color} text-white px-4 py-2 rounded-full mb-4 font-bold shadow-md`}>
                   <span className="text-2xl">{categoryInfo.icon}</span>
@@ -147,15 +148,15 @@ function GroceriesContent() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
-                      className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${theme.colors.bgCard} ${
+                      className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${theme.colors.bgCard} ${theme.colors.border} ${
                         item.checked
-                          ? 'opacity-50 border-gray-200'
-                          : 'border-gray-300 hover:border-purple-400'
+                          ? 'opacity-60'
+                          : 'hover:border-purple-400 hover:shadow-md'
                       }`}
                     >
                       <button
                         onClick={() => toggleGroceryItem(item.id, item.checked)}
-                        className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                        className={`flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
                           item.checked
                             ? 'bg-green-500 border-green-500'
                             : 'border-gray-400 hover:border-green-500'
@@ -165,17 +166,17 @@ function GroceriesContent() {
                       </button>
 
                       <div className="flex-1">
-                        <p className={`font-bold ${item.checked ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                        <p className={`font-bold ${item.checked ? 'line-through text-gray-400 dark:text-gray-500' : theme.colors.text}`}>
                           {item.name}
                         </p>
                         {item.quantity && (
-                          <p className="text-sm text-gray-500">{item.quantity}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{item.quantity}</p>
                         )}
                       </div>
 
                       <button
                         onClick={() => deleteGroceryItem(item.id)}
-                        className="text-red-500 hover:text-red-700 p-2"
+                        className="text-gray-400 hover:text-red-500 p-2 rounded-lg bg-transparent hover:bg-red-50 dark:hover:bg-transparent transition-colors"
                       >
                         <FaTrash />
                       </button>

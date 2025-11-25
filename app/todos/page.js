@@ -97,53 +97,52 @@ function TodosContent() {
             </p>
           </div>
 
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
-            aria-label={currentTheme === 'dark' ? 'Cast Curse' : 'Add Todo'}
-          >
-            <FaPlus /> <span className="hidden sm:inline">{currentTheme === 'dark' ? 'Cast Curse' : 'Add Todo'}</span>
-          </button>
-        </div>
-
-        {/* Filters and Sort - Collapsible on Mobile */}
-        <div className={`${theme.colors.bgCard} rounded-2xl shadow-lg mb-6 overflow-hidden`}>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`w-full flex items-center justify-between p-4 ${currentTheme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} transition-all`}
-          >
-            <div className="flex items-center gap-2">
-              <FaFilter className="text-purple-500" />
-              <h3 className={`font-bold ${theme.colors.text}`}>Filter & Sort</h3>
+          <div className="flex items-center gap-3 self-end sm:self-auto">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 px-4 md:px-5 py-3 rounded-2xl text-sm font-bold transition-all shadow-sm border ${
+                showFilters
+                  ? 'bg-purple-500 border-purple-500 text-white'
+                  : currentTheme === 'dark'
+                    ? 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'
+                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <FaFilter /> Filters
               {(filterMember !== 'all' || filterPriority !== 'all') && (
-                <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-full">
+                <span className="bg-white/20 text-white px-2 py-0.5 rounded-full text-[10px]">
                   Active
                 </span>
               )}
-            </div>
-            <motion.div
-              animate={{ rotate: showFilters ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <FaFilter className={`${theme.colors.textMuted}`} />
-            </motion.div>
-          </button>
+            </button>
 
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+              aria-label={currentTheme === 'dark' ? 'Cast Curse' : 'Add Todo'}
+            >
+              <FaPlus /> <span className="hidden sm:inline">{currentTheme === 'dark' ? 'Cast Curse' : 'Add Todo'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Filters and Sort - Calendar-style */}
+        <div className="mb-6">
           <AnimatePresence>
             {showFilters && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden border-t-2 border-gray-200 dark:border-gray-700"
+                className="overflow-hidden mt-2"
               >
-                <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 space-y-4 md:space-y-0">
-                  <div>
-                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>Assigned To</label>
+                <div className={`flex flex-col sm:flex-row gap-3 pt-2`}>
+                  <div className="flex-1">
+                    <label className={`text-xs font-bold mb-1 block ml-1 ${theme.colors.textMuted}`}>Assigned To</label>
                     <select
                       value={filterMember}
                       onChange={(e) => setFilterMember(e.target.value)}
-                      className={`w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold ${theme.colors.bgCard}`}
+                      className={`w-full px-3 py-2 text-sm rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
                     >
                       <option value="all">All Members</option>
                       {members.map(member => (
@@ -154,12 +153,12 @@ function TodosContent() {
                     </select>
                   </div>
 
-                  <div>
-                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>Priority</label>
+                  <div className="flex-1">
+                    <label className={`text-xs font-bold mb-1 block ml-1 ${theme.colors.textMuted}`}>Priority</label>
                     <select
                       value={filterPriority}
                       onChange={(e) => setFilterPriority(e.target.value)}
-                      className={`w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold ${theme.colors.bgCard}`}
+                      className={`w-full px-3 py-2 text-sm rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
                     >
                       <option value="all">All Priorities</option>
                       <option value="high">High</option>
@@ -168,12 +167,12 @@ function TodosContent() {
                     </select>
                   </div>
 
-                  <div>
-                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>Sort By</label>
+                  <div className="flex-1">
+                    <label className={`text-xs font-bold mb-1 block ml-1 ${theme.colors.textMuted}`}>Sort By</label>
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
-                      className={`w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold ${theme.colors.bgCard}`}
+                      className={`w-full px-3 py-2 text-sm rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
                     >
                       <option value="date">Newest First</option>
                       <option value="priority">Priority</option>
