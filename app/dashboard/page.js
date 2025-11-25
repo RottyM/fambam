@@ -17,7 +17,7 @@ import toast from 'react-hot-toast';
 import {
   FaCheckCircle, FaBroom, FaCalendarAlt, FaImages, FaPills, FaClock,
   FaMapMarkerAlt, FaTimes, FaUtensils, FaShoppingCart, FaFileAlt, FaKey,
-  FaFilm
+  FaFilm, FaEdit
 } from 'react-icons/fa';
 
 // --- HELPER: Convert 24h time (14:25) to 12h (2:25 PM) ---
@@ -296,6 +296,10 @@ function DashboardContent() {
                 })}
               </span>
             </div>
+            <Link href="/settings" className="inline-flex items-center gap-2 mt-2 text-purple-600 hover:text-purple-800 text-sm font-bold transition-all">
+              <FaEdit size={12} />
+              <span>Change Avatar</span>
+            </Link>
           </div>
           <div className="text-4xl md:text-6xl animate-wiggle flex-shrink-0">
             {currentTheme === 'dark' ? '🦇' : '👋'}

@@ -5,8 +5,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { motion } from 'framer-motion';
-import { FaMoon, FaSun, FaBell, FaBellSlash, FaSpinner, FaUser, FaPalette, FaKey, FaTrash, FaSignOutAlt, FaCopy, FaUserPlus } from 'react-icons/fa';
+import { FaMoon, FaSun, FaBell, FaBellSlash, FaSpinner, FaUser, FaPalette, FaKey, FaTrash, FaSignOutAlt, FaCopy, FaUserPlus, FaEdit } from 'react-icons/fa';
 import UserAvatar from '@/components/UserAvatar';
+import AvatarSelector from '@/components/AvatarSelector';
 import Link from 'next/link'; // Added Link import
 import toast from 'react-hot-toast';
 import { useState } from 'react'; // Added useState import
@@ -27,6 +28,8 @@ function SettingsContent() {
     resetNotificationState 
   } = useNotifications();
   const [isToggling, setIsToggling] = useState(false);
+  const [isEditingAvatar, setIsEditingAvatar] = useState(false);
+  const [savingAvatar, setSavingAvatar] = useState(false);
 
   const handleNotificationToggle = async () => {
     setIsToggling(true);
@@ -187,13 +190,71 @@ function SettingsContent() {
 
       {/* Profile Card */}
       <Card title="User Profile" description="View and manage your account details.">
-        <div className="flex items-center gap-4">
-          <UserAvatar user={userData || user} size={64} />
-          <div>
-            <p className="text-xl font-bold">{userData?.displayName || user?.email}</p>
-            <p className={`text-sm ${theme.colors.textMuted}`}>{userData?.role} | Points: {userData?.points || 0}</p>
+        <div className="space-y-6">
+          {/* Avatar and Info */}
+          <div className="flex items-center gap-4">
+            <div className="relative group">
+              <UserAvatar user={userData || user} size={64} />
+              <button
+                onClick={() => setIsEditingAvatar(!isEditingAvatar)}
+                className="absolute -bottom-1 -right-1 bg-purple-500 hover:bg-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg transition-all group-hover:scale-110"
+                title="Change Avatar"
+              >
+                <FaEdit size={14} />
+              </button>
+            </div>
+            <div>
+              <p className="text-xl font-bold">{userData?.displayName || user?.email}</p>
+              <p className={`text-sm ${theme.colors.textMuted}`}>{userData?.role} | Points: {userData?.points || 0}</p>
+              <button
+                onClick={() => setIsEditingAvatar(!isEditingAvatar)}
+                className="text-purple-600 hover:text-purple-800 text-sm font-bold mt-1"
+              >
+                {isEditingAvatar ? 'Cancel Avatar Change' : 'Change Avatar'}
+              </button>
+            </div>
           </div>
+
+          {/* Avatar Selector */}
+          {isEditingAvatar && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="border-t pt-6"
+            >
+              <AvatarSelector
+                userId={user?.uid}
+                currentAvatar={userData?.avatar}
+                onSelect={async (newAvatar) => {
+                  setSavingAvatar(true);
+                  try {
+                    const userRef = firestoreDoc(db, 'users', user.uid);
+                    await updateDoc(userRef, {
+                      avatar: newAvatar
+                    });
+                    toast.success('Avatar updated successfully!');
+                    setIsEditingAvatar(false);
+                    // Reload to see changes immediately
+                    setTimeout(() => window.location.reload(), 1000);
+                  } catch (error) {
+                    toast.error('Failed to update avatar');
+                    console.error('Avatar update error:', error);
+                  } finally {
+                    setSavingAvatar(false);
+                  }
+                }}
+              />
+              {savingAvatar && (
+                <div className="flex items-center justify-center mt-4">
+                  <FaSpinner className="animate-spin mr-2" />
+                  <span>Saving avatar...</span>
+                </div>
+              )}
+            </motion.div>
+          )}
         </div>
+        
         <button 
           onClick={handleSignOut}
           className="mt-6 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-xl transition-all flex items-center gap-2"

@@ -9,8 +9,8 @@ import { db, functions } from '@/lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
-
-const avatarStyles = ['adventurer', 'avataaars', 'big-smile', 'bottts', 'fun-emoji', 'pixel-art'];
+import AvatarSelector from '@/components/AvatarSelector';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function SetupPage() {
   const { user, userData } = useAuth();
@@ -20,41 +20,31 @@ export default function SetupPage() {
   const [selectedAvatar, setSelectedAvatar] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const generateAvatarUrl = (style) => {
-    return `https://api.dicebear.com/7.x/${style}/svg?seed=${user.uid}`;
-  };
-
-  const handleRandomAvatar = async () => {
-    try {
-      setLoading(true);
-      const assignAvatar = httpsCallable(functions, 'assignRandomAvatar');
-      const result = await assignAvatar();
-      setSelectedAvatar(result.data.avatar);
-      toast.success('Random avatar assigned!');
-    } catch (error) {
-      console.error(error);
-      // Fallback if function doesn't exist yet
-      const randomStyle = avatarStyles[Math.floor(Math.random() * avatarStyles.length)];
-      const avatar = {
-        type: 'dicebear',
-        style: randomStyle,
-        seed: user.uid,
-        url: generateAvatarUrl(randomStyle),
-      };
-      setSelectedAvatar(avatar);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSelectAvatar = (style) => {
+  const handleRandomAvatar = () => {
+    // Generate a random avatar style from all available styles
+    const lightStyles = [
+      'fun-emoji', 'adventurer', 'adventurer-neutral',
+      'avataaars', 'avataaars-neutral', 'big-smile', 
+      'lorelei', 'lorelei-neutral', 'pixel-art', 'pixel-art-neutral',
+      'micah', 'miniavs', 'open-peeps', 'personas', 'dylan'
+    ];
+    const darkStyles = [
+      'bottts', 'bottts-neutral', 'shapes', 'identicon', 
+      'notionists', 'notionists-neutral', 'thumbs', 'rings',
+      'bauhaus', 'croodles', 'croodles-neutral'
+    ];
+    const allStyles = [...lightStyles, ...darkStyles];
+    const randomStyle = allStyles[Math.floor(Math.random() * allStyles.length)];
+    const randomSeed = `${user.uid}_${Date.now()}`; // Unique seed for variety
+    
     const avatar = {
       type: 'dicebear',
-      style: style,
-      seed: user.uid,
-      url: generateAvatarUrl(style),
+      style: randomStyle,
+      seed: randomSeed,
+      url: `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${randomSeed}`,
     };
     setSelectedAvatar(avatar);
+    toast.success('Random avatar selected!');
   };
 
   const handleCreateFamily = async (e) => {
@@ -169,27 +159,12 @@ export default function SetupPage() {
 
               <div className="mb-8">
                 <p className="text-center font-bold text-gray-700 mb-4">Or choose one:</p>
-                <div className="grid grid-cols-3 gap-4">
-                  {avatarStyles.map(style => (
-                    <button
-                      key={style}
-                      onClick={() => handleSelectAvatar(style)}
-                      className={`aspect-square rounded-2xl border-4 transition-all hover:scale-105 overflow-hidden ${
-                        selectedAvatar?.style === style
-                          ? 'border-purple-500 shadow-lg'
-                          : 'border-gray-200 hover:border-purple-300'
-                      }`}
-                    >
-                      <Image
-                        src={generateAvatarUrl(style)}
-                        alt={style}
-                        width={150}
-                        height={150}
-                        unoptimized
-                      />
-                    </button>
-                  ))}
-                </div>
+                <AvatarSelector
+                  userId={user?.uid}
+                  currentAvatar={selectedAvatar}
+                  onSelect={setSelectedAvatar}
+                  size={80}
+                />
               </div>
 
               <button
