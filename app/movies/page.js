@@ -263,7 +263,7 @@ function MoviesContent() {
           <h1 className="text-4xl font-display font-bold mb-2">
             <span className="gradient-text">Movie Night</span> 🎬
           </h1>
-          <p className="text-gray-600 font-semibold">
+          <p className={`${theme.colors.textLight} font-semibold`}>
             Vote on what to watch next!
           </p>
         </div>
@@ -277,68 +277,64 @@ function MoviesContent() {
       </div>
 
       {/* Filters, Randomizer & View Mode Toggle */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
-        <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2 pt-1 px-1">
-          <div className="flex gap-2 shrink-0 flex-nowrap">
-            <button
-              onClick={() => setView('active')}
-              className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
-                view === 'active'
-                  ? 'border-purple-500 bg-purple-50 text-purple-700'
-                  : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
-              }`}
-            >
-              <FaList className="hidden md:inline" /> Watchlist ({activeMovies.length})
-            </button>
-            <button
-              onClick={() => setView('watched')}
-              className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
-                view === 'watched'
-                  ? 'border-green-500 bg-green-50 text-green-700'
-                  : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-green-300'
-              }`}
-            >
-              <FaCheck className="hidden md:inline" /> Watched ({watchedMovies.length})
-            </button>
+      <div className="flex items-center gap-3 mb-6 overflow-x-auto custom-scrollbar pb-2 pt-1 px-1">
+        <div className="flex gap-2 shrink-0 flex-nowrap">
+          <button
+            onClick={() => setView('active')}
+            className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
+              view === 'active'
+                ? 'border-purple-500 bg-purple-50 text-purple-700'
+                : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
+            }`}
+          >
+            <FaList className="hidden md:inline" /> Watchlist ({activeMovies.length})
+          </button>
+          <button
+            onClick={() => setView('watched')}
+            className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
+              view === 'watched'
+                ? 'border-green-500 bg-green-50 text-green-700'
+                : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-green-300'
+            }`}
+          >
+            <FaCheck className="hidden md:inline" /> Watched ({watchedMovies.length})
+          </button>
 
-            {view === 'active' && activeMovies.length > 0 && (
-              <button
-                onClick={pickRandomMovie}
-                className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 border-yellow-400 bg-yellow-50 text-yellow-900 font-bold shadow-sm whitespace-nowrap hover:bg-yellow-100 transition-all text-xs md:text-sm"
-                title="Spin random pick"
-              >
-                <FaRandom />
-                <span className="hidden sm:inline">Spin</span>
-              </button>
-            )}
-          </div>
+          {view === 'active' && activeMovies.length > 0 && (
+            <button
+              onClick={pickRandomMovie}
+              className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 border-yellow-400 bg-yellow-50 text-yellow-900 font-bold shadow-sm whitespace-nowrap hover:bg-yellow-100 transition-all text-xs md:text-sm"
+              title="Spin random pick"
+            >
+              <FaRandom />
+              <span className="hidden sm:inline">Spin</span>
+            </button>
+          )}
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2 pt-1 px-1 md:justify-end">
-          <div className="flex gap-2 shrink-0 flex-nowrap">
-            <button
-              onClick={() => setViewMode('detail')}
-              className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
-                viewMode === 'detail'
-                  ? 'border-purple-500 bg-purple-50 text-purple-700'
-                  : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
-              }`}
-              title="Detail View"
-            >
-              <FaList />
-            </button>
-            <button
-              onClick={() => setViewMode('poster')}
-              className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
-                viewMode === 'poster'
-                  ? 'border-purple-500 bg-purple-50 text-purple-700'
-                  : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
-              }`}
-              title="Poster View"
-            >
-              <FaTh />
-            </button>
-          </div>
+        <div className="flex gap-2 shrink-0 flex-nowrap">
+          <button
+            onClick={() => setViewMode('detail')}
+            className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
+              viewMode === 'detail'
+                ? 'border-purple-500 bg-purple-50 text-purple-700'
+                : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
+            }`}
+            title="Detail View"
+          >
+            <FaList />
+          </button>
+          <button
+            onClick={() => setViewMode('poster')}
+            className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
+              viewMode === 'poster'
+                ? 'border-purple-500 bg-purple-50 text-purple-700'
+                : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
+            }`}
+            title="Poster View"
+          >
+            <FaTh />
+          </button>
         </div>
       </div>
 
@@ -370,7 +366,7 @@ function MoviesContent() {
                   exit={{ opacity: 0, scale: 0.9 }}
                   className="relative group"
                 >
-                  <div className="aspect-[2/3] relative rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 max-h-[260px]">
+                  <div className="aspect-[2/3] relative rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all bg-gray-100 dark:bg-gray-900 max-h-[260px]">
                     {movie.posterUrl ? (
                       <Image
                         src={movie.posterUrl}
@@ -446,13 +442,13 @@ function MoviesContent() {
                       <div className="flex-1 p-5 flex flex-col">
                         <div className="flex items-start justify-between gap-3 mb-2">
                           <h3 className={`text-2xl font-bold ${theme.colors.text}`}>
-                            {movie.title} {year && <span className="text-gray-500 dark:text-gray-400">({year})</span>}
+                            {movie.title} {year && <span className={theme.colors.textLight}>({year})</span>}
                           </h3>
                         </div>
 
-                      <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      <div className={`flex flex-wrap items-center gap-2 text-sm ${theme.colors.textLight} mb-3`}>
                         {movie.certification && (
-                          <span className="border border-gray-400 px-1.5 py-0.5 rounded text-xs font-semibold">
+                          <span className={`border ${theme.colors.textLight} px-1.5 py-0.5 rounded text-xs font-semibold`}>
                             {movie.certification}
                           </span>
                         )}
@@ -480,16 +476,16 @@ function MoviesContent() {
                               <circle cx="24" cy="24" r="20" stroke="#e5e7eb" strokeWidth="4" fill="none" />
                               <circle cx="24" cy="24" r="20" stroke="#22c55e" strokeWidth="4" fill="none" strokeDasharray={`${userScore * 1.256} 125.6`} strokeLinecap="round" />
                             </svg>
-                            <div className="absolute inset-0 flex items-center justify-center text-xs font-bold">
+                            <div className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${theme.colors.text}`}>
                               {userScore}%
                             </div>
                           </div>
-                          <span className="text-sm font-semibold text-gray-700">User Score</span>
+                          <span className={`text-sm font-semibold ${theme.colors.textLight}`}>User Score</span>
                         </div>
                       )}
 
                       {movie.tagline && (
-                        <p className="text-sm italic text-gray-500 dark:text-gray-400 mb-2">{movie.tagline}</p>
+                        <p className={`text-sm italic ${theme.colors.textLight} mb-2`}>{movie.tagline}</p>
                       )}
                       {movie.trailerKey && (
                         <button
@@ -500,13 +496,13 @@ function MoviesContent() {
                         </button>
                       )}
                       <div className="mb-3 flex-1">
-                        <p className="text-base text-gray-700 dark:text-gray-200 leading-relaxed line-clamp-4">
+                        <p className={`text-base ${theme.colors.textLight} leading-relaxed line-clamp-4`}>
                           {movie.overview}
                         </p>
                       </div>
 
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-                        <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                      <div className="flex items-center justify-between mt-3">
+                        <div className={`flex items-center gap-2 text-xs ${theme.colors.textLight}`}>
                           <UserAvatar user={uploader} size={20} />
                           <span className="truncate">{uploader?.displayName?.split(' ')[0]}</span>
                         </div>
@@ -546,10 +542,6 @@ function MoviesContent() {
                       </div>
                     </div>
                   </div>
-
-                  <div className="flex justify-end items-center gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex-1" />
-                  </div>
                 </motion.div>
               );
             }
@@ -558,7 +550,7 @@ function MoviesContent() {
       </div>
 
       {displayedMovies.length === 0 && (
-        <div className="text-center py-12 text-gray-400">
+        <div className={`text-center py-12 ${theme.colors.textLight}`}>
           <div className="text-6xl mb-4">🍿</div>
           <p>No movies found. Add one to get started!</p>
         </div>
