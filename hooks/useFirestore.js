@@ -529,6 +529,22 @@ export function useRecipes() {
     }
   };
 
+  const updateRecipe = async (recipeId, updates) => {
+    try {
+      await updateDoc(
+        doc(db, 'families', userData.familyId, 'recipes', recipeId),
+        {
+          ...updates,
+          updatedAt: serverTimestamp(),
+        }
+      );
+      toast.success('Recipe updated!');
+    } catch (error) {
+      toast.error('Failed to update recipe');
+      console.error(error);
+    }
+  };
+
   const deleteRecipe = async (recipeId) => {
     try {
       await deleteDoc(
@@ -541,7 +557,7 @@ export function useRecipes() {
     }
   };
 
-  return { recipes, loading, addRecipe, deleteRecipe };
+  return { recipes, loading, addRecipe, updateRecipe, deleteRecipe };
 }
 
 // --- 10. MEAL PLAN ---

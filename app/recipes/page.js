@@ -8,15 +8,21 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { searchRecipes, getRecipeInformation, getRecipeNutrition } from '@/lib/spoonacular';
 import { enrichRecipeWithUSDA, formatNutrientName } from '@/lib/usdaEnrichment';
-import { FaPlus, FaTrash, FaShoppingCart, FaCalendar, FaSearch, FaCamera, FaYoutube } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaShoppingCart, FaCalendar, FaSearch, FaCamera, FaYoutube, FaTimes } from 'react-icons/fa';
 import RecipeScannerModal from '@/components/RecipeScannerModal';
 import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
+const getYouTubeId = (url) => {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return match && match[2].length === 11 ? match[2] : null;
+};
 
 function RecipesContent() {
-  const { recipes, loading, addRecipe, deleteRecipe } = useRecipes();
+  const { recipes, loading, addRecipe, updateRecipe, deleteRecipe } = useRecipes();
   const { addGroceryItem } = useGroceries();
   const { userData } = useAuth();
   const { theme, currentTheme } = useTheme();
@@ -34,14 +40,18 @@ function RecipesContent() {
   const [isEnriching, setIsEnriching] = useState(false);
   const [enrichmentProgress, setEnrichmentProgress] = useState(null);
   const [nutritionSource, setNutritionSource] = useState('spoonacular'); // 'spoonacular' or 'usda'
+  const [editingRecipeId, setEditingRecipeId] = useState(null);
   const [newRecipe, setNewRecipe] = useState({
     name: '',
     description: '',
     servings: '',
     prepTime: '',
+    cookTime: '',
     ingredients: [{ name: '', amount: '', category: 'other' }],
     instructions: '',
     imageFile: null,
+    videoUrl: '',
+    sourceType: 'manual', // manual | search | scanned
   });
 
   const handleSearch = async (e) => {
@@ -152,12 +162,14 @@ function RecipesContent() {
         description: apiRecipe.summary?.replace(/<[^>]*>/g, '').substring(0, 200) || '',
         servings: `${apiRecipe.servings || ''} servings`,
         prepTime: `${apiRecipe.readyInMinutes || ''} mins`,
+        cookTime: apiRecipe.cookTime || '',
         ingredients,
         instructions,
         imageUrl: apiRecipe.image,
         nutrition: apiRecipe.nutrition,
         // --- THIS IS THE FIX: Restored sourceUrl ---
         sourceUrl: apiRecipe.sourceUrl,
+        sourceType: 'search',
       });
 
       toast.success(`Added ${apiRecipe.title} to your recipes!`);
@@ -200,7 +212,9 @@ function RecipesContent() {
     setUploading(true);
 
     try {
-      let imageUrl = '';
+      let imageUrl = editingRecipeId
+        ? recipes.find(r => r.id === editingRecipeId)?.imageUrl || ''
+        : '';
 
       // Upload image if provided
       if (newRecipe.imageFile) {
@@ -213,26 +227,39 @@ function RecipesContent() {
         imageUrl = await getDownloadURL(storageRef);
       }
 
-      await addRecipe({
+      const payload = {
         name: newRecipe.name,
         description: newRecipe.description,
         servings: newRecipe.servings,
         prepTime: newRecipe.prepTime,
+        cookTime: newRecipe.cookTime,
         ingredients: newRecipe.ingredients.filter(ing => ing.name),
         instructions: newRecipe.instructions,
         imageUrl,
-      });
+        videoUrl: newRecipe.videoUrl || '',
+        sourceType: (newRecipe.sourceType === 'manual' && newRecipe.imageFile) ? 'uploaded' : newRecipe.sourceType || (newRecipe.imageFile ? 'uploaded' : 'manual'),
+      };
+
+      if (editingRecipeId) {
+        await updateRecipe(editingRecipeId, { ...payload });
+      } else {
+        await addRecipe({ ...payload });
+      }
 
       setNewRecipe({
         name: '',
         description: '',
         servings: '',
         prepTime: '',
+        cookTime: '',
         ingredients: [{ name: '', amount: '', category: 'other' }],
         instructions: '',
         imageFile: null,
+        videoUrl: '',
+        sourceType: 'manual',
       });
       setShowAddModal(false);
+      setEditingRecipeId(null);
     } catch (error) {
       console.error('Error adding recipe:', error);
       toast.error('Failed to add recipe');
@@ -258,21 +285,16 @@ function RecipesContent() {
       }
 
       // Combine prep and cook time if both exist
-      let totalTime = '';
-      if (scannedRecipe.prepTime && scannedRecipe.cookTime) {
-        totalTime = `Prep: ${scannedRecipe.prepTime}, Cook: ${scannedRecipe.cookTime}`;
-      } else {
-        totalTime = scannedRecipe.prepTime || scannedRecipe.cookTime || '';
-      }
-
       await addRecipe({
         name: scannedRecipe.name,
-        description: scannedRecipe.description || 'Scanned recipe',
+        description: scannedRecipe.description || '',
         servings: scannedRecipe.servings,
-        prepTime: totalTime,
+        prepTime: scannedRecipe.prepTime || '',
+        cookTime: scannedRecipe.cookTime || '',
         ingredients: scannedRecipe.ingredients.filter(ing => ing.name),
         instructions: scannedRecipe.instructions,
         imageUrl,
+        sourceType: 'scanned',
       });
 
       toast.success(`Successfully added "${scannedRecipe.name}" to your recipes! 📖`);
@@ -295,6 +317,29 @@ function RecipesContent() {
       });
     }
     toast.success(`Added ${recipe.name} ingredients to grocery list! 🛒`);
+  };
+
+  const startEditingRecipe = (recipe) => {
+    setEditingRecipeId(recipe.id);
+    setNewRecipe({
+      name: recipe.name || '',
+      description: recipe.description || '',
+      servings: recipe.servings || '',
+      prepTime: recipe.prepTime || '',
+      ingredients: recipe.ingredients?.length
+        ? recipe.ingredients.map((ing) => ({
+            name: ing.name || '',
+            amount: ing.amount || '',
+            category: ing.category || 'other',
+          }))
+        : [{ name: '', amount: '', category: 'other' }],
+      instructions: recipe.instructions || '',
+      imageFile: null,
+      videoUrl: recipe.videoUrl || '',
+      cookTime: recipe.cookTime || '',
+      sourceType: recipe.sourceType || 'manual',
+    });
+    setShowAddModal(true);
   };
 
   if (loading) {
@@ -342,19 +387,19 @@ function RecipesContent() {
 
         {/* Search Bar */}
         <form onSubmit={handleSearch} className="mb-6">
-          <div className="flex gap-2 md:gap-3">
+          <div className="flex flex-col md:flex-row gap-3 md:gap-4 items-stretch">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="🔍 Search recipes..."
-              className="flex-1 px-4 md:px-6 py-3 md:py-4 rounded-2xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold text-base md:text-lg shadow-lg"
+              className="flex-1 px-4 md:px-5 py-3 md:py-3.5 rounded-2xl border-2 border-gray-200 bg-white/80 focus:border-purple-500 focus:outline-none font-semibold text-base md:text-lg shadow-sm hover:border-purple-300 transition-colors"
               required
             />
             <button
               type="submit"
               disabled={searching}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center gap-2"
+              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-4 md:px-6 py-3 md:py-3.5 rounded-2xl font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center gap-2 justify-center"
               aria-label="Search"
             >
               {searching ? <span className="md:hidden">...</span> : <FaSearch />}
@@ -368,24 +413,24 @@ function RecipesContent() {
 
         {/* Tabs */}
         {searchResults.length > 0 && (
-          <div className="overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 mb-6">
-            <div className="flex gap-2 min-w-min">
+          <div className="mb-6 flex items-center gap-3 overflow-x-auto custom-scrollbar pb-2 pt-1 px-1">
+            <div className="flex gap-3 shrink-0">
               <button
                 onClick={() => setActiveTab('my-recipes')}
-                className={`px-4 md:px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap text-sm md:text-base ${
+                className={`flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-sm md:text-base ${
                   activeTab === 'my-recipes'
-                    ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? 'border-orange-500 bg-orange-50 text-orange-700'
+                    : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-orange-300'
                 }`}
               >
                 My Recipes ({recipes.length})
               </button>
               <button
                 onClick={() => setActiveTab('search-results')}
-                className={`px-4 md:px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap text-sm md:text-base ${
+                className={`flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-sm md:text-base ${
                   activeTab === 'search-results'
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-blue-300'
                 }`}
               >
                 Search Results ({searchResults.length})
@@ -411,7 +456,7 @@ function RecipesContent() {
                   key={recipe.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className={`${theme.colors.bgCard} rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer`}
+                  className={`${theme.colors.bgCard} rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer group relative`}
                   onClick={() => setSelectedRecipe(recipe)}
                 >
                   {recipe.imageUrl ? (
@@ -423,6 +468,24 @@ function RecipesContent() {
                         className="object-cover"
                         unoptimized
                       />
+                      {recipe.videoUrl && (
+                        <div className="absolute inset-0 flex items-end justify-start pointer-events-none">
+                          <button
+                            className="m-3 bg-black/60 backdrop-blur-md text-white rounded-full p-2.5 shadow-lg hover:bg-black/70 transition-colors flex items-center justify-center pointer-events-auto"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const videoId = getYouTubeId(recipe.videoUrl);
+                              window.open(
+                                videoId ? `https://www.youtube.com/watch?v=${videoId}` : recipe.videoUrl,
+                                '_blank'
+                              );
+                            }}
+                            title="Watch on YouTube"
+                          >
+                            <FaYoutube className="text-red-500" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="h-48 bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center">
@@ -430,15 +493,36 @@ function RecipesContent() {
                     </div>
                   )}
 
-                  <div className="p-6">
+                  <div className="p-6 relative">
                     <h3 className="text-xl font-bold text-gray-800 mb-2">{recipe.name}</h3>
-                    {recipe.description && (
+                    {recipe.description && recipe.description.toLowerCase() !== 'scanned recipe' && (
                       <p className="text-gray-600 text-sm mb-3 line-clamp-2">{recipe.description}</p>
                     )}
 
-                    <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                    <div className="flex items-center gap-3 text-sm text-gray-500 mb-4 flex-wrap">
+                      {recipe.sourceType === 'scanned' && (
+                        <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-bold text-xs">
+                          Scanned Recipe
+                        </span>
+                      )}
+                      {recipe.sourceType === 'search' && (
+                        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold text-xs">
+                          Added from Search
+                        </span>
+                      )}
+                      {recipe.sourceType === 'uploaded' && (
+                        <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-bold text-xs">
+                          Uploaded Recipe
+                        </span>
+                      )}
+                      {(!recipe.sourceType || recipe.sourceType === 'manual') && (
+                        <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full font-bold text-xs">
+                          Added Recipe
+                        </span>
+                      )}
                       {recipe.servings && <span>👥 {recipe.servings}</span>}
-                      {recipe.prepTime && <span>⏱️ {recipe.prepTime}</span>}
+                      {recipe.prepTime && <span>⏱️ Prep {recipe.prepTime}</span>}
+                      {recipe.cookTime && <span>🍳 Cook {recipe.cookTime}</span>}
                     </div>
 
                     <div className="flex gap-2">
@@ -458,7 +542,7 @@ function RecipesContent() {
                             deleteRecipe(recipe.id);
                           }
                         }}
-                        className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-xl transition-all flex items-center justify-center"
+                        className="bg-gray-100 text-gray-500 p-2 rounded-xl transition-all flex items-center justify-center hover:bg-gray-200 hover:text-red-500"
                         title="Delete recipe"
                       >
                         <FaTrash />
@@ -524,15 +608,15 @@ function RecipesContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto p-4"
+            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
             onClick={() => setSelectedRecipe(null)}
           >
             <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl max-w-2xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto`}
+              className={`${theme.colors.bgCard} rounded-3xl max-w-4xl w-full shadow-2xl max-h-[90vh] overflow-y-auto flex flex-col border ${theme.colors.borderLight}`}
             >
               {selectedRecipe.imageUrl && (
                 <div className="relative h-64">
@@ -543,90 +627,133 @@ function RecipesContent() {
                     className="object-cover rounded-t-3xl"
                     unoptimized
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 </div>
               )}
 
-              <div className="p-4 md:p-8">
-                <div className="flex items-start justify-between mb-4">
-                  <h2 className="text-3xl font-display font-bold gradient-text">
-                    {selectedRecipe.name}
-                  </h2>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm('Delete this recipe?')) {
-                        deleteRecipe(selectedRecipe.id);
-                        setSelectedRecipe(null);
-                      }
-                    }}
-                    className="text-red-500 hover:text-red-700 p-2"
-                  >
-                    <FaTrash />
-                  </button>
+              <div className="p-6 flex-1 flex flex-col">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-800">{selectedRecipe.name}</h2>
+                    {selectedRecipe.description &&
+                      selectedRecipe.description.toLowerCase() !== 'scanned recipe' && (
+                        <p className="text-gray-600 mt-2">{selectedRecipe.description}</p>
+                    )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    deleteRecipe(selectedRecipe.id);
+                    setSelectedRecipe(null);
+                  }}
+                      className="bg-red-100 text-red-500 px-3 py-2 rounded-full font-bold hover:bg-red-200 transition-all"
+                      title="Delete recipe"
+                >
+                  <FaTrash />
+                </button>
+                <button
+                  onClick={() => {
+                    startEditingRecipe(selectedRecipe);
+                  }}
+                  className="bg-blue-100 text-blue-600 px-3 py-2 rounded-full font-bold hover:bg-blue-200 transition-all"
+                  title="Edit recipe"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => setSelectedRecipe(null)}
+                  className="bg-gray-100 text-gray-600 px-3 py-2 rounded-full font-bold hover:bg-gray-200 transition-all"
+                  title="Close"
+                >
+                      <FaTimes />
+                    </button>
+                  </div>
                 </div>
 
-                {selectedRecipe.description && (
-                  <p className="text-gray-600 mb-4">{selectedRecipe.description}</p>
-                )}
-
-                <div className="flex gap-4 mb-6">
+                <div className="flex flex-wrap gap-3 text-sm mb-6">
                   {selectedRecipe.servings && (
-                    <div className="bg-purple-50 px-4 py-2 rounded-xl">
-                      <span className="font-bold text-purple-700">👥 {selectedRecipe.servings}</span>
-                    </div>
+                    <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-bold">
+                      👥 {selectedRecipe.servings}
+                    </span>
                   )}
                   {selectedRecipe.prepTime && (
-                    <div className="bg-blue-50 px-4 py-2 rounded-xl">
-                      <span className="font-bold text-blue-700">⏱️ {selectedRecipe.prepTime}</span>
-                    </div>
+                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-bold">
+                      ⏱️ {selectedRecipe.prepTime}
+                    </span>
+                  )}
+                  {selectedRecipe.cookTime && (
+                    <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-bold">
+                      🍳 {selectedRecipe.cookTime}
+                    </span>
                   )}
                 </div>
 
-                <div className="mb-6">
-                  <h3 className="text-xl font-bold mb-3">📝 Ingredients:</h3>
-                  <div className="space-y-2">
-                    {selectedRecipe.ingredients?.map((ing, i) => (
-                      <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                        <span className="font-semibold text-gray-800">{ing.name}</span>
-                        {ing.amount && <span className="text-gray-600">- {ing.amount}</span>}
-                      </div>
-                    ))}
-                  </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">Ingredients</h3>
+                <div className="space-y-2 mb-6">
+                  {selectedRecipe.ingredients?.map((ing, i) => (
+                    <div key={i} className="flex items-center gap-2 text-gray-700">
+                      <span className="text-purple-500 font-bold">•</span>
+                      <span>
+                        {ing.amount && `${ing.amount} `}
+                        {ing.name}
+                      </span>
+                    </div>
+                  ))}
                 </div>
 
                 {selectedRecipe.instructions && (
-                  <div className="mb-6">
-                    <h3 className="text-xl font-bold mb-3">👨‍🍳 Instructions:</h3>
-                    <p className="text-gray-700 whitespace-pre-line bg-gray-50 p-4 rounded-xl">
+                  <>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">Instructions</h3>
+                    <p className="text-gray-700 whitespace-pre-line mb-6">
                       {selectedRecipe.instructions}
                     </p>
+                  </>
+                )}
+
+                {selectedRecipe.videoUrl && (
+                  <div className="mt-4">
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">Video</h3>
+                    <div className="aspect-video rounded-2xl overflow-hidden shadow-lg">
+                      {(() => {
+                        const videoId = getYouTubeId(selectedRecipe.videoUrl);
+                        if (videoId) {
+                          return (
+                            <iframe
+                              src={`https://www.youtube.com/embed/${videoId}`}
+                              title="YouTube video player"
+                              frameBorder="0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              className="w-full h-full"
+                            ></iframe>
+                          );
+                        }
+                        return (
+                          <a
+                            href={selectedRecipe.videoUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block w-full h-full bg-gray-100 flex items-center justify-center text-blue-600 font-bold"
+                          >
+                            Open Video
+                          </a>
+                        );
+                      })()}
+                    </div>
                   </div>
                 )}
-                {/* --- ADDED: Watch Video Button (only if URL exists) --- */}
-                {selectedRecipe.videoUrl && (
+
+                <div className="mt-6">
                   <button
                     onClick={() => {
-                      const videoId = getYouTubeId(selectedRecipe.videoUrl);
-                      if (videoId) {
-                        setVideoToPlay(videoId);
-                      } else {
-                        toast.error("Invalid YouTube URL");
-                      }
+                      addAllToGroceries(selectedRecipe);
+                      setSelectedRecipe(null);
                     }}
-                    className="w-full mb-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 rounded-2xl font-bold hover:from-purple-700 hover:to-indigo-700 transition-all shadow-lg flex items-center justify-center gap-2"
+                    className="w-full bg-gradient-to-r from-green-500 to-blue-500 text-white py-4 rounded-2xl font-bold hover:from-green-600 hover:to-blue-600 transition-all shadow-lg flex items-center justify-center gap-2"
                   >
-                    <FaYoutube size={20} /> Watch Video Tutorial
+                    <FaShoppingCart /> Add All Ingredients to Grocery List
                   </button>
-                )}
-                <button
-                  onClick={() => {
-                    addAllToGroceries(selectedRecipe);
-                    setSelectedRecipe(null);
-                  }}
-                  className="w-full bg-gradient-to-r from-green-500 to-blue-500 text-white py-4 rounded-2xl font-bold hover:from-green-600 hover:to-blue-600 transition-all shadow-lg flex items-center justify-center gap-2"
-                >
-                  <FaShoppingCart /> Add All Ingredients to Grocery List
-                </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
@@ -641,7 +768,11 @@ function RecipesContent() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto p-4"
-            onClick={() => !uploading && setShowAddModal(false)}
+            onClick={() => {
+              if (uploading) return;
+              setShowAddModal(false);
+              setEditingRecipeId(null);
+            }}
           >
             <motion.div
               initial={{ scale: 0.9 }}
@@ -650,9 +781,22 @@ function RecipesContent() {
               onClick={(e) => e.stopPropagation()}
               className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 max-w-2xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto`}
             >
-              <h2 className="text-2xl md:text-3xl font-display font-bold mb-4 md:mb-6 gradient-text">
-                🍳 Add Recipe
-              </h2>
+              <div className="flex items-center justify-between mb-4 md:mb-6">
+                <h2 className="text-2xl md:text-3xl font-display font-bold gradient-text">
+                  🍳 {editingRecipeId ? 'Edit Recipe' : 'Add Recipe'}
+                </h2>
+                <button
+                  onClick={() => {
+                    if (uploading) return;
+                    setShowAddModal(false);
+                    setEditingRecipeId(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  aria-label="Close"
+                >
+                  <FaTimes />
+                </button>
+              </div>
 
               <form onSubmit={handleAddRecipe} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -704,6 +848,18 @@ function RecipesContent() {
                       value={newRecipe.prepTime}
                       onChange={(e) => setNewRecipe({ ...newRecipe, prepTime: e.target.value })}
                       placeholder="30 mins"
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
+                      Cook Time
+                    </label>
+                    <input
+                      type="text"
+                      value={newRecipe.cookTime}
+                      onChange={(e) => setNewRecipe({ ...newRecipe, cookTime: e.target.value })}
+                      placeholder="45 mins"
                       className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
                     />
                   </div>
@@ -786,7 +942,7 @@ function RecipesContent() {
                     disabled={uploading}
                     className="flex-1 bg-gradient-to-r from-orange-500 to-pink-500 text-white py-3 rounded-xl font-bold hover:from-orange-600 hover:to-pink-600 transition-all shadow-lg disabled:opacity-50"
                   >
-                    {uploading ? 'Adding...' : 'Add Recipe'}
+                    {uploading ? (editingRecipeId ? 'Updating...' : 'Saving...') : editingRecipeId ? 'Update Recipe' : 'Add Recipe'}
                   </button>
                 </div>
               </form>

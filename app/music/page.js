@@ -15,7 +15,6 @@ import {
 import { useMusicJams } from '@/hooks/useMusicJams';
 import JamCard from '@/components/JamCard';
 import AddJamModal from '@/components/AddJamModal';
-import PlaylistFolder from '@/components/PlaylistFolder';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import YouTube from 'react-youtube'; 
@@ -217,48 +216,79 @@ function MusicContent() {
 
       {/* --- PLAYLIST BAR --- */}
       <div className="mb-6 flex items-center gap-2 overflow-x-auto custom-scrollbar pb-4 pt-2 px-1">
-          <div className="flex gap-4 shrink-0">
-            {/* 'All' Folder */}
-            <PlaylistFolder 
-                folder={{ id: 'all', name: 'All Jams' }} 
-                isActive={activeFilterId === 'all'} 
-                onClick={() => setActiveFilterId('all')}
-                onPlay={() => { setActiveFilterId('all'); handlePlayFolder(); }}
-                onDropJam={() => {}} 
-                count={''} 
-            />
+        <div className="flex gap-3 shrink-0">
+          {/* 'All' Folder */}
+          <button
+            onClick={() => setActiveFilterId('all')}
+            className={`flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-sm md:text-base ${
+              activeFilterId === 'all'
+                ? 'border-purple-500 bg-purple-50 text-purple-700'
+                : `border-dashed ${currentTheme === 'dark' ? 'border-gray-700 bg-gray-900 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} hover:border-purple-300`
+            }`}
+          >
+            <FaFolderPlus /> All Jams
+          </button>
 
-            {/* Dynamic Folders */}
-            {folders.map(folder => (
-                <PlaylistFolder 
-                    key={folder.id}
-                    folder={folder} 
-                    isActive={activeFilterId === folder.id} 
-                    onClick={() => setActiveFilterId(folder.id)}
-                    onDelete={handleDeleteFolder}
-                    onPlay={() => { setActiveFilterId(folder.id); handlePlayFolder(); }}
-                    onDropJam={assignJamToFolder}
-                    count={''}
-                />
-            ))}
-
-            {/* Add Button */}
-            <button 
-                onClick={handleCreateFolder}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed text-gray-400 hover:text-purple-500 hover:border-purple-400 transition-colors font-bold whitespace-nowrap shrink-0 ${currentTheme === 'dark' ? 'border-gray-700' : 'border-gray-300'}`}
+          {/* Dynamic Folders */}
+          {folders.map(folder => (
+            <button
+              key={folder.id}
+              onClick={() => setActiveFilterId(folder.id)}
+              className={`relative group flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-sm md:text-base ${
+                activeFilterId === folder.id
+                  ? 'border-purple-500 bg-purple-50 text-purple-700'
+                  : `border-dashed ${currentTheme === 'dark' ? 'border-gray-700 bg-gray-900 text-gray-200' : 'border-gray-300 bg-white text-gray-700'} hover:border-purple-300`
+              }`}
             >
-                <FaFolderPlus /> Add Playlist
+              <FaFolderPlus /> {folder.name}
+              <span className="text-xs opacity-70">{/* count placeholder if needed */}</span>
+              <div className="flex items-center gap-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveFilterId(folder.id);
+                    handlePlayFolder();
+                  }}
+                  title="Play playlist"
+                  className="text-green-500 hover:text-green-600"
+                >
+                  <FaPlay />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteFolder(folder.id);
+                  }}
+                  title="Delete playlist"
+                  className="text-red-500 hover:text-red-600"
+                >
+                  <FaTimes />
+                </button>
+              </div>
             </button>
+          ))}
 
-            {/* Export Button */}
-            <button 
-                onClick={handleExport}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed text-gray-400 hover:text-green-500 hover:border-green-400 transition-colors font-bold whitespace-nowrap shrink-0 ${currentTheme === 'dark' ? 'border-gray-700' : 'border-gray-300'}`}
-                title="Create Spotify Playlist"
-            >
-                <FaShareSquare /> Export
-            </button>
-          </div>
+          {/* Add Button */}
+          <button
+            onClick={handleCreateFolder}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed text-gray-400 hover:text-purple-500 hover:border-purple-400 transition-colors font-bold whitespace-nowrap shrink-0 ${
+              currentTheme === 'dark' ? 'border-gray-700' : 'border-gray-300'
+            }`}
+          >
+            <FaFolderPlus /> Add Playlist
+          </button>
+
+          {/* Export Button */}
+          <button
+            onClick={handleExport}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed text-gray-400 hover:text-green-500 hover:border-green-400 transition-colors font-bold whitespace-nowrap shrink-0 ${
+              currentTheme === 'dark' ? 'border-gray-700' : 'border-gray-300'
+            }`}
+            title="Create Spotify Playlist"
+          >
+            <FaShareSquare /> Export
+          </button>
+        </div>
       </div>
 
       {/* --- GRID --- */}

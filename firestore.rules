@@ -93,7 +93,17 @@ service cloud.firestore {
       
       match /memories/{memoryId} {
         allow read, create, update: if isFamilyMember(familyId);
-        allow delete: if isParentInFamily(familyId) || resource.data.uploadedBy == request.auth.uid;
+        // Deletes are handled by the 'deleteMemory' Cloud Function, not directly by clients.
+        allow delete: if false;
+
+        // --- NEW: Rule for comments subcollection ---
+        match /comments/{commentId} {
+          allow read: if isFamilyMember(familyId);
+          allow create: if isFamilyMember(familyId) && 
+                         request.resource.data.userId == request.auth.uid;
+          allow update: if false; // No updates for now
+          allow delete: if isFamilyMember(familyId) && resource.data.userId == request.auth.uid;
+        }
       }
 
       match /folders/{folderId} {

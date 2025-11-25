@@ -21,7 +21,7 @@ function TodosContent() {
   const { todos, loading, addTodo } = useTodos();
   const { members } = useFamily();
   const { userData } = useAuth();
-  const { currentTheme, theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filterMember, setFilterMember] = useState('all');
@@ -48,7 +48,6 @@ function TodosContent() {
     });
   };
 
-  // Filter and sort todos
   const filteredTodos = todos.filter(todo => {
     if (filterMember !== 'all' && todo.assignedTo !== filterMember) return false;
     if (filterPriority !== 'all' && todo.priority !== filterPriority) return false;
@@ -126,7 +125,7 @@ function TodosContent() {
               animate={{ rotate: showFilters ? 180 : 0 }}
               transition={{ duration: 0.2 }}
             >
-              <FaFilter className="text-gray-400" />
+              <FaFilter className={`${theme.colors.textMuted}`} />
             </motion.div>
           </button>
 
@@ -136,132 +135,93 @@ function TodosContent() {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
+                className="overflow-hidden border-t-2 border-gray-200 dark:border-gray-700"
               >
-                <div className="p-4 pt-0 border-t border-gray-100">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div>
-                      <label className={`block text-xs md:text-sm font-semibold ${theme.colors.text} mb-1`}>
-                        Assigned To
-                      </label>
-                      <select
-                        value={filterMember}
-                        onChange={(e) => setFilterMember(e.target.value)}
-                        className="w-full px-3 md:px-4 py-2 text-sm md:text-base rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
-                      >
-                        <option value="all">All Members</option>
-                        {members.map(member => (
-                          <option key={member.id} value={member.id}>
-                            {member.displayName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 space-y-4 md:space-y-0">
+                  <div>
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>Assigned To</label>
+                    <select
+                      value={filterMember}
+                      onChange={(e) => setFilterMember(e.target.value)}
+                      className={`w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold ${theme.colors.bgCard}`}
+                    >
+                      <option value="all">All Members</option>
+                      {members.map(member => (
+                        <option key={member.id} value={member.id}>
+                          {member.displayName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                    <div>
-                      <label className={`block text-xs md:text-sm font-semibold ${theme.colors.text} mb-1`}>
-                        Priority
-                      </label>
-                      <select
-                        value={filterPriority}
-                        onChange={(e) => setFilterPriority(e.target.value)}
-                        className="w-full px-3 md:px-4 py-2 text-sm md:text-base rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
-                      >
-                        <option value="all">All Priorities</option>
-                        <option value="high">🔴 High</option>
-                        <option value="medium">🟡 Medium</option>
-                        <option value="low">🔵 Low</option>
-                      </select>
-                    </div>
+                  <div>
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>Priority</label>
+                    <select
+                      value={filterPriority}
+                      onChange={(e) => setFilterPriority(e.target.value)}
+                      className={`w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold ${theme.colors.bgCard}`}
+                    >
+                      <option value="all">All Priorities</option>
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                    </select>
+                  </div>
 
-                    <div>
-                      <label className={`block text-xs md:text-sm font-semibold ${theme.colors.text} mb-1`}>
-                        Sort By
-                      </label>
-                      <select
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
-                        className="w-full px-3 md:px-4 py-2 text-sm md:text-base rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
-                      >
-                        <option value="date">Date Created</option>
-                        <option value="priority">Priority</option>
-                      </select>
-                    </div>
+                  <div>
+                    <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>Sort By</label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className={`w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold ${theme.colors.bgCard}`}
+                    >
+                      <option value="date">Newest First</option>
+                      <option value="priority">Priority</option>
+                    </select>
                   </div>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
-      </div>
 
-      {/* Active Todos */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-display font-bold mb-4 flex items-center gap-2">
-          <span>{currentTheme === 'dark' ? '💀' : '🔥'}</span> {currentTheme === 'dark' ? 'Active Hexes' : 'Active Tasks'}
-          {activeTodos.length > 0 && (
-            <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold">
-              {activeTodos.length}
-            </span>
-          )}
-        </h2>
+        {/* Active Todos */}
+        <div className="space-y-4 mb-8">
+          <h2 className="text-2xl font-bold text-gray-800">Active Tasks</h2>
+          {activeTodos.map(todo => (
+            <TodoItem key={todo.id} todo={todo} />
+          ))}
+        </div>
 
-        {activeTodos.length === 0 ? (
-          <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg`}>
-            <div className="text-6xl mb-4">🎉</div>
-            <p className={`text-xl font-bold ${theme.colors.textMuted}`}>
-              {filterMember !== 'all' || filterPriority !== 'all'
-                ? 'No todos match your filters'
-                : 'All done!'}
-            </p>
-            <p className="text-gray-500">
-              {filterMember !== 'all' || filterPriority !== 'all'
-                ? 'Try adjusting your filters'
-                : 'No active todos right now'}
-            </p>
+        {/* Completed Todos */}
+        {completedTodos.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-gray-500 opacity-70">
+              Completed ({completedTodos.length})
+            </h2>
+            {completedTodos.map(todo => (
+              <TodoItem key={todo.id} todo={todo} />
+            ))}
           </div>
-        ) : (
-          <div className="space-y-3">
-            <AnimatePresence>
-              {activeTodos.map(todo => (
-                <TodoItem key={todo.id} todo={todo} />
-              ))}
-            </AnimatePresence>
+        )}
+
+        {filteredTodos.length === 0 && (
+          <div className="text-center py-12 text-gray-400">
+            <p className="text-6xl mb-4">✅</p>
+            <p className="text-xl font-bold">All done!</p>
+            <p>Add a new todo to get started!</p>
           </div>
         )}
       </div>
 
-      {/* Completed Todos */}
-      {completedTodos.length > 0 && (
-        <div>
-          <h2 className="text-2xl font-display font-bold mb-4 flex items-center gap-2">
-            <span>✅</span> Completed
-            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-bold">
-              {completedTodos.length}
-            </span>
-          </h2>
-          <div className="space-y-3 opacity-70">
-            {completedTodos.slice(0, 5).map(todo => (
-              <TodoItem key={todo.id} todo={todo} />
-            ))}
-          </div>
-          {completedTodos.length > 5 && (
-            <p className="text-center text-gray-500 mt-4 text-sm">
-              + {completedTodos.length - 5} more completed tasks
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Add Todo Modal */}
+      {/* Add Modal */}
       <AnimatePresence>
         {showAddModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto p-4"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
             onClick={() => setShowAddModal(false)}
           >
             <motion.div
@@ -269,12 +229,10 @@ function TodosContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 max-w-2xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto`}
+              className={`${theme.colors.bgCard} rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto`}
             >
-              <div className="flex items-center justify-between mb-4 md:mb-6">
-                <h2 className="text-2xl md:text-3xl font-display font-bold gradient-text">
-                  ✨ Add New Todo
-                </h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-3xl font-display font-bold gradient-text">Add New Todo</h2>
                 <button
                   onClick={() => setShowAddModal(false)}
                   className="text-gray-400 hover:text-gray-600 p-2"
@@ -283,7 +241,7 @@ function TodosContent() {
                 </button>
               </div>
 
-              <form onSubmit={handleAddTodo} className="space-y-4 md:space-y-6">
+              <form onSubmit={handleAddTodo} className="space-y-6">
                 <div>
                   <label className={`block text-sm font-bold ${theme.colors.text} mb-2`}>
                     What needs to be done?
@@ -293,7 +251,7 @@ function TodosContent() {
                     value={newTodo.title}
                     onChange={(e) => setNewTodo({ ...newTodo, title: e.target.value })}
                     placeholder="e.g., Take out the trash, Do homework"
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                    className={`w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold ${theme.colors.bgCard}`}
                     required
                   />
                 </div>

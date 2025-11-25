@@ -8,22 +8,24 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useChores } from '@/hooks/useFirestore';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
+import { useTheme } from '@/contexts/ThemeContext';
 import toast from 'react-hot-toast';
 
 export default function ChoreCard({ chore }) {
   const { getMemberById, isParent } = useFamily();
   const { submitChore } = useChores();
   const { userData } = useAuth();
+  const { theme, currentTheme } = useTheme();
   const assignedMember = getMemberById(chore.assignedTo);
 
   const getStatusColor = () => {
     switch (chore.status) {
-      case 'pending': return 'bg-gray-200 text-gray-700';
-      case 'in_progress': return 'bg-blue-200 text-blue-700';
-      case 'submitted': return 'bg-yellow-200 text-yellow-700';
-      case 'approved': return 'bg-green-200 text-green-700';
-      case 'rejected': return 'bg-red-200 text-red-700';
-      default: return 'bg-gray-200 text-gray-700';
+      case 'pending': return currentTheme === 'dark' ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700';
+      case 'in_progress': return currentTheme === 'dark' ? 'bg-blue-800 text-blue-300' : 'bg-blue-200 text-blue-700';
+      case 'submitted': return currentTheme === 'dark' ? 'bg-yellow-800 text-yellow-300' : 'bg-yellow-200 text-yellow-700';
+      case 'approved': return currentTheme === 'dark' ? 'bg-green-800 text-green-300' : 'bg-green-200 text-green-700';
+      case 'rejected': return currentTheme === 'dark' ? 'bg-red-800 text-red-300' : 'bg-red-200 text-red-700';
+      default: return currentTheme === 'dark' ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700';
     }
   };
 
@@ -50,7 +52,7 @@ export default function ChoreCard({ chore }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all border-4 border-gradient-to-r from-pink-300 to-purple-300"
+      className={`${theme.colors.bgCard} rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all border-4 ${currentTheme === 'dark' ? 'border-gradient-to-r from-pink-700 to-purple-700' : 'border-gradient-to-r from-pink-300 to-purple-300'}`}
     >
       {/* Header with icon and avatar */}
       <div className="flex items-start gap-4 mb-3">
@@ -59,18 +61,18 @@ export default function ChoreCard({ chore }) {
         </div>
         
         <div className="flex-1">
-          <h3 className="text-xl font-display font-bold text-gray-800 mb-1">
+          <h3 className={`text-xl font-display font-bold ${theme.colors.text} mb-1`}>
             {chore.title}
           </h3>
           {chore.description && (
-            <p className="text-sm text-gray-600 mb-2">{chore.description}</p>
+            <p className={`text-sm ${theme.colors.textMuted} mb-2`}>{chore.description}</p>
           )}
           
           {/* Assigned member */}
           {assignedMember && (
             <div className="flex items-center gap-2 mb-2">
               <UserAvatar user={assignedMember} size={24} />
-              <span className="text-sm text-gray-600">
+              <span className={`text-sm ${theme.colors.textMuted}`}>
                 {assignedMember.displayName}
               </span>
             </div>
@@ -80,7 +82,7 @@ export default function ChoreCard({ chore }) {
 
       {/* Points and Status */}
       <div className="flex items-center gap-2 flex-wrap mb-4">
-        <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md">
+        <span className={`bg-gradient-to-r ${currentTheme === 'dark' ? 'from-yellow-600 to-orange-600' : 'from-yellow-400 to-orange-400'} text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md`}>
           ⭐ {chore.pointValue} points
         </span>
         <span className={`px-4 py-1.5 rounded-full text-sm font-semibold ${getStatusColor()}`}>

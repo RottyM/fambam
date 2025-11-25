@@ -21,6 +21,7 @@ function DocumentsContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [uploadExpanded, setUploadExpanded] = useState(true);
 
   const onDrop = async (acceptedFiles) => {
     if (!userData?.familyId) return;
@@ -131,41 +132,68 @@ function DocumentsContent() {
         </p>
       </div>
 
-      {/* Upload area */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        {...getRootProps()}
-        className={`border-4 border-dashed rounded-3xl p-12 mb-8 text-center cursor-pointer transition-all ${
-          isDragActive
-            ? 'border-purple-500 bg-purple-50'
-            : `border-gray-300 hover:border-purple-400 ${theme.colors.bgCard}`
-        }`}
-      >
-        <input {...getInputProps()} />
-        <div className="text-6xl mb-4 animate-bounce-slow">
-          {uploading ? '⏳' : '📤'}
-        </div>
-        <h3 className="text-2xl font-display font-bold mb-2 text-gray-800">
-          {uploading ? 'Uploading...' : isDragActive ? 'Drop files here!' : 'Upload Documents'}
-        </h3>
-        <p className="text-gray-600 font-semibold">
-          Drag & drop files or click to browse<br />
-          <span className="text-sm">Supports PDF, Images, Word documents</span>
-        </p>
-      </motion.div>
+       {/* Upload area */}
+      <div className="mb-4 flex justify-end">
+        <button
+          onClick={() => setUploadExpanded(!uploadExpanded)}
+          className="flex items-center gap-2 text-sm font-bold text-purple-600 hover:text-purple-800 transition-colors px-3 py-2 rounded-full bg-purple-50 hover:bg-purple-100"
+        >
+          <FaUpload />
+          {uploadExpanded ? 'Hide upload' : 'Show upload'}
+        </button>
+      </div>
 
-      {/* Search bar */}
+      <AnimatePresence initial={false}>
+        {uploadExpanded && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            {...getRootProps()}
+            className={`border-4 border-dashed rounded-3xl p-10 md:p-12 mb-8 text-center cursor-pointer transition-all ${
+              isDragActive
+                ? 'border-purple-500 bg-purple-50'
+                : `border-gray-300 hover:border-purple-400 ${theme.colors.bgCard}`
+            }`}
+          >
+            <input {...getInputProps()} />
+            <div className="text-5xl md:text-6xl mb-4 animate-bounce-slow">
+              {uploading ? '⌛' : '📤'}
+            </div>
+            <h3 className="text-xl md:text-2xl font-display font-bold mb-2 text-gray-800">
+              {uploading ? 'Uploading...' : isDragActive ? 'Drop files here!' : 'Upload Documents'}
+            </h3>
+            <p className="text-gray-600 font-semibold">
+              Drag & drop files or click to browse<br />
+              <span className="text-sm">Supports PDF, Images, Word documents</span>
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+{/* Search bar */}
       <div className="mb-6">
-        <div className="relative">
-          <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search documents (including OCR text)..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold shadow-md"
-          />
+        <div className="flex flex-col md:flex-row gap-3 md:gap-4 items-stretch">
+          <div className="relative flex-1">
+            <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search documents (including OCR text)..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 md:py-3.5 rounded-2xl border-2 border-gray-200 bg-white/80 focus:border-purple-500 focus:outline-none font-semibold text-base md:text-lg shadow-sm hover:border-purple-300 transition-colors"
+            />
+          </div>
+          <button
+            onClick={() => {}}
+            className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-4 md:px-6 py-3 md:py-3.5 rounded-2xl font-bold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+            type="button"
+            aria-label="Search"
+          >
+            <FaSearch />
+            <span className="hidden md:inline">Search</span>
+          </button>
         </div>
       </div>
 
@@ -227,7 +255,7 @@ function DocumentsContent() {
                 {doc.uploadedBy === userData?.uid && (
                   <button
                     onClick={() => setDeleteConfirm(doc)}
-                    className="px-4 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-all"
+                    className="px-4 bg-gray-100 text-gray-500 rounded-xl font-bold hover:bg-gray-200 hover:text-red-500 transition-all"
                     title="Delete document"
                   >
                     <FaTrash />

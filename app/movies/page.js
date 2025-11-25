@@ -274,59 +274,67 @@ function MoviesContent() {
         </button>
       </div>
 
-      {/* Tabs, Randomizer & View Mode Toggle */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center mb-6">
-        {/* Left side: Tabs and Randomizer */}
-        <div className="flex gap-3 items-center">
-          <div className="bg-white p-1 rounded-xl shadow-sm flex">
+      {/* Filters, Randomizer & View Mode Toggle */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-2 pt-1 px-1">
+          <div className="flex gap-3 shrink-0">
             <button
               onClick={() => setView('active')}
-              className={`px-4 py-2 rounded-lg font-bold transition-all ${
-                view === 'active' ? 'bg-purple-100 text-purple-600' : 'text-gray-500 hover:bg-gray-50'
+              className={`flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-sm md:text-base ${
+                view === 'active'
+                  ? 'border-purple-500 bg-purple-50 text-purple-700'
+                  : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
               }`}
             >
               Watchlist ({activeMovies.length})
             </button>
             <button
               onClick={() => setView('watched')}
-              className={`px-4 py-2 rounded-lg font-bold transition-all ${
-                view === 'watched' ? 'bg-green-100 text-green-600' : 'text-gray-500 hover:bg-gray-50'
+              className={`flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-sm md:text-base ${
+                view === 'watched'
+                  ? 'border-green-500 bg-green-50 text-green-700'
+                  : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-green-300'
               }`}
             >
               Watched ({watchedMovies.length})
             </button>
-          </div>
 
-          {view === 'active' && activeMovies.length > 0 && (
-            <button
-              onClick={pickRandomMovie}
-              className="bg-yellow-400 text-yellow-900 px-3 py-2 rounded-xl font-bold hover:bg-yellow-300 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
-            >
-              <FaRandom /> <span className="hidden sm:inline">Spin!</span>
-            </button>
-          )}
+            {view === 'active' && activeMovies.length > 0 && (
+              <button
+                onClick={pickRandomMovie}
+                className="flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 border-yellow-400 bg-yellow-50 text-yellow-900 font-bold shadow-sm whitespace-nowrap hover:bg-yellow-100 transition-all"
+              >
+                <FaRandom /> <span className="hidden sm:inline">Spin</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Right side: View Mode Toggle */}
-        <div className="bg-white p-1 rounded-xl shadow-sm flex items-center">
-          <button
-            onClick={() => setViewMode('detail')}
-            className={`p-2 rounded-lg transition-all ${
-              viewMode === 'detail' ? 'bg-purple-100 text-purple-600' : 'text-gray-400 hover:bg-gray-50'
-            }`}
-            title="Detail View"
-          >
-            <FaList size={20} />
-          </button>
-          <button
-            onClick={() => setViewMode('poster')}
-            className={`p-2 rounded-lg transition-all ${
-              viewMode === 'poster' ? 'bg-purple-100 text-purple-600' : 'text-gray-400 hover:bg-gray-50'
-            }`}
-            title="Decision Mode (Posters Only)"
-          >
-            <FaTh size={20} />
-          </button>
+        <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-2 pt-1 px-1 md:justify-end">
+          <div className="flex gap-3 shrink-0">
+            <button
+              onClick={() => setViewMode('detail')}
+              className={`flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-sm md:text-base ${
+                viewMode === 'detail'
+                  ? 'border-purple-500 bg-purple-50 text-purple-700'
+                  : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
+              }`}
+              title="Detail View"
+            >
+              <FaList /> Detail View
+            </button>
+            <button
+              onClick={() => setViewMode('poster')}
+              className={`flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-sm md:text-base ${
+                viewMode === 'poster'
+                  ? 'border-purple-500 bg-purple-50 text-purple-700'
+                  : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
+              }`}
+              title="Poster View"
+            >
+              <FaTh /> Poster Grid
+            </button>
+          </div>
         </div>
       </div>
 
