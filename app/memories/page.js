@@ -345,7 +345,7 @@ function MemoriesContent() {
     <>
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-display font-bold mb-2">
+          <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
             <span className="gradient-text">Memory Vault</span>
           </h1>
           <p className="text-gray-600 font-semibold">

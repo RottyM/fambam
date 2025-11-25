@@ -87,7 +87,7 @@ function TodosContent() {
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-4xl font-display font-bold mb-2">
+            <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
               <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
                 {currentTheme === 'dark' ? 'Dark Deeds' : 'Family To-Dos'}
               </span>

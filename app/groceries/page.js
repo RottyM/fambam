@@ -72,7 +72,7 @@ function GroceriesContent() {
       <div className="mb-6 lg:mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold mb-2">
+            <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
               <span className="gradient-text">Grocery List</span>
             </h1>
             <p className="text-sm sm:text-base text-gray-600 font-semibold">

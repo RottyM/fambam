@@ -260,7 +260,7 @@ function MoviesContent() {
     <>
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-display font-bold mb-2">
+          <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
             <span className="gradient-text">Movie Night</span> 🎬
           </h1>
           <p className={`${theme.colors.textLight} font-semibold`}>

@@ -323,7 +323,7 @@ function DashboardContent() {
       >
         <div className="flex items-center justify-between gap-3 md:gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl md:text-4xl font-display font-bold mb-1 md:mb-2">
+            <h1 className="text-4xl md:text-5xl font-display font-bold mb-1 md:mb-2">
               <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
                 {theme.messages.welcome}, {userData?.displayName}!
               </span>

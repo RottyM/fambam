@@ -89,7 +89,7 @@ function ChoresContent() {
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <div>
-            <h1 className="text-2xl md:text-4xl font-display font-bold mb-2">
+            <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
               <span className="gradient-text">Chore Tracker</span>
             </h1>
           <p className="text-base md:text-lg text-gray-800 font-semibold">

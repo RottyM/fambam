@@ -243,7 +243,7 @@ const MedicationPage = () => {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl md:text-4xl font-display font-bold mb-2">
+            <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
               <span className="gradient-text">Medication Tracker</span>
             </h1>
             <p className={`text-sm md:text-base font-semibold ${theme.colors.textMuted}`}>

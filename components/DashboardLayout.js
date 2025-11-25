@@ -234,7 +234,7 @@ export default function DashboardLayout({ children }) {
 
       {/* Main content area - Pushed to the right */}
       <div className="lg:pl-72 min-h-screen transition-all duration-300 ease-in-out">
-        <div className="p-4 md:p-8 lg:p-12 max-w-7xl mx-auto"> 
+        <div className="pl-16 pr-4 py-4 md:p-8 lg:p-12 max-w-7xl mx-auto">
           {children}
         </div>
       </div>

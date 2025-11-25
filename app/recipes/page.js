@@ -358,7 +358,7 @@ function RecipesContent() {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-4xl font-display font-bold mb-2">
+            <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
               <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
                 {currentTheme === 'dark' ? 'Potion Recipes' : 'Family Recipes'}
               </span>
