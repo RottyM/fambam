@@ -20,13 +20,13 @@ import toast from 'react-hot-toast';
 import UserAvatar from '@/components/UserAvatar';
 
 const EVENT_CATEGORIES = [
-  { value: 'appointment', label: 'Appointment', icon: '🕯️', lightBg: 'bg-blue-100 text-blue-800', darkBg: 'bg-blue-900/60 text-blue-100' },
-  { value: 'birthday', label: 'Birthday', icon: '🎂', lightBg: 'bg-pink-100 text-pink-800', darkBg: 'bg-pink-900/60 text-pink-100' },
-  { value: 'activity', label: 'Activity', icon: '⚔️', lightBg: 'bg-green-100 text-green-800', darkBg: 'bg-emerald-900/60 text-emerald-100' },
-  { value: 'school', label: 'School', icon: '📚', lightBg: 'bg-yellow-100 text-yellow-800', darkBg: 'bg-amber-900/60 text-amber-100' },
-  { value: 'reminder', label: 'Reminder', icon: '☠️', lightBg: 'bg-purple-100 text-purple-800', darkBg: 'bg-violet-900/60 text-purple-100' },
-  { value: 'social', label: 'Social', icon: '🎉', lightBg: 'bg-orange-100 text-orange-800', darkBg: 'bg-orange-900/60 text-orange-100' },
-  { value: 'other', label: 'Other', icon: '🔮', lightBg: 'bg-gray-200 text-gray-800', darkBg: 'bg-gray-800 text-gray-100' },
+  { value: 'appointment', label: 'Appointment', emoji: '🏥', Icon: FaCalendarAlt, lightBg: 'bg-blue-100 text-blue-800', darkBg: 'bg-blue-900/60 text-blue-100', gradient: 'from-blue-400 to-blue-600' },
+  { value: 'birthday', label: 'Birthday', emoji: '🎂', Icon: FaBirthdayCake, lightBg: 'bg-pink-100 text-pink-800', darkBg: 'bg-pink-900/60 text-pink-100', gradient: 'from-pink-400 to-pink-600' },
+  { value: 'activity', label: 'Activity', emoji: '⚽', Icon: FaRunning, lightBg: 'bg-green-100 text-green-800', darkBg: 'bg-emerald-900/60 text-emerald-100', gradient: 'from-green-400 to-emerald-600' },
+  { value: 'school', label: 'School', emoji: '📚', Icon: FaSchool, lightBg: 'bg-yellow-100 text-yellow-800', darkBg: 'bg-amber-900/60 text-amber-100', gradient: 'from-yellow-400 to-amber-600' },
+  { value: 'reminder', label: 'Reminder', emoji: '⏰', Icon: FaBell, lightBg: 'bg-purple-100 text-purple-800', darkBg: 'bg-violet-900/60 text-purple-100', gradient: 'from-purple-400 to-violet-600' },
+  { value: 'social', label: 'Social', emoji: '🎉', Icon: FaUsers, lightBg: 'bg-orange-100 text-orange-800', darkBg: 'bg-orange-900/60 text-orange-100', gradient: 'from-orange-400 to-orange-600' },
+  { value: 'other', label: 'Other', emoji: '📌', Icon: FaAsterisk, lightBg: 'bg-gray-200 text-gray-800', darkBg: 'bg-gray-800 text-gray-100', gradient: 'from-gray-400 to-gray-600' },
 ];
 
 function CalendarContent() {
@@ -280,7 +280,7 @@ function CalendarContent() {
                             onClick={() => setFilterCategory(cat.value)}
                             className={`${pillBase} ${filterCategory === cat.value ? pillActive : pillInactive}`}
                           >
-                            <span className="text-sm">{cat.icon}</span>
+                            <span className="text-lg">{cat.emoji}</span>
                             <span>{cat.label}</span>
                           </motion.button>
                         ))}
@@ -386,10 +386,9 @@ function CalendarContent() {
                     {dayEvents.map(event => {
                       const category = EVENT_CATEGORIES.find(c => c.value === event.category);
                       const badgeBg = isDarkMode ? category?.darkBg : category?.lightBg;
-                      
                       return (
-                        <div 
-                          key={event.id} 
+                        <div
+                          key={event.id}
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedEvent(event);
@@ -397,11 +396,11 @@ function CalendarContent() {
                           className="cursor-pointer group"
                         >
                           <div className={`md:hidden flex items-center gap-1 p-1 rounded-md mb-1 ${badgeBg}`}>
-                            <span className="text-[10px]">{category?.icon}</span>
+                            <span className="text-[10px]">{category?.emoji}</span>
                             <span className="text-[9px] font-bold truncate leading-tight">{event.title}</span>
                           </div>
                           <div className={`hidden md:flex items-center gap-1 text-xs px-1.5 py-0.5 rounded truncate ${badgeBg}`}>
-                            <span className="text-xs">{category?.icon}</span>
+                            <span className="text-sm">{category?.emoji}</span>
                             <span className="truncate">{event.title}</span>
                           </div>
                         </div>
@@ -433,14 +432,13 @@ function CalendarContent() {
                     {dayEvents.map(event => {
                       const category = EVENT_CATEGORIES.find(c => c.value === event.category);
                       const badgeBg = isDarkMode ? category?.darkBg : category?.lightBg;
-                      
                       return (
-                         <div 
-                            key={event.id} 
+                         <div
+                            key={event.id}
                             onClick={() => setSelectedEvent(event)}
                             className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:opacity-80 transition-opacity ${badgeBg}`}
                          >
-                           <span className="text-sm">{category?.icon}</span>
+                           <span className="text-lg">{category?.emoji}</span>
                            <span className="font-bold text-sm flex-1">{event.title}</span>
                            <span className="text-xs opacity-75">{format(event.start?.toDate ? event.start.toDate() : new Date(event.start), 'h:mm a')}</span>
                          </div>
@@ -503,12 +501,12 @@ function CalendarContent() {
                   onClick={() => setSelectedEvent(event)}
                   className={`${theme.colors.bgCard} p-4 md:p-5 rounded-2xl shadow-md hover:shadow-xl transition-all border ${theme.colors.border} cursor-pointer flex items-center gap-4`}
                 >
-                   <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl flex-shrink-0 ${badgeBg}`}>
-                      {category?.icon}
+                   <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center text-3xl flex-shrink-0 shadow-lg`}>
+                      {category?.emoji}
                    </div>
                    <div className="flex-1">
-                      <h3 className={`font-bold ${theme.colors.text}`}>{event.title}</h3>
-                      <p className={`text-xs ${theme.colors.textMuted}`}>{format(event.start?.toDate ? event.start.toDate() : new Date(event.start), 'PPP p')}</p>
+                      <h3 className={`font-bold text-lg ${theme.colors.text}`}>{event.title}</h3>
+                      <p className={`text-sm ${theme.colors.textMuted}`}>{format(event.start?.toDate ? event.start.toDate() : new Date(event.start), 'PPP p')}</p>
                    </div>
                 </motion.div>
               );
@@ -545,19 +543,18 @@ function CalendarContent() {
              >
                 {(() => {
                    const category = EVENT_CATEGORIES.find(c => c.value === selectedEvent.category);
-                   const badgeBg = isDarkMode ? category?.darkBg : category?.lightBg;
-                   
+                   const gradient = category?.gradient || 'from-gray-400 to-gray-600';
                    const assigned = members.filter(m => selectedEvent.assignedTo?.includes(m.id));
                    return (
                       <>
-                        <div className={`-mt-6 -mx-6 p-6 ${badgeBg} mb-4 flex items-start justify-between`}>
+                        <div className={`-mt-6 -mx-6 p-6 bg-gradient-to-br ${gradient} mb-4 flex items-start justify-between text-white`}>
                            <div>
-                              <div className="text-4xl mb-2">{category?.icon}</div>
-                              <h3 className={`text-xl font-bold leading-tight ${theme.colors.text}`}>{selectedEvent.title}</h3>
-                              <p className={`text-sm font-semibold ${theme.colors.textMuted}`}>{category?.label}</p>
+                              <div className="text-5xl mb-3">{category?.emoji}</div>
+                              <h3 className="text-2xl font-bold leading-tight">{selectedEvent.title}</h3>
+                              <p className="text-sm font-semibold opacity-90">{category?.label}</p>
                            </div>
-                           <button onClick={() => setSelectedEvent(null)} className={`p-2 rounded-full transition-colors ${currentTheme === 'dark' ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-400 hover:bg-gray-100'}`}>
-                              <FaTimes size={14} />
+                           <button onClick={() => setSelectedEvent(null)} className="bg-white/20 p-2.5 rounded-full hover:bg-white/30 transition-colors backdrop-blur-sm">
+                              <FaTimes size={16} className="text-white" />
                            </button>
                         </div>
                         
@@ -654,12 +651,25 @@ function CalendarContent() {
 
                 <div>
                    <label className={`block text-xs font-bold ${theme.colors.textMuted} mb-1`}>Category</label>
-                   <div className="flex gap-2 overflow-x-auto pb-2">
+                   <div className="grid grid-cols-2 gap-2">
                       {EVENT_CATEGORIES.map(cat => (
-                         <button type="button" key={cat.value} onClick={() => setNewEvent({...newEvent, category: cat.value})} className={`p-2 rounded-lg border whitespace-nowrap text-xs flex items-center gap-1 ${newEvent.category === cat.value ? 'bg-purple-100 border-purple-500 text-purple-700' : `${theme.colors.border} ${theme.colors.textMuted}`}`}>
-                            <span className="text-sm">{cat.icon}</span>
-                            {cat.label}
-                         </button>
+                         <motion.button
+                            type="button"
+                            key={cat.value}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => setNewEvent({...newEvent, category: cat.value})}
+                            className={`p-3 rounded-xl border-2 whitespace-nowrap text-sm flex items-center gap-2 font-bold transition-all ${
+                               newEvent.category === cat.value
+                                  ? `bg-gradient-to-r ${cat.gradient} text-white border-transparent shadow-md`
+                                  : currentTheme === 'dark'
+                                     ? 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600'
+                                     : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                            }`}
+                         >
+                            <span className="text-2xl">{cat.emoji}</span>
+                            <span>{cat.label}</span>
+                         </motion.button>
                       ))}
                    </div>
                 </div>
