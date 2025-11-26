@@ -249,8 +249,16 @@ function MoviesContent() {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">🍿</div>
-          <p className="text-xl font-bold text-purple-600">Loading movies...</p>
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+            className="text-7xl mb-4"
+          >
+            🎬
+          </motion.div>
+          <p className={`text-xl font-bold ${currentTheme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
+            Loading movies...
+          </p>
         </div>
       </div>
     );
@@ -265,78 +273,90 @@ function MoviesContent() {
               {currentTheme === 'dark' ? 'Midnight Screening' : 'Movie Night'}
             </span>
           </h1>
-          <p className={`${theme.colors.textLight} font-semibold`}>
-            Vote on what to watch next!
+          <p className={`${theme.colors.textMuted} font-semibold text-sm md:text-base`}>
+            Vote on what to watch next! 🍿
           </p>
         </div>
         {/* Add Movie Button */}
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => setShowAddModal(true)}
-          className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg flex items-center gap-2"
+          className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
         >
-          <FaPlus /> <span className="hidden md:inline">Add Movie</span>
-        </button>
+          <FaPlus size={16} /> <span className="hidden md:inline">Add Movie</span>
+        </motion.button>
       </div>
 
       {/* Filters, Randomizer & View Mode Toggle */}
       <div className="flex items-center gap-3 mb-6 overflow-x-auto custom-scrollbar pb-2 pt-1 px-1">
         <div className="flex gap-2 shrink-0 flex-nowrap">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setView('active')}
-            className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-full border-2 font-bold transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
               view === 'active'
-                ? 'border-purple-500 bg-purple-50 text-purple-700'
-                : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
+                ? 'border-purple-500 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-700 dark:text-purple-300 shadow-md'
+                : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-purple-300'
             }`}
           >
             <FaList className="hidden md:inline" /> Watchlist ({activeMovies.length})
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setView('watched')}
-            className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-full border-2 font-bold transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
               view === 'watched'
-                ? 'border-green-500 bg-green-50 text-green-700'
-                : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-green-300'
+                ? 'border-green-500 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 text-green-700 dark:text-green-300 shadow-md'
+                : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-green-300'
             }`}
           >
             <FaCheck className="hidden md:inline" /> Watched ({watchedMovies.length})
-          </button>
+          </motion.button>
 
           {view === 'active' && activeMovies.length > 0 && (
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05, rotate: 5 }}
+              whileTap={{ scale: 0.95 }}
               onClick={pickRandomMovie}
-              className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 border-yellow-400 bg-yellow-50 text-yellow-900 font-bold shadow-sm whitespace-nowrap hover:bg-yellow-100 transition-all text-xs md:text-sm"
+              className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2.5 rounded-full font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2 whitespace-nowrap text-xs md:text-sm"
               title="Spin random pick"
             >
               <FaRandom />
-              <span className="hidden sm:inline">Spin</span>
-            </button>
+              <span className="hidden sm:inline">Pick Random</span>
+            </motion.button>
           )}
         </div>
 
         <div className="flex gap-2 shrink-0 flex-nowrap">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setViewMode('detail')}
-            className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
+            className={`px-3 md:px-4 py-2 rounded-full border-2 font-bold transition-all text-xs md:text-sm ${
               viewMode === 'detail'
-                ? 'border-purple-500 bg-purple-50 text-purple-700'
-                : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400'
             }`}
             title="Detail View"
           >
-            <FaList />
-          </button>
-          <button
+            <FaList className="inline mr-1" /> Details
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setViewMode('poster')}
-            className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
+            className={`px-3 md:px-4 py-2 rounded-full border-2 font-bold transition-all text-xs md:text-sm ${
               viewMode === 'poster'
-                ? 'border-purple-500 bg-purple-50 text-purple-700'
-                : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400'
             }`}
             title="Poster View"
           >
-            <FaTh />
-          </button>
+            <FaTh className="inline mr-1" /> Posters
+          </motion.button>
         </div>
       </div>
 

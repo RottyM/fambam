@@ -161,7 +161,27 @@ function CalendarContent() {
     });
   };
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading calendar...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <motion.div
+            animate={{ rotate: 360, scale: [1, 1.2, 1] }}
+            transition={{
+              rotate: { repeat: Infinity, duration: 2, ease: "linear" },
+              scale: { repeat: Infinity, duration: 1.5 }
+            }}
+            className="text-7xl mb-4"
+          >
+            📅
+          </motion.div>
+          <p className={`text-xl font-bold ${currentTheme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
+            Loading calendar...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -179,50 +199,56 @@ function CalendarContent() {
           </div>
 
           {isParent() && (
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2"
+              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
               aria-label="Add Event"
             >
               <FaPlus size={16} />
               <span className="hidden sm:inline">Add Event</span>
-            </button>
+            </motion.button>
           )}
         </div>
 
         <div className="flex flex-col gap-3 mb-4">
           <div className="flex items-center justify-between gap-2">
-            <div className={`flex rounded-xl p-1 ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+            <div className={`flex rounded-2xl p-1.5 shadow-sm ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
               {['month', 'week', 'list'].map((mode) => {
                 const isActive = viewMode === mode;
                 return (
-                  <button
+                  <motion.button
                     key={mode}
+                    whileHover={!isActive ? { scale: 1.05 } : {}}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => setViewMode(mode)}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${
+                    className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold capitalize transition-all ${
                       isActive
                         ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md'
                         : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
                     }`}
                   >
                     {mode}
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>
 
-            <button 
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm border ${
-                showFilters 
-                  ? 'bg-purple-500 border-purple-500 text-white' 
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs md:text-sm font-bold transition-all shadow-sm border ${
+                showFilters
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 border-purple-400 text-white shadow-md'
                   : isDarkMode
                     ? 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'
                     : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
             >
               <FaFilter /> Filters
-            </button>
+            </motion.button>
           </div>
 
           <AnimatePresence>
@@ -238,22 +264,26 @@ function CalendarContent() {
                     <label className={`text-xs font-bold mb-2 block ml-1 ${theme.colors.textMuted}`}>Category</label>
                     <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-1">
                       <div className="flex gap-3 shrink-0">
-                        <button
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                           onClick={() => setFilterCategory('all')}
                           className={`${pillBase} ${filterCategory === 'all' ? pillActive : pillInactive}`}
                         >
                           <FaFilter size={14} />
                           <span>All</span>
-                        </button>
+                        </motion.button>
                         {EVENT_CATEGORIES.map(cat => (
-                          <button
+                          <motion.button
                             key={cat.value}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
                             onClick={() => setFilterCategory(cat.value)}
                             className={`${pillBase} ${filterCategory === cat.value ? pillActive : pillInactive}`}
                           >
                             <cat.Icon size={14} />
                             <span>{cat.label}</span>
-                          </button>
+                          </motion.button>
                         ))}
                       </div>
                     </div>
@@ -263,22 +293,26 @@ function CalendarContent() {
                     <label className={`text-xs font-bold mb-2 block ml-1 ${theme.colors.textMuted}`}>Member</label>
                     <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-1">
                       <div className="flex gap-3 shrink-0">
-                        <button
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                           onClick={() => setFilterMember('all')}
                           className={`${pillBase} ${filterMember === 'all' ? pillActive : pillInactive}`}
                         >
                           <FaUser size={14} />
                           <span>All</span>
-                        </button>
+                        </motion.button>
                         {members.map(m => (
-                          <button
+                          <motion.button
                             key={m.id}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
                             onClick={() => setFilterMember(m.id)}
                             className={`${pillBase} ${filterMember === m.id ? pillActive : pillInactive}`}
                           >
                             <UserAvatar user={m} size={24} />
                             <span>{m.displayName}</span>
-                          </button>
+                          </motion.button>
                         ))}
                       </div>
                     </div>
@@ -290,16 +324,26 @@ function CalendarContent() {
         </div>
 
         {(viewMode === 'month' || viewMode === 'week') && (
-          <div className={`${theme.colors.bgCard} rounded-xl p-3 shadow-sm mb-4 flex items-center justify-between border ${theme.colors.border}`}>
-            <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${isDarkMode ? 'hover:bg-gray-700 text-white' : 'text-gray-700'}`}>
-              <FaChevronLeft />
-            </button>
-            <h2 className={`text-lg font-bold ${theme.colors.text}`}>
+          <div className={`${theme.colors.bgCard} rounded-2xl p-3 md:p-4 shadow-sm mb-4 flex items-center justify-between border ${theme.colors.border}`}>
+            <motion.button
+              whileHover={{ scale: 1.1, x: -2 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+              className={`p-2.5 rounded-xl hover:bg-gray-100 transition-colors ${isDarkMode ? 'hover:bg-gray-700 text-white' : 'text-gray-700'}`}
+            >
+              <FaChevronLeft size={18} />
+            </motion.button>
+            <h2 className={`text-lg md:text-xl font-bold ${theme.colors.text}`}>
               {format(currentMonth, 'MMMM yyyy')}
             </h2>
-            <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${isDarkMode ? 'hover:bg-gray-700 text-white' : 'text-gray-700'}`}>
-              <FaChevronRight />
-            </button>
+            <motion.button
+              whileHover={{ scale: 1.1, x: 2 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+              className={`p-2.5 rounded-xl hover:bg-gray-100 transition-colors ${isDarkMode ? 'hover:bg-gray-700 text-white' : 'text-gray-700'}`}
+            >
+              <FaChevronRight size={18} />
+            </motion.button>
           </div>
         )}
       </div>
@@ -413,20 +457,52 @@ function CalendarContent() {
       {viewMode === 'list' && (
         <div className="space-y-3">
           {filteredEvents.length === 0 ? (
-            <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg border ${theme.colors.border}`}>
-              <div className="text-6xl mb-4">📭</div>
-              <p className={`text-xl font-bold ${theme.colors.textMuted}`}>No events found</p>
-            </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`text-center py-16 rounded-3xl border-2 border-dashed ${
+                currentTheme === 'dark' ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'
+              }`}
+            >
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ repeat: Infinity, duration: 2 }}
+                className="text-7xl mb-4"
+              >
+                📅
+              </motion.div>
+              <p className={`text-xl font-bold mb-2 ${theme.colors.text}`}>
+                No events scheduled!
+              </p>
+              <p className={`${theme.colors.textMuted} mb-6`}>
+                Add your first event to get started
+              </p>
+              {isParent() && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowAddModal(true)}
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all"
+                >
+                  Add First Event
+                </motion.button>
+              )}
+            </motion.div>
           ) : (
             filteredEvents.map(event => {
               const category = EVENT_CATEGORIES.find(c => c.value === event.category);
               const badgeBg = isDarkMode ? category?.darkBg : category?.lightBg;
               const CatIcon = category?.Icon;
               return (
-                <div 
-                   key={event.id} 
-                   onClick={() => setSelectedEvent(event)}
-                   className={`${theme.colors.bgCard} p-4 rounded-xl shadow-sm border ${theme.colors.border} flex items-center gap-4 cursor-pointer hover:shadow-md transition-all`}
+                <motion.div
+                  key={event.id}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  whileHover={{ scale: 1.02, x: 5 }}
+                  onClick={() => setSelectedEvent(event)}
+                  className={`${theme.colors.bgCard} p-4 md:p-5 rounded-2xl shadow-md hover:shadow-xl transition-all border ${theme.colors.border} cursor-pointer flex items-center gap-4`}
                 >
                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl flex-shrink-0 ${badgeBg}`}>
                       {CatIcon && <CatIcon />}
@@ -435,7 +511,7 @@ function CalendarContent() {
                       <h3 className={`font-bold ${theme.colors.text}`}>{event.title}</h3>
                       <p className={`text-xs ${theme.colors.textMuted}`}>{format(event.start?.toDate ? event.start.toDate() : new Date(event.start), 'PPP p')}</p>
                    </div>
-                </div>
+                </motion.div>
               );
             })
           )}
@@ -647,9 +723,15 @@ function CalendarContent() {
                   />
                 </div>
 
-                <button type="submit" disabled={syncing} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-xl font-bold shadow-lg mt-2">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="submit"
+                  disabled={syncing}
+                  className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 md:py-4 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all mt-2"
+                >
                    {syncing ? 'Adding...' : 'Save Event'}
-                </button>
+                </motion.button>
               </form>
             </motion.div>
           </motion.div>
