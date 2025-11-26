@@ -60,7 +60,7 @@ function GroceriesContent() {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <motion.div 
+          <motion.div
             animate={{ y: [0, -20, 0] }}
             transition={{ repeat: Infinity, duration: 1.5 }}
             className="text-6xl mb-4"

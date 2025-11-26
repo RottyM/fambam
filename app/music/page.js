@@ -224,8 +224,16 @@ function MusicContent() {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">🎸</div>
-          <p className="text-xl font-bold text-purple-600">Loading jams...</p>
+          <motion.div
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ repeat: Infinity, duration: 1.5 }}
+            className="text-7xl mb-4"
+          >
+            🎵
+          </motion.div>
+          <p className={`text-xl font-bold ${currentTheme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
+            Loading music...
+          </p>
         </div>
       </div>
     );
@@ -240,28 +248,33 @@ function MusicContent() {
               {currentTheme === 'dark' ? 'Dark Harmonies' : 'Family Jams'}
             </span>
           </h1>
-          <p className={`${currentTheme === 'dark' ? 'text-purple-200' : 'text-purple-600'} font-semibold`}>
-            {activeFolderName} • {filteredCount} {filteredCount === 1 ? 'song' : 'songs'}
-          </p>
-          <p className={`${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-semibold`}>
-            Share your favorite tunes of the week!
+          <p className={`text-sm md:text-base font-semibold ${theme.colors.textMuted}`}>
+            Create playlists and share your favorite music 🎵
           </p>
         </div>
-        
+
         {/* Top Action Buttons */}
         <div className="flex gap-3">
-            <button
+            <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handlePlayFolder}
-                className="bg-green-500 text-white px-6 py-3 rounded-2xl font-bold hover:bg-green-600 transition-all shadow-lg flex items-center gap-2 shrink-0"
+                disabled={filteredCount === 0}
+                className="bg-gradient-to-r from-pink-500 to-rose-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-                <FaPlay /> <span className="hidden md:inline">Play All</span>
-            </button>
-            <button
+                <FaPlay size={14} /> <span className="hidden md:inline">Play All</span>
+                <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full ml-1">{filteredCount}</span>
+            </motion.button>
+            <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setShowAddModal(true)}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg flex items-center gap-2 shrink-0"
+                className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2 shrink-0"
             >
-                <FaMusic /> <span className="">Post a Jam</span>
-            </button>
+                <FaMusic size={16} />
+                <span className="hidden md:inline">Add Jam</span>
+                <span className="md:hidden">➕</span>
+            </motion.button>
         </div>
       </div>
 
