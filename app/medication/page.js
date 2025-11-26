@@ -131,6 +131,8 @@ const MedicationPage = () => {
     console.log('1. user.familyId:', user?.familyId);
     console.log('2. user.uid:', user?.uid);
     console.log('3. newMedication:', newMedication);
+    console.log('🎯 Custom Days being saved:', newMedication.customDays);
+    console.log('🎯 Custom Days length:', newMedication.customDays.length);
 
     if (!user?.familyId) {
       console.log('❌ BLOCKED: No familyId');
