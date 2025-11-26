@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useRecipes, useGroceries } from '@/hooks/useFirestore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,7 +8,8 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { searchRecipes, getRecipeInformation, getRecipeNutrition } from '@/lib/spoonacular';
 import { enrichRecipeWithUSDA, formatNutrientName } from '@/lib/usdaEnrichment';
-import { FaPlus, FaTrash, FaShoppingCart, FaCalendar, FaSearch, FaCamera, FaYoutube, FaTimes } from 'react-icons/fa';
+import { fetchFoodImageFallback } from '@/lib/imageFallback';
+import { FaPlus, FaTrash, FaShoppingCart, FaSearch, FaCamera, FaYoutube, FaTimes } from 'react-icons/fa';
 import RecipeScannerModal from '@/components/RecipeScannerModal';
 import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -19,6 +20,38 @@ const getYouTubeId = (url) => {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
   const match = url.match(regExp);
   return match && match[2].length === 11 ? match[2] : null;
+};
+
+const DEFAULT_RECIPE_IMAGE = 'https://source.unsplash.com/600x400/?home-cooked-meal';
+
+// Light-weight category inference to keep groceries out of "Other"
+function inferCategory(name = '', aisle = '') {
+  const text = `${name} ${aisle}`.toLowerCase();
+  const has = (keywords) => keywords.some((k) => text.includes(k));
+
+  if (has(['produce', 'vegetable', 'fruit', 'leaf', 'greens'])) return 'produce';
+  if (has(['meat', 'beef', 'pork', 'chicken', 'turkey', 'seafood', 'fish', 'shrimp'])) return 'meat';
+  if (has(['dairy', 'milk', 'cheese', 'yogurt', 'butter', 'cream'])) return 'dairy';
+  if (has(['frozen'])) return 'frozen';
+  if (has(['bakery', 'bread', 'bun', 'bagel', 'tortilla'])) return 'bakery';
+  if (has(['snack', 'chips', 'cracker', 'candy'])) return 'snacks';
+  if (has(['beverage', 'drink', 'juice', 'soda', 'coffee', 'tea'])) return 'beverages';
+  if (has(['spice', 'seasoning', 'herb', 'condiment', 'sauce', 'oil', 'vinegar', 'stock', 'broth', 'bouillon'])) return 'condiments';
+  if (has(['rice', 'pasta', 'grain', 'flour', 'sugar', 'salt', 'beans', 'lentil'])) return 'pantry';
+  return 'other';
+}
+
+const CATEGORIES = {
+  produce: { name: 'Produce', icon: "🥬", color: "from-green-400 to-green-500" },
+  dairy: { name: 'Dairy', icon: "🥛", color: "from-blue-400 to-blue-500" },
+  meat: { name: 'Meat & Seafood', icon: "🍖", color: "from-red-400 to-red-500" },
+  frozen: { name: 'Frozen', icon: "🧊", color: "from-cyan-400 to-cyan-500" },
+  pantry: { name: 'Pantry', icon: "🥞", color: "from-yellow-400 to-yellow-500" },
+  bakery: { name: 'Bakery', icon: "🥐", color: "from-orange-400 to-orange-500" },
+  snacks: { name: 'Snacks', icon: "🍿", color: "from-purple-400 to-purple-500" },
+  beverages: { name: 'Beverages', icon: "🥤", color: "from-pink-400 to-pink-500" },
+  condiments: { name: 'Condiments & Spices', icon: "🧂", color: "from-amber-400 to-red-500" },
+  other: { name: 'Other', icon: "📦", color: "from-gray-400 to-gray-500" },
 };
 
 function RecipesContent() {
@@ -36,6 +69,8 @@ function RecipesContent() {
   const [selectedSearchRecipe, setSelectedSearchRecipe] = useState(null);
   const [loadingRecipeDetails, setLoadingRecipeDetails] = useState(false);
   const [activeTab, setActiveTab] = useState('my-recipes');
+  const [timeLimit, setTimeLimit] = useState(null);
+  const [detailImageUrl, setDetailImageUrl] = useState('');
   const [usdaNutrition, setUsdaNutrition] = useState(null);
   const [isEnriching, setIsEnriching] = useState(false);
   const [enrichmentProgress, setEnrichmentProgress] = useState(null);
@@ -50,16 +85,27 @@ function RecipesContent() {
     ingredients: [{ name: '', amount: '', category: 'other' }],
     instructions: '',
     imageFile: null,
+    imageUrl: '',
     videoUrl: '',
     sourceType: 'manual', // manual | search | scanned
   });
+
+  // Decide which nutrients to show (per serving) depending on the selected source.
+  const isUsdaSource = nutritionSource === 'usda';
+  const displayNutrients =
+    isUsdaSource && usdaNutrition?.totalNutrition
+      ? usdaNutrition.totalNutrition.nutrients || usdaNutrition.totalNutrition.totals || []
+      : selectedSearchRecipe?.nutrition?.nutrients || [];
+  const displayTotals = isUsdaSource && usdaNutrition?.totalNutrition?.totals
+    ? usdaNutrition.totalNutrition.totals
+    : [];
 
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     setSearching(true);
     try {
-      const results = await searchRecipes(searchQuery);
+      const results = await searchRecipes(searchQuery, timeLimit || null);
       setSearchResults(results);
       setActiveTab('search-results');
       toast.success(`Found ${results.length} recipes!`);
@@ -114,7 +160,7 @@ function RecipesContent() {
         if (result.failedIngredients.length > 0) {
           toast.success(
             `Enhanced with USDA data! ${successRate}% ingredient coverage.\n` +
-            `Couldn't match: ${result.failedIngredients.slice(0, 3).join(', ')}${result.failedIngredients.length > 3 ? '...' : ''}`,
+            `Couldn&apos;t match: ${result.failedIngredients.slice(0, 3).join(', ')}${result.failedIngredients.length > 3 ? '...' : ''}`,
             { duration: 5000 }
           );
         } else {
@@ -141,10 +187,7 @@ function RecipesContent() {
         amount: ing.measures?.us?.amount && ing.measures?.us?.unitShort
           ? `${ing.measures.us.amount} ${ing.measures.us.unitShort}`
           : ing.amount || '',
-        category: ing.aisle?.toLowerCase().includes('produce') ? 'produce'
-          : ing.aisle?.toLowerCase().includes('meat') ? 'meat'
-          : ing.aisle?.toLowerCase().includes('dairy') ? 'dairy'
-          : 'other'
+        category: inferCategory(ing.name || ing.original, ing.aisle),
       })) || [];
 
       // Parse instructions
@@ -215,6 +258,9 @@ function RecipesContent() {
       let imageUrl = editingRecipeId
         ? recipes.find(r => r.id === editingRecipeId)?.imageUrl || ''
         : '';
+      let displayImageUrl = editingRecipeId
+        ? recipes.find(r => r.id === editingRecipeId)?.displayImageUrl || ''
+        : '';
 
       // Upload image if provided
       if (newRecipe.imageFile) {
@@ -225,6 +271,13 @@ function RecipesContent() {
         );
         await uploadBytes(storageRef, newRecipe.imageFile);
         imageUrl = await getDownloadURL(storageRef);
+      } else if (newRecipe.imageUrl) {
+        // Use provided URL when no new file is uploaded
+        imageUrl = newRecipe.imageUrl;
+      }
+      // If user provided a display image URL, prefer it for showing (but keep the stored imageUrl for uploads)
+      if (newRecipe.imageUrl) {
+        displayImageUrl = newRecipe.imageUrl;
       }
 
       const payload = {
@@ -233,9 +286,15 @@ function RecipesContent() {
         servings: newRecipe.servings,
         prepTime: newRecipe.prepTime,
         cookTime: newRecipe.cookTime,
-        ingredients: newRecipe.ingredients.filter(ing => ing.name),
+        ingredients: newRecipe.ingredients
+          .filter(ing => ing.name)
+          .map(ing => ({
+            ...ing,
+            category: ing.category || inferCategory(ing.name, ''),
+          })),
         instructions: newRecipe.instructions,
         imageUrl,
+        displayImageUrl,
         videoUrl: newRecipe.videoUrl || '',
         sourceType: (newRecipe.sourceType === 'manual' && newRecipe.imageFile) ? 'uploaded' : newRecipe.sourceType || (newRecipe.imageFile ? 'uploaded' : 'manual'),
       };
@@ -272,28 +331,48 @@ function RecipesContent() {
     setUploading(true);
     try {
       let imageUrl = '';
+      let displayImageUrl = '';
 
       // Upload the scanned image if provided
       if (imageFile) {
-        const timestamp = Date.now();
-        const storageRef = ref(
-          storage,
-          `families/${userData.familyId}/recipes/${timestamp}_${imageFile.name}`
-        );
-        await uploadBytes(storageRef, imageFile);
-        imageUrl = await getDownloadURL(storageRef);
+        try {
+          const timestamp = Date.now();
+          const storageRef = ref(
+            storage,
+            `families/${userData.familyId}/recipes/${timestamp}_${imageFile.name}`
+          );
+          await uploadBytes(storageRef, imageFile);
+          imageUrl = await getDownloadURL(storageRef);
+        } catch (err) {
+          console.warn('Image upload failed, will try fallback:', err);
+        }
       }
 
+      // Fetch a stock fallback based on the recipe name (always; use it for display preference)
+      const fallback = await fetchFoodImageFallback(scannedRecipe.name);
+      if (!imageUrl && fallback) {
+        imageUrl = fallback;
+      }
+      displayImageUrl = fallback || imageUrl;
+
       // Combine prep and cook time if both exist
+      const ingredientsWithCategory = scannedRecipe.ingredients
+        .filter(ing => ing.name)
+        .map(ing => ({
+          ...ing,
+          category: ing.category || inferCategory(ing.name, ''),
+        }));
+
       await addRecipe({
         name: scannedRecipe.name,
         description: scannedRecipe.description || '',
         servings: scannedRecipe.servings,
         prepTime: scannedRecipe.prepTime || '',
         cookTime: scannedRecipe.cookTime || '',
-        ingredients: scannedRecipe.ingredients.filter(ing => ing.name),
+        ingredients: ingredientsWithCategory,
         instructions: scannedRecipe.instructions,
         imageUrl,
+        displayImageUrl,
         sourceType: 'scanned',
       });
 
@@ -335,12 +414,39 @@ function RecipesContent() {
         : [{ name: '', amount: '', category: 'other' }],
       instructions: recipe.instructions || '',
       imageFile: null,
+      imageUrl: recipe.imageUrl || '',
+      displayImageUrl: recipe.displayImageUrl || '',
       videoUrl: recipe.videoUrl || '',
       cookTime: recipe.cookTime || '',
       sourceType: recipe.sourceType || 'manual',
     });
     setShowAddModal(true);
   };
+
+  // Ensure the detail modal has an image; if none stored, fetch a fallback.
+  useEffect(() => {
+    let isMounted = true;
+    async function ensureDetailImage() {
+      if (!selectedRecipe) {
+        if (isMounted) setDetailImageUrl('');
+        return;
+      }
+      if (selectedRecipe.displayImageUrl || selectedRecipe.imageUrl) {
+        if (isMounted) setDetailImageUrl(selectedRecipe.displayImageUrl || selectedRecipe.imageUrl);
+        return;
+      }
+      const fallback = await fetchFoodImageFallback(selectedRecipe.name || 'recipe');
+      if (isMounted && fallback) {
+        setDetailImageUrl(fallback);
+      } else if (isMounted) {
+        setDetailImageUrl(DEFAULT_RECIPE_IMAGE);
+      }
+    }
+    ensureDetailImage();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedRecipe]);
 
   if (loading) {
     return (
@@ -388,25 +494,57 @@ function RecipesContent() {
         {/* Search Bar */}
         <form onSubmit={handleSearch} className="mb-6">
           <div className="flex flex-col md:flex-row gap-3 md:gap-4 items-stretch">
+            <div className="relative flex-1">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="🔍 Search recipes..."
-              className="flex-1 px-4 md:px-5 py-3 md:py-3.5 rounded-2xl border-2 border-gray-200 bg-white/80 focus:border-purple-500 focus:outline-none font-semibold text-base md:text-lg shadow-sm hover:border-purple-300 transition-colors"
+              className={`w-full px-4 md:px-5 py-3 md:py-3.5 rounded-2xl border-2 font-semibold text-base md:text-lg shadow-sm transition-colors pr-10 ${
+                currentTheme === 'dark'
+                  ? 'bg-gray-800 border-gray-700 text-gray-200 placeholder-gray-500 focus:border-purple-500 hover:border-purple-400'
+                  : 'bg-white/80 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-purple-500 hover:border-purple-300'
+              } focus:outline-none`}
               required
             />
-            <button
-              type="submit"
-              disabled={searching}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-4 md:px-6 py-3 md:py-3.5 rounded-2xl font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center gap-2 justify-center"
-              aria-label="Search"
-            >
-              {searching ? <span className="md:hidden">...</span> : <FaSearch />}
-              <span className="hidden md:inline">{searching ? 'Searching...' : 'Search'}</span>
-            </button>
+            {searchQuery && (
+                <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                >
+                    <FaTimes />
+                </button>
+            )}
+            </div>
+            <div className="flex gap-2">
+              <select
+                value={timeLimit ?? ''}
+                onChange={(e) => setTimeLimit(e.target.value ? Number(e.target.value) : null)}
+                className={`px-3 py-3 md:py-3.5 rounded-2xl border-2 font-semibold text-sm md:text-base shadow-sm transition-colors ${
+                  currentTheme === 'dark'
+                    ? 'bg-gray-800 border-gray-700 text-gray-200 focus:border-purple-500'
+                    : 'bg-white/80 border-gray-200 text-gray-900 focus:border-purple-500'
+                }`}
+              >
+                <option value="">Any time</option>
+                <option value="15">≤ 15 min</option>
+                <option value="30">≤ 30 min</option>
+                <option value="45">≤ 45 min</option>
+                <option value="60">≤ 60 min</option>
+              </select>
+              <button
+                type="submit"
+                disabled={searching}
+                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-4 md:px-6 py-3 md:py-3.5 rounded-2xl font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center gap-2 justify-center"
+                aria-label="Search"
+              >
+                {searching ? <span className="md:hidden">...</span> : <FaSearch />}
+                <span className="hidden md:inline">{searching ? 'Searching...' : 'Search'}</span>
+              </button>
+            </div>
           </div>
-          <p className="mt-2 text-xs md:text-sm text-gray-600 font-semibold">
+          <p className="mt-2 text-xs md:text-sm text-gray-600 dark:text-gray-400 font-semibold">
             🍳 Search thousands of recipes with photos and instructions.
           </p>
         </form>
@@ -447,7 +585,7 @@ function RecipesContent() {
             <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg`}>
               <div className="text-6xl mb-4">🍳</div>
               <p className={`text-xl font-bold ${theme.colors.textMuted}`}>No recipes yet</p>
-              <p className={theme.colors.textMuted}>Add your family's favorite recipes or search for new ones!</p>
+              <p className={theme.colors.textMuted}>Add your family&apos;s favorite recipes or search for new ones!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -459,24 +597,24 @@ function RecipesContent() {
                   className={`${theme.colors.bgCard} rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer group relative`}
                   onClick={() => setSelectedRecipe(recipe)}
                 >
-                  {recipe.imageUrl ? (
-                    <div className="relative h-48">
-                      <Image
-                        src={recipe.imageUrl}
-                        alt={recipe.name}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    </div>
-                  ) : (
-                    <div className="h-48 bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center">
-                      <span className="text-6xl">🍳</span>
-                    </div>
-                  )}
+                  <div className="relative h-48">
+                    <Image
+                      src={
+                        recipe.displayImageUrl ||
+                        recipe.imageUrl ||
+                        (recipe.name
+                          ? `https://source.unsplash.com/600x400/?food,${encodeURIComponent(recipe.name)}`
+                          : DEFAULT_RECIPE_IMAGE)
+                      }
+                      alt={recipe.name}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
 
                   <div className="p-6 relative">
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">{recipe.name}</h3>
+                    <h3 className={`text-xl font-bold mb-2 ${currentTheme === 'dark' ? 'text-gray-100' : 'text-gray-800'}`}>{recipe.name}</h3>
                     {recipe.description && recipe.description.toLowerCase() !== 'scanned recipe' && (
                       <p className="text-gray-600 text-sm mb-3 line-clamp-2">{recipe.description}</p>
                     )}
@@ -524,11 +662,11 @@ function RecipesContent() {
                             deleteRecipe(recipe.id);
                           }
                         }}
-                        className="bg-gray-100 text-gray-500 p-2 rounded-xl transition-all flex items-center justify-center hover:bg-gray-200 hover:text-red-500"
-                        title="Delete recipe"
-                      >
-                        <FaTrash />
-                      </button>
+                      className="text-red-600 p-2 rounded-xl transition-all flex items-center justify-center font-bold hover:text-red-700"
+                      title="Delete recipe"
+                    >
+                      <FaTrash />
+                    </button>
                     </div>
                   </div>
                 </motion.div>
@@ -565,7 +703,7 @@ function RecipesContent() {
                 </div>
               )}
               <div className="p-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-2 line-clamp-2">
+                <h3 className={`text-xl font-bold mb-2 line-clamp-2 ${currentTheme === 'dark' ? 'text-gray-100' : 'text-gray-800'}`}>
                   {recipe.title}
                 </h3>
                 <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
@@ -590,7 +728,7 @@ function RecipesContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
             onClick={() => setSelectedRecipe(null)}
           >
             <motion.div
@@ -600,10 +738,10 @@ function RecipesContent() {
               onClick={(e) => e.stopPropagation()}
               className={`${theme.colors.bgCard} rounded-3xl max-w-4xl w-full shadow-2xl max-h-[90vh] overflow-y-auto flex flex-col border ${theme.colors.borderLight}`}
             >
-              {selectedRecipe.imageUrl && (
+              {detailImageUrl ? (
                 <div className="relative h-64">
                   <Image
-                    src={selectedRecipe.imageUrl}
+                    src={detailImageUrl}
                     alt={selectedRecipe.name}
                     fill
                     className="object-cover rounded-t-3xl"
@@ -611,15 +749,19 @@ function RecipesContent() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 </div>
+              ) : (
+                <div className="h-64 bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center rounded-t-3xl">
+                  <span className="text-5xl">??</span>
+                </div>
               )}
 
               <div className="p-6 flex-1 flex flex-col">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
-                <h2 className="text-3xl font-bold text-gray-800">{selectedRecipe.name}</h2>
+                <h2 className={`text-3xl font-bold ${theme.colors.text}`}>{selectedRecipe.name}</h2>
                     {selectedRecipe.description &&
                       selectedRecipe.description.toLowerCase() !== 'scanned recipe' && (
-                        <p className="text-gray-600 mt-2">{selectedRecipe.description}</p>
+                        <p className={`${theme.colors.textMuted} mt-2`}>{selectedRecipe.description}</p>
                     )}
               </div>
               <div className="flex gap-2">
@@ -628,7 +770,7 @@ function RecipesContent() {
                     deleteRecipe(selectedRecipe.id);
                     setSelectedRecipe(null);
                   }}
-                      className="bg-red-100 text-red-500 px-3 py-2 rounded-full font-bold hover:bg-red-200 transition-all"
+                      className="text-red-500 px-3 py-2 rounded-full font-bold hover:text-red-600"
                       title="Delete recipe"
                 >
                   <FaTrash />
@@ -749,7 +891,7 @@ function RecipesContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 overflow-y-auto p-4"
             onClick={() => {
               if (uploading) return;
               setShowAddModal(false);
@@ -761,7 +903,7 @@ function RecipesContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 max-w-2xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto`}
+              className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 max-w-2xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto border ${theme.colors.border}`}
             >
               <div className="flex items-center justify-between mb-4 md:mb-6">
                 <h2 className="text-2xl md:text-3xl font-display font-bold gradient-text">
@@ -791,7 +933,7 @@ function RecipesContent() {
                       value={newRecipe.name}
                       onChange={(e) => setNewRecipe({ ...newRecipe, name: e.target.value })}
                       placeholder="Spaghetti Carbonara"
-                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                      className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500`}
                       required
                     />
                   </div>
@@ -803,7 +945,7 @@ function RecipesContent() {
                       type="file"
                       accept="image/*"
                       onChange={handleImageChange}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none"
+                      className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500`}
                     />
                   </div>
                 </div>
@@ -818,7 +960,7 @@ function RecipesContent() {
                       value={newRecipe.servings}
                       onChange={(e) => setNewRecipe({ ...newRecipe, servings: e.target.value })}
                       placeholder="4 servings"
-                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                      className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500`}
                     />
                   </div>
                   <div>
@@ -830,7 +972,7 @@ function RecipesContent() {
                       value={newRecipe.prepTime}
                       onChange={(e) => setNewRecipe({ ...newRecipe, prepTime: e.target.value })}
                       placeholder="30 mins"
-                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                      className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500`}
                     />
                   </div>
                   <div>
@@ -842,7 +984,7 @@ function RecipesContent() {
                       value={newRecipe.cookTime}
                       onChange={(e) => setNewRecipe({ ...newRecipe, cookTime: e.target.value })}
                       placeholder="45 mins"
-                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                      className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500`}
                     />
                   </div>
                 </div>
@@ -852,28 +994,39 @@ function RecipesContent() {
                     Ingredients
                   </label>
                   {newRecipe.ingredients.map((ing, index) => (
-                    <div key={index} className="flex gap-2 mb-2">
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2 items-center">
                       <input
                         type="text"
                         value={ing.name}
                         onChange={(e) => handleIngredientChange(index, 'name', e.target.value)}
                         placeholder="Ingredient"
-                        className="flex-1 px-4 py-2 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none"
+                        className={`w-full px-4 py-2 rounded-xl border-2 focus:outline-none ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500`}
                       />
                       <input
                         type="text"
                         value={ing.amount}
                         onChange={(e) => handleIngredientChange(index, 'amount', e.target.value)}
                         placeholder="Amount"
-                        className="w-32 px-4 py-2 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none"
+                        className={`w-full px-4 py-2 rounded-xl border-2 focus:outline-none ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500`}
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveIngredient(index)}
-                        className="px-3 text-red-500 hover:text-red-700"
-                      >
-                        <FaTrash />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={ing.category}
+                          onChange={(e) => handleIngredientChange(index, 'category', e.target.value)}
+                          className={`w-full px-4 py-2 rounded-xl border-2 focus:outline-none ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500`}
+                        >
+                          {Object.entries(CATEGORIES).map(([key, cat]) => (
+                            <option key={key} value={key}>{cat.name}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveIngredient(index)}
+                          className="px-3 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
                     </div>
                   ))}
                   <button
@@ -894,7 +1047,7 @@ function RecipesContent() {
                     value={newRecipe.videoUrl}
                     onChange={(e) => setNewRecipe({ ...newRecipe, videoUrl: e.target.value })}
                     placeholder="https://www.youtube.com/watch?v=..."
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none"
+                    className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500`}
                   />
                 </div>
                 <div>
@@ -905,7 +1058,7 @@ function RecipesContent() {
                     value={newRecipe.instructions}
                     onChange={(e) => setNewRecipe({ ...newRecipe, instructions: e.target.value })}
                     placeholder="Step-by-step instructions..."
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                    className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500`}
                     rows={4}
                   />
                 </div>
@@ -939,7 +1092,7 @@ function RecipesContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 overflow-y-auto p-4"
             onClick={() => setSelectedSearchRecipe(null)}
           >
             <motion.div
@@ -947,7 +1100,7 @@ function RecipesContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 max-w-5xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto`}
+              className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 max-w-5xl w-full shadow-2xl my-4 md:my-8 max-h-[95vh] overflow-y-auto border ${theme.colors.border}`}
             >
               {loadingRecipeDetails ? (
                 <div className="flex items-center justify-center py-20">
@@ -965,17 +1118,19 @@ function RecipesContent() {
                     ← Back to results
                   </button>
 
-                  {selectedSearchRecipe.image && (
-                    <div className="relative h-48 md:h-64 rounded-2xl overflow-hidden mb-4 md:mb-6">
-                      <Image
-                        src={selectedSearchRecipe.image}
-                        alt={selectedSearchRecipe.title}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    </div>
-                  )}
+                  <div className="relative h-48 md:h-64 rounded-2xl overflow-hidden mb-4 md:mb-6">
+                    <Image
+                      src={
+                        selectedSearchRecipe.image ||
+                        selectedSearchRecipe.imageUrl ||
+                        DEFAULT_RECIPE_IMAGE
+                      }
+                      alt={selectedSearchRecipe.title}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
 
                   <h2 className="text-2xl md:text-3xl font-display font-bold mb-4 gradient-text">
                     {selectedSearchRecipe.title}
@@ -984,42 +1139,45 @@ function RecipesContent() {
                   {/* Recipe Info Cards */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4 md:mb-6">
                     {selectedSearchRecipe.readyInMinutes && (
-                      <div className="bg-blue-50 p-3 md:p-4 rounded-xl text-center">
+                      <div className={`${theme.colors.bgSecondary} p-3 md:p-4 rounded-xl text-center`}>
                         <div className="text-xl md:text-2xl mb-1">⏱️</div>
-                        <div className="text-xs md:text-sm font-bold text-blue-900">{selectedSearchRecipe.readyInMinutes} mins</div>
+                        <div className={`text-xs md:text-sm font-bold ${theme.colors.text}`}>{selectedSearchRecipe.readyInMinutes} mins</div>
                       </div>
                     )}
                     {selectedSearchRecipe.servings && (
-                      <div className="bg-purple-50 p-3 md:p-4 rounded-xl text-center">
+                      <div className={`${theme.colors.bgSecondary} p-3 md:p-4 rounded-xl text-center`}>
                         <div className="text-xl md:text-2xl mb-1">👥</div>
-                        <div className="text-xs md:text-sm font-bold text-purple-900">{selectedSearchRecipe.servings} servings</div>
+                        <div className={`text-xs md:text-sm font-bold ${theme.colors.text}`}>{selectedSearchRecipe.servings} servings</div>
                       </div>
                     )}
                     {selectedSearchRecipe.healthScore && (
-                      <div className="bg-green-50 p-3 md:p-4 rounded-xl text-center">
+                      <div className={`${theme.colors.bgSecondary} p-3 md:p-4 rounded-xl text-center`}>
                         <div className="text-xl md:text-2xl mb-1">💚</div>
-                        <div className="text-xs md:text-sm font-bold text-green-900">Health: {selectedSearchRecipe.healthScore}/100</div>
+                        <div className={`text-xs md:text-sm font-bold ${theme.colors.text}`}>Health: {selectedSearchRecipe.healthScore}/100</div>
                       </div>
                     )}
                     {selectedSearchRecipe.pricePerServing && (
-                      <div className="bg-orange-50 p-3 md:p-4 rounded-xl text-center">
+                      <div className={`${theme.colors.bgSecondary} p-3 md:p-4 rounded-xl text-center`}>
                         <div className="text-xl md:text-2xl mb-1">💰</div>
-                        <div className="text-xs md:text-sm font-bold text-orange-900">${(selectedSearchRecipe.pricePerServing / 100).toFixed(2)}/serving</div>
+                        <div className={`text-xs md:text-sm font-bold ${theme.colors.text}`}>${(selectedSearchRecipe.pricePerServing / 100).toFixed(2)}/serving</div>
                       </div>
                     )}
                   </div>
 
                   {/* Nutrition Info */}
                   {selectedSearchRecipe.nutrition && (
-                    <div className="bg-gradient-to-br from-green-50 to-blue-50 p-4 md:p-6 rounded-2xl mb-4 md:mb-6">
+                    <div className={`${theme.colors.bgSecondary} p-4 md:p-6 rounded-2xl mb-4 md:mb-6`}>
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-                        <h3 className="text-lg md:text-xl font-bold flex items-center gap-2">
+                        <h3 className={`text-lg md:text-xl font-bold flex items-center gap-2 ${theme.colors.text}`}>
                           <span>📊</span> Nutrition Facts
                           {usdaNutrition && (
                             <span className="text-sm font-normal text-green-600">
                               ({nutritionSource === 'usda' ? 'USDA Enhanced' : 'Spoonacular'})
                             </span>
                           )}
+                          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 ml-2">
+                            Per serving
+                          </span>
                         </h3>
 
                         {/* USDA Enrichment Button */}
@@ -1040,7 +1198,7 @@ function RecipesContent() {
                               className={`px-3 py-1 rounded-lg font-bold text-sm transition-all ${
                                 nutritionSource === 'spoonacular'
                                   ? 'bg-blue-500 text-white'
-                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                  : `${theme.colors.bgCard} ${theme.colors.text} hover:opacity-80`
                               }`}
                             >
                               Spoonacular
@@ -1050,7 +1208,7 @@ function RecipesContent() {
                               className={`px-3 py-1 rounded-lg font-bold text-sm transition-all ${
                                 nutritionSource === 'usda'
                                   ? 'bg-green-500 text-white'
-                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                  : `${theme.colors.bgCard} ${theme.colors.text} hover:opacity-80`
                               }`}
                             >
                               USDA
@@ -1084,10 +1242,7 @@ function RecipesContent() {
 
                       {/* Display nutrition data */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
-                        {(nutritionSource === 'usda' && usdaNutrition
-                          ? usdaNutrition.totalNutrition.nutrients
-                          : selectedSearchRecipe.nutrition.nutrients
-                        )?.slice(0, 12).map((nutrient, i) => (
+                        {displayNutrients?.slice(0, 12).map((nutrient, i) => (
                           <div key={i} className={`${theme.colors.bgCard} border ${theme.colors.border} p-2 md:p-3 rounded-xl`}>
                             <div className={`text-xs ${theme.colors.textMuted} mb-1 line-clamp-2`}>
                               {nutritionSource === 'usda' ? formatNutrientName(nutrient.name) : nutrient.name}
@@ -1099,6 +1254,30 @@ function RecipesContent() {
                         ))}
                       </div>
 
+                      {/* USDA whole recipe totals for context */}
+                      {nutritionSource === 'usda' && displayTotals.length > 0 && (
+                        <div className="mt-3">
+                          <div className="text-xs md:text-sm font-bold text-gray-700 dark:text-gray-200 mb-1">
+                            Whole recipe totals (USDA)
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {displayTotals.slice(0, 6).map((nutrient, i) => (
+                              <div
+                                key={i}
+                                className={`${theme.colors.bgCard} border ${theme.colors.border} px-2 py-1 rounded-lg text-xs md:text-sm`}
+                              >
+                                <span className={`${theme.colors.text} font-semibold`}>
+                                  {formatNutrientName(nutrient.name)}
+                                </span>{' '}
+                                <span className={theme.colors.textMuted}>
+                                  {(nutrient.amount ? nutrient.amount.toFixed(1) : 'N/A')}{nutrient.unit}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* USDA Coverage Info */}
                       {usdaNutrition && nutritionSource === 'usda' && (
                         <div className="mt-4 p-3 bg-green-100 rounded-xl">
@@ -1106,7 +1285,7 @@ function RecipesContent() {
                             <strong>✅ {Math.round(usdaNutrition.coverage)}% ingredient coverage</strong>
                             {usdaNutrition.failedIngredients.length > 0 && (
                               <span className="block mt-1 text-xs">
-                                Couldn't match: {usdaNutrition.failedIngredients.join(', ')}
+                                Couldn&apos;t match: {usdaNutrition.failedIngredients.join(', ')}
                               </span>
                             )}
                           </p>
@@ -1183,7 +1362,6 @@ export default function RecipesPage() {
     </DashboardLayout>
   );
 }
-
 
 
 

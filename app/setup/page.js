@@ -10,10 +10,9 @@ import { httpsCallable } from 'firebase/functions';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 import AvatarSelector from '@/components/AvatarSelector';
-import { useTheme } from '@/contexts/ThemeContext';
 
 export default function SetupPage() {
-  const { user, userData } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [familyName, setFamilyName] = useState('');

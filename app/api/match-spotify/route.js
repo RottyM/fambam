@@ -34,7 +34,6 @@ export async function POST(request) {
     if (!jams || jams.length === 0) return NextResponse.json({ uris: [] });
 
     const token = await getSpotifyToken();
-    const uris = [];
     let matchCount = 0;
 
     // Process all jams in parallel
@@ -56,7 +55,7 @@ export async function POST(request) {
         const q = encodeURIComponent(`${cleanName} ${jam.artist}`);
         
         try {
-          const res = await fetch(`https://api.spotify.com/v1/search?$q&type=track&limit=1`, {
+          const res = await fetch(`https://api.spotify.com/v1/search?q=${q}&type=track&limit=1`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           const data = await res.json();
@@ -66,7 +65,7 @@ export async function POST(request) {
             return data.tracks.items[0].uri; // Returns "spotify:track:..."
           }
         } catch (e) {
-          console.error("Match failed for", jam.title);
+          console.error("Match failed for", jam.title, e);
         }
       }
       return null;

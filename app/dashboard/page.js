@@ -9,13 +9,14 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useTodos, useChores, useMemories, useCalendarEvents } from '@/hooks/useFirestore';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState, useEffect, useCallback } from 'react';
-import { format, isFuture, isToday, isTomorrow, parseISO, startOfDay } from 'date-fns';
+import { format, isFuture, isToday, isTomorrow, startOfDay } from 'date-fns';
 import { db } from '../../lib/firebase';
 import { collection, query, where, onSnapshot, addDoc, doc, serverTimestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import {
-  FaCheckCircle, FaBroom, FaCalendarAlt, FaImages, FaPills, FaClock,
+  FaCheckCircle, FaCalendarAlt, FaImages, FaPills, FaClock,
   FaMapMarkerAlt, FaTimes, FaUtensils, FaShoppingCart, FaFileAlt, FaKey,
   FaFilm, FaEdit
 } from 'react-icons/fa';
@@ -703,10 +704,13 @@ function DashboardContent() {
                       playsInline
                     />
                   ) : (
-                    <img
+                    <Image
                       src={spotlightMemory.downloadURL}
                       alt="Memory spotlight"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      priority
                     />
                   )}
 

@@ -18,6 +18,11 @@
 # misc
 .DS_Store
 *.pem
+claude.md 
+GROK.md
+/.GROK
+/.claude
+
 
 # debug
 npm-debug.log*

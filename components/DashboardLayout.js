@@ -14,7 +14,6 @@ import {
   FaCheckSquare,
   FaBroom,
   FaCalendarAlt,
-  FaFileAlt,
   FaImages,
   FaSignOutAlt,
   FaCog,
@@ -26,7 +25,6 @@ import {
   FaSun,
   FaBell,
   FaBellSlash,
-  FaCapsules,
   FaSpinner,
   FaFilm,
   FaMusic, // <--- ADDED IMPORT
@@ -48,9 +46,9 @@ const navItems = [
 export default function DashboardLayout({ children }) { 
   const pathname = usePathname();
   const { user, userData, signOut } = useAuth();
-  const { family, members } = useFamily();
+  const { family } = useFamily();
   const { theme, toggleTheme, currentTheme } = useTheme();
-  const { permission, notificationsEnabled, requestPermission, disableNotifications, notificationsSupported } = useNotifications();
+  const { notificationsEnabled, requestPermission, disableNotifications, notificationsSupported } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const [isTogglingNotifications, setIsTogglingNotifications] = useState(false);
   const mainRef = useRef(null);

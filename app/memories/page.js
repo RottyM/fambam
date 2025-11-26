@@ -8,7 +8,7 @@ import { useFamily } from '@/contexts/FamilyContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import UserAvatar from '@/components/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaUpload, FaHeart, FaTimes, FaComment, FaLock, FaUnlock, FaTrash, FaPlus, FaFolder, FaFolderOpen, FaFolderPlus, FaFilter, FaChevronUp, FaChevronDown } from 'react-icons/fa';
+import { FaUpload, FaHeart, FaTimes, FaComment, FaLock, FaUnlock, FaTrash, FaFolder, FaFolderOpen, FaFolderPlus, FaFilter, FaChevronUp, FaChevronDown } from 'react-icons/fa';
 import { storage, db, functions } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { addDoc, collection, serverTimestamp, updateDoc, doc, arrayUnion, arrayRemove, onSnapshot, query, orderBy, deleteDoc } from 'firebase/firestore';
@@ -55,7 +55,7 @@ function MemoryFilterPill({
   showDelete = false,
   onDelete,
 }) {
-  const { theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
 
   const [{ isOver, canDrop }, drop] = useDrop(
     () => ({
@@ -81,17 +81,16 @@ function MemoryFilterPill({
   const hoverClasses = !isActive && !isDropping ? 'hover:border-gray-300 dark:hover:border-gray-600' : '';
   const iconColor = isActive
     ? 'text-white'
-    : (isDropping ? 'text-purple-500' : 'text-gray-400');
-  const countColor = isActive ? 'text-purple-200' : 'text-gray-500';
+    : (isDropping ? 'text-purple-500' : (currentTheme === 'dark' ? 'text-gray-400' : 'text-black'));
+  const countColor = isActive ? 'text-purple-200' : (currentTheme === 'dark' ? 'text-gray-500' : 'text-gray-700');
 
   return (
     <div ref={allowDrop ? drop : null} className="relative group shrink-0">
       <button
         onClick={onClick}
-        className={`relative flex items-center gap-2 px-4 py-2 pr-8 rounded-full border-2 transition-all font-bold whitespace-nowrap shadow-sm ${bgColor} ${borderColor} ${hoverClasses}`}
-      >
+        className={`relative flex items-center gap-2 px-4 py-2 pr-8 rounded-full border-2 transition-all whitespace-nowrap shadow-sm ${bgColor} ${borderColor} ${hoverClasses}`}      >
         {Icon && <Icon className={iconColor} />}
-        <span>{label}</span>
+        <span className={`font-bold ${currentTheme === 'dark' ? 'text-gray-300' : 'text-black'}`}>{label}</span>
         {count !== undefined && (
           <span className={`text-xs ${countColor}`}>({count})</span>
         )}
@@ -134,10 +133,6 @@ function MemoriesContent() {
     : folders.find(f => f.id === activeFilterId) || null;
   const [folderView, setFolderView] = useState({ isOpen: false, memories: [], initialIndex: 0, detailsOpen: false });
   const [uploadAreaExpanded, setUploadAreaExpanded] = useState(false);
-  const [showMobileTip, setShowMobileTip] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    return sessionStorage.getItem('memoriesTipHidden') !== 'true';
-  });
 
   // Combine loading states
   const loading = loadingMemories || loadingFolders;
@@ -244,21 +239,6 @@ function MemoriesContent() {
     },
   });
 
-  // Allow dropping files directly onto the memories grid/cards (no click handling here)
-  const {
-    getRootProps: getGridDropProps,
-    isDragActive: isGridDragActive,
-  } = useDropzone({
-    onDrop,
-    noClick: true,
-    noKeyboard: true,
-    noDragEventsBubbling: true,
-    accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'],
-      'video/*': ['.mp4', '.mov', '.avi'],
-    },
-  });
-
   const toggleLike = async (memoryId, currentLikes) => {
     const userId = user.uid;
     const isLiked = currentLikes?.includes(userId);
@@ -295,13 +275,6 @@ function MemoriesContent() {
     } catch (error) {
       console.error('Error adding comment:', error);
       toast.error('Failed to add comment');
-    }
-  };
-
-  const hideMobileTip = () => {
-    setShowMobileTip(false);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('memoriesTipHidden', 'true');
     }
   };
 
@@ -421,21 +394,25 @@ function MemoriesContent() {
               {currentTheme === 'dark' ? 'Archives' : 'Memory Vault'}
             </span>
           </h1>
-          <p className="text-gray-600 font-semibold">
+          <p className={`font-semibold ${currentTheme === 'dark' ? 'text-gray-300' : 'text-black'}`}>
             {filteredMemories.length} memories
             {lockedMemories.length > 0 && ` • ${lockedMemories.length} time capsules 🔒`}
           </p>
         </div>
 
         <div className="flex gap-3 items-start">
-          <button
-            onClick={() => setUploadAreaExpanded(!uploadAreaExpanded)}
-            className="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-purple-600 transition-colors px-4 py-3 rounded-xl border-2 border-gray-200 bg-white shadow-sm hover:border-purple-300"
-          >
-            <FaUpload className="text-purple-500" />
-            {uploadAreaExpanded ? 'Hide upload' : 'Show upload'}
-            {uploadAreaExpanded ? <FaChevronUp /> : <FaChevronDown />}
-          </button>
+        <button
+          onClick={() => setUploadAreaExpanded(!uploadAreaExpanded)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-all shadow-sm ${
+            currentTheme === 'dark'
+              ? 'bg-gray-800 text-gray-200 border border-gray-700 hover:bg-gray-700'
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          <FaUpload />
+          <span className="hidden md:inline">Show upload</span>
+          {uploadAreaExpanded ? <FaChevronUp /> : <FaChevronDown />}
+        </button>
           {lockedMemories.length > 0 && (
             <button
               onClick={() => setShowTimeCapsules(!showTimeCapsules)}
@@ -505,9 +482,12 @@ function MemoriesContent() {
 
 {/* Folders List - Horizontal Scrollable */}
       <div className="mb-6">
-        <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-3 flex items-center gap-2">
-          <FaFolder /> Folders ({folders.length})
-        </h2>
+      <h3 className={`text-lg font-bold flex items-center gap-2 mb-3 ${
+        currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+      }`}>
+        <FaFolder className={currentTheme === 'dark' ? 'text-gray-400' : 'text-black'} /> 
+        Folders ({folders.length})
+      </h3>
         {folders.length === 0 ? (
           <p className="text-gray-500 italic text-sm">No folders yet. Create one above!</p>
         ) : (
@@ -573,7 +553,7 @@ function MemoriesContent() {
                 >
                   <button
                     onClick={() => setShowAddFolderModal(true)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed text-gray-400 hover:text-purple-500 hover:border-purple-400 transition-colors font-bold whitespace-nowrap shrink-0 ${currentTheme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed text-black hover:text-purple-600 hover:border-purple-500 transition-colors font-bold whitespace-nowrap shrink-0 ${currentTheme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}
                   >
                     <FaFolderPlus /> Add Folder
                   </button>
@@ -583,71 +563,7 @@ function MemoriesContent() {
           </div>
         )}
       </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-6"
-      >
-        {uploadAreaExpanded && (
-          <div className="overflow-hidden transition-all duration-300">
-            <div
-              {...getRootProps()}
-              className="p-4 md:p-8 lg:p-12 border-4 border-dashed rounded-3xl text-center cursor-pointer transition-all hover:border-purple-400 hover:bg-purple-50"
-            >
-              <input {...getInputProps()} />
-              <FaUpload className="text-4xl md:text-6xl text-purple-400 mx-auto mb-2 md:mb-4" />
-              <p className="text-lg md:text-xl font-bold text-gray-700 mb-1 md:mb-2">
-                {uploading ? 'Uploading...' : isDragActive ? 'Drop it here!' : 'Drop photos/videos or tap to upload'}
-              </p>
-              <p className="text-sm md:text-base text-gray-500">Share your family moments ✨</p>
-
-              <div className="mt-4 md:mt-6 space-y-3 md:space-y-4">
-                <div className="flex items-center justify-center gap-2 md:gap-3">
-                  <input
-                    type="checkbox"
-                    id="timecapsule"
-                    checked={isTimeCapsule}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      setIsTimeCapsule(e.target.checked);
-                    }}
-                    className="w-4 h-4 md:w-5 md:h-5 rounded"
-                  />
-                  <label htmlFor="timecapsule" className="font-bold text-purple-600 cursor-pointer text-sm md:text-base">
-                    🕰️ Create Time Capsule (reveal on future date)
-                  </label>
-                </div>
-
-                {isTimeCapsule && (
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="date"
-                      value={revealDate}
-                      onChange={(e) => setRevealDate(e.target.value)}
-                      min={format(new Date(), 'yyyy-MM-dd')}
-                      className="px-3 py-2 md:px-4 md:py-2 rounded-xl border-2 border-purple-300 focus:border-purple-500 focus:outline-none font-semibold text-sm md:text-base"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </motion.div>
-
-      {/* Time Capsule View Banner */}
-      {showTimeCapsules && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl p-6 text-center"
-        >
-          <p className="text-2xl font-bold mb-2">🔒 Time Capsules</p>
-          <p className="opacity-90">These memories will be revealed on their scheduled dates</p>
-        </motion.div>
-      )}
-
+      
       {/* Memories Grid */}
       {displayMemories.length === 0 ? (
         <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg`}>

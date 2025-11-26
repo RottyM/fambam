@@ -173,7 +173,7 @@ function DailyCheckInContent() {
             animate={{ opacity: 1, y: 0 }}
             className="bg-gradient-to-br from-purple-500 via-pink-500 to-indigo-500 rounded-3xl p-8 shadow-2xl mb-8 text-white"
           >
-            <p className="text-sm font-bold mb-3 opacity-90">Today's Question:</p>
+            <p className="text-sm font-bold mb-3 opacity-90">Today&apos;s Question:</p>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-6">{todayPrompt}</h2>
 
             {!hasAnswered ? (
@@ -195,7 +195,7 @@ function DailyCheckInContent() {
               </form>
             ) : (
               <div className="bg-white/20 backdrop-blur-lg rounded-2xl p-6">
-                <p className="font-bold text-xl">✓ You've checked in today!</p>
+                <p className="font-bold text-xl">✓ You&apos;ve checked in today!</p>
                 <p className="opacity-90 mt-2">See everyone’s responses below</p>
               </div>
             )}
@@ -274,7 +274,7 @@ function DailyCheckInContent() {
                 </div>
 
                 <p className="text-xl italic font-medium text-purple-600 dark:text-purple-400 mb-6">
-                  "{entries[0]?.prompt}"
+                  &quot;{entries[0]?.prompt}&quot;
                 </p>
 
                 <div className="space-y-4">

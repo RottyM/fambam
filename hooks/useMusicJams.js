@@ -178,6 +178,18 @@ export function useMusicJams(activeFilterId = null) {
       }
   };
 
+  const removeJamFromFolder = async (jamId, folderId) => {
+    if (!familyId || !jamId || !folderId) return;
+    const jamRef = doc(db, 'families', familyId, 'music_jams', jamId);
+    try {
+      await updateDoc(jamRef, { folderIds: arrayRemove(folderId) });
+      toast.success("Removed from playlist");
+    } catch (error) {
+      console.error(error);
+      toast.error("Could not remove song.");
+    }
+  };
+
   return { 
       jams: filteredJams, 
       allJams,
@@ -189,6 +201,7 @@ export function useMusicJams(activeFilterId = null) {
       createFolder,
       renameFolder, // <--- Exported
       deleteFolder, // <--- Exported
-      assignJamToFolder
+      assignJamToFolder,
+      removeJamFromFolder
   };
 }

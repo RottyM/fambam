@@ -16,7 +16,7 @@ import { useFamilyActions } from '@/hooks/useFamilyActions';
 
 // --- AddMovieModal Component ---
 // (This component is unchanged from previous versions)
-function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, getMovieDetails, searchLoading }) {
+function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, getMovieDetails, theme, currentTheme }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [manualTitle, setManualTitle] = useState('');
@@ -32,6 +32,7 @@ function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, getMov
       const { results } = await searchMovies(searchQuery);
       setSearchResults(results);
     } catch (error) {
+      console.error('Movie search failed:', error);
       toast.error('Search failed. Check your TMDB key or network connection.');
       setSearchResults([]);
     } finally {
@@ -67,6 +68,7 @@ function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, getMov
       setSearchQuery('');
       setSearchResults([]);
     } catch (error) {
+      console.error('Failed to add movie from search:', error);
       toast.error('Failed to add movie. Please try again.');
     } finally {
       setIsAddingMovie(false);
@@ -92,7 +94,7 @@ function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, getMov
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={() => setShowModal(false)}
         >
           <motion.div
@@ -100,25 +102,39 @@ function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, getMov
             animate={{ scale: 1 }}
             exit={{ scale: 0.9 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl max-h-[95vh] overflow-y-auto"
+            className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-lg w-full shadow-2xl max-h-[95vh] overflow-y-auto border ${theme.colors.border}`}
           >
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold gradient-text flex items-center gap-2">
                     <FaFilm /> Add a Movie
                 </h2>
-                <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => setShowModal(false)} className={`p-2 rounded-xl transition-colors ${currentTheme === 'dark' ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-400 hover:bg-gray-100'}`}>
                     <FaTimes size={20} />
                 </button>
             </div>
 
             <form onSubmit={handleSearch} className="flex gap-2 mb-4">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search for a movie..."
-                className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none font-medium"
-              />
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="🔍 Search for a movie..."
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 focus:border-purple-500 focus:outline-none font-medium"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSearchResults([]);
+                    }}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                  >
+                    <FaTimes />
+                  </button>
+                )}
+              </div>
               <button
                 type="submit"
                 disabled={isSearching || !searchQuery.trim()}
@@ -130,13 +146,13 @@ function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, getMov
 
             {searchResults.length > 0 && (
               <div className="space-y-3 mb-6 border-t pt-4">
-                <h3 className="text-lg font-bold text-gray-700">Results:</h3>
+                <h3 className="text-lg font-bold text-gray-700 dark:text-gray-200">Results:</h3>
                 {searchResults.map(movie => (
                   <div
                     key={movie.id}
-                    className={`flex gap-3 p-3 bg-gray-50 rounded-xl items-center transition-colors ${
-                      isAddingMovie ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-100'
-                    }`}
+                    className={`flex gap-3 p-3 rounded-xl items-center transition-colors ${
+                      isAddingMovie ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                    } ${currentTheme === 'dark' ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'}`}
                     onClick={() => !isAddingMovie && handleAddFromSearch(movie)}
                   >
                     <Image
@@ -148,8 +164,8 @@ function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, getMov
                       unoptimized
                     />
                     <div className='flex-1 min-w-0'>
-                        <p className="font-bold text-gray-800 truncate">{movie.title}</p>
-                        <p className="text-sm text-gray-500">{movie.releaseDate?.substring(0, 4)}</p>
+                        <p className="font-bold text-gray-800 dark:text-gray-200 truncate">{movie.title}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{movie.releaseDate?.substring(0, 4)}</p>
                     </div>
                     <FaPlus className='text-purple-500 flex-shrink-0' />
                   </div>
@@ -158,14 +174,14 @@ function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, getMov
             )}
             
             <div className="border-t pt-4">
-                <h3 className="text-lg font-bold text-gray-700 mb-3">Or, Add Manually:</h3>
+                <h3 className={`text-lg font-bold mb-3 ${currentTheme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Or, Add Manually:</h3>
                 <form onSubmit={handleAddManual} className="flex gap-2">
                     <input
                         type="text"
                         value={manualTitle}
                         onChange={(e) => setManualTitle(e.target.value)}
                         placeholder="Type movie title here"
-                        className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none font-medium"
+                        className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 focus:border-purple-500 focus:outline-none font-medium"
                         required
                     />
                     <button
@@ -188,7 +204,7 @@ function AddMovieModal({ showModal, setShowModal, addMovie, searchMovies, getMov
 // --- Main Content Component ---
 function MoviesContent() {
   const { movies, loading, addMovie, toggleWatched, toggleVote, deleteMovie } = useMovies();
-  const { searchMovies, getMovieDetails, loading: searchLoading } = useFamilyActions(); 
+  const { searchMovies, getMovieDetails } = useFamilyActions(); 
   
   const { user } = useAuth();
   const { getMemberById } = useFamily();
@@ -297,8 +313,12 @@ function MoviesContent() {
             onClick={() => setView('active')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-full border-2 font-bold transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
               view === 'active'
-                ? 'border-purple-500 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-700 dark:text-purple-300 shadow-md'
-                : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-purple-300'
+                ? currentTheme === 'dark'
+                  ? 'border-purple-500 bg-purple-900/30 text-purple-300 shadow-md'
+                  : 'border-purple-500 bg-purple-50 text-purple-700 shadow-md'
+                : currentTheme === 'dark'
+                  ? 'border-gray-700 bg-gray-800 text-gray-300 hover:border-purple-300'
+                  : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-purple-300'
             }`}
           >
             <FaList className="hidden md:inline" /> Watchlist ({activeMovies.length})
@@ -309,8 +329,12 @@ function MoviesContent() {
             onClick={() => setView('watched')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-full border-2 font-bold transition-all shadow-sm whitespace-nowrap text-xs md:text-sm ${
               view === 'watched'
-                ? 'border-green-500 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 text-green-700 dark:text-green-300 shadow-md'
-                : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-green-300'
+                ? currentTheme === 'dark'
+                  ? 'border-green-500 bg-green-900/30 text-green-300 shadow-md'
+                  : 'border-green-500 bg-green-50 text-green-700 shadow-md'
+                : currentTheme === 'dark'
+                  ? 'border-gray-700 bg-gray-800 text-gray-300 hover:border-green-300'
+                  : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-green-300'
             }`}
           >
             <FaCheck className="hidden md:inline" /> Watched ({watchedMovies.length})
@@ -337,8 +361,12 @@ function MoviesContent() {
             onClick={() => setViewMode('detail')}
             className={`px-3 md:px-4 py-2 rounded-full border-2 font-bold transition-all text-xs md:text-sm ${
               viewMode === 'detail'
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                ? currentTheme === 'dark'
+                  ? 'border-blue-500 bg-blue-900/30 text-blue-300'
+                  : 'border-blue-500 bg-blue-50 text-blue-700'
+                : currentTheme === 'dark'
+                  ? 'border-gray-700 bg-gray-800 text-gray-400'
+                  : 'border-gray-300 bg-gray-50 text-gray-600'
             }`}
             title="Detail View"
           >
@@ -350,8 +378,12 @@ function MoviesContent() {
             onClick={() => setViewMode('poster')}
             className={`px-3 md:px-4 py-2 rounded-full border-2 font-bold transition-all text-xs md:text-sm ${
               viewMode === 'poster'
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                ? currentTheme === 'dark'
+                  ? 'border-blue-500 bg-blue-900/30 text-blue-300'
+                  : 'border-blue-500 bg-blue-50 text-blue-700'
+                : currentTheme === 'dark'
+                  ? 'border-gray-700 bg-gray-800 text-gray-400'
+                  : 'border-gray-300 bg-gray-50 text-gray-600'
             }`}
             title="Poster View"
           >
@@ -412,7 +444,7 @@ function MoviesContent() {
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleVote(movie.id, movie.votes); }}
                           className={`p-1.5 rounded-full shadow-sm transition-all ${
-                            hasVoted ? 'bg-red-500 text-white' : 'bg-white/80 text-gray-500 hover:bg-red-500 hover:text-white'
+                            hasVoted ? 'bg-red-500 text-white' : 'bg-white/80 text-gray-500 hover:bg-red-500 hover:text-white dark:bg-gray-800/80 dark:text-gray-300 dark:hover:text-white'
                           }`}
                           title="Vote"
                         >
@@ -422,7 +454,7 @@ function MoviesContent() {
                       <button
                         onClick={(e) => { e.stopPropagation(); toggleWatched(movie.id, movie.watched); }}
                         className={`p-1.5 rounded-full shadow-sm transition-all ${
-                           movie.watched ? 'bg-green-500 text-white' : 'bg-white/80 text-gray-500 hover:bg-green-500 hover:text-white'
+                           movie.watched ? 'bg-green-500 text-white' : 'bg-white/80 text-gray-500 hover:bg-green-500 hover:text-white dark:bg-gray-800/80 dark:text-gray-300 dark:hover:text-white'
                         }`}
                         title={movie.watched ? "Mark as unwatched" : "Mark as watched"}
                       >
@@ -533,7 +565,7 @@ function MoviesContent() {
                           <button
                             onClick={() => toggleWatched(movie.id, movie.watched)}
                             className={`p-2 rounded-full transition-colors ${
-                              movie.watched ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400 hover:bg-green-50 hover:text-green-500'
+                              movie.watched ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400 hover:bg-green-50 hover:text-green-500 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-green-500'
                             }`}
                             title={movie.watched ? "Mark as unwatched" : "Mark as watched"}
                           >
@@ -544,7 +576,7 @@ function MoviesContent() {
                             <button
                               onClick={() => toggleVote(movie.id, movie.votes)}
                               className={`flex items-center gap-1 px-3 py-1.5 rounded-full font-bold transition-all ${
-                                hasVoted ? 'bg-red-50 text-red-500 ring-2 ring-red-100' : 'bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-400'
+                                hasVoted ? 'bg-red-50 text-red-500 ring-2 ring-red-100' : 'bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-400 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-red-400'
                               }`}
                               title="Like"
                             >
@@ -584,7 +616,8 @@ function MoviesContent() {
         addMovie={addMovie}
         searchMovies={searchMovies}
         getMovieDetails={getMovieDetails}
-        searchLoading={searchLoading}
+        theme={theme}
+        currentTheme={currentTheme}
       />
 
       {/* Winner Modal */}
@@ -599,10 +632,10 @@ function MoviesContent() {
             <motion.div
               initial={{ scale: 0.5, rotate: -10 }}
               animate={{ scale: 1, rotate: 0 }}
-              className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border-4 border-yellow-400"
+              className={`${theme.colors.bgCard} rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border-4 border-yellow-400`}
             >
               <div className="text-6xl mb-4 animate-bounce">🏆</div>
-              <h2 className="text-xl font-bold text-gray-500 uppercase tracking-wider mb-2">Tonight we watch</h2>
+              <h2 className={`text-xl font-bold ${theme.colors.textMuted} uppercase tracking-wider mb-2`}>Tonight we watch</h2>
               <h1 className="text-4xl font-display font-black gradient-text mb-6">
                 {winningMovie.title}
               </h1>
@@ -617,9 +650,9 @@ function MoviesContent() {
                     setShowWinnerModal(false);
                     setWinningMovie(null);
                   }}
-                  className="bg-gray-900 text-white py-3 rounded-xl font-bold hover:bg-gray-800"
+                  className={`${currentTheme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-900 hover:bg-gray-800'} text-white py-3 rounded-xl font-bold`}
                 >
-                  Let's Watch It! 🍿
+                  Let&apos;s Watch It! 🍿
                 </button>
                 <button
                   onClick={() => {
@@ -627,7 +660,7 @@ function MoviesContent() {
                     setWinningMovie(null);
                     setTimeout(pickRandomMovie, 300); 
                   }}
-                  className="text-gray-500 font-semibold hover:text-gray-800"
+                  className={`${theme.colors.textMuted} font-semibold hover:${theme.colors.text}`}
                 >
                   Spin Again 🔄
                 </button>

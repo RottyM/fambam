@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useTheme } from '@/contexts/ThemeContext';
 import { 
@@ -18,6 +18,7 @@ import AddJamModal from '@/components/AddJamModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import YouTube from 'react-youtube'; 
+import { useSearchParams } from 'next/navigation';
 
 // --- DRAG AND DROP IMPORTS ---
 import { DndProvider } from 'react-dnd';
@@ -52,6 +53,7 @@ function MusicContent() {
   const { theme, currentTheme } = useTheme();
   const [activeFilterId, setActiveFilterId] = useState('all'); 
   const [showAddModal, setShowAddModal] = useState(false);
+  const searchParams = useSearchParams();
   
   // --- PLAYER STATE ---
   const [queue, setQueue] = useState([]);
@@ -67,9 +69,6 @@ function MusicContent() {
       ? allJams.length
       : allJams.filter(j => j.folderIds?.includes(folderId) || j.folderId === folderId).length;
   const filteredCount = jams.length;
-  const activeFolderName = activeFilterId === 'all'
-    ? 'All Jams'
-    : folders.find(f => f.id === activeFilterId)?.name || 'Playlist';
 
   // --- PLAYBACK HANDLERS ---
   
@@ -109,6 +108,22 @@ function MusicContent() {
           setCurrentIndex(prev => prev - 1);
       }
   };
+
+  // Surface Spotify auth status/errors from callback redirect
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const err = searchParams.get('error');
+    if (status === 'connected') {
+      toast.success('Connected to Spotify!');
+    } else if (err) {
+      const msg =
+        err === 'no_code' ? 'Spotify sign-in failed: no code returned.' :
+        err === 'token_failed' ? 'Spotify sign-in failed: token exchange error.' :
+        err === 'missing_spotify_env' ? 'Missing Spotify client id/secret.' :
+        'Spotify sign-in failed.';
+      toast.error(msg);
+    }
+  }, [searchParams]);
 
   const currentTrack = queue[currentIndex];
   const youtubeId = currentTrack ? getYouTubeId(currentTrack.link) : null;
@@ -220,6 +235,11 @@ function MusicContent() {
     await assignJamToFolder(jamId, destination);
   };
 
+  const handleRemoveFromFolder = async (jamId, folderId) => {
+    if (!folderId || folderId === 'all') return;
+    await removeJamFromFolder(jamId, folderId);
+  };
+
   if (loading && folders.length === 0) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -254,7 +274,7 @@ function MusicContent() {
         </div>
 
         {/* Top Action Buttons */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 justify-end">
             <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -309,7 +329,7 @@ function MusicContent() {
 
           <button
             onClick={handleCreateFolder}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed text-gray-400 hover:text-purple-500 hover:border-purple-400 transition-colors font-bold whitespace-nowrap shrink-0 ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed text-gray-700 hover:text-purple-500 hover:border-purple-400 transition-colors font-bold whitespace-nowrap shrink-0 ${
               currentTheme === 'dark' ? 'border-gray-700' : 'border-gray-300'
             }`}
           >
@@ -318,7 +338,7 @@ function MusicContent() {
 
           <button
             onClick={handleExport}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed text-gray-400 hover:text-green-500 hover:border-green-400 transition-colors font-bold whitespace-nowrap shrink-0 ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed text-gray-700 hover:text-green-500 hover:border-green-400 transition-colors font-bold whitespace-nowrap shrink-0 ${
               currentTheme === 'dark' ? 'border-gray-700' : 'border-gray-300'
             }`}
             title="Create Spotify Playlist"

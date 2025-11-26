@@ -1,0 +1,27 @@
+2nd round 
+Changes in dark mode mobile
+
+Todos - main cards - the flow of information is all bunched to the left, needs layout needs to be fixed to use entire card space.
+
+Changes in all views
+to-dos - Section titles show  different colors, need to adjust for light/dark mode
+to-dos - Section titles need light/dark alternative titles in terms are used in active/completed terms under main page title.
+Active Tasks/Cursed
+Completed / Vanquished
+
+
+Chores/page - the filter button has light mode styles needs both light/dark
+Chores/page - Section title shows light mode styles
+Chores/page - Cards show white title and border ? Needs dark mode styles
+
+Recipes/page - The clear all and add buttons in mobile view are showing double icons, remove the unwanted icon. Right align both buttons.
+
+Recipes/page - needs icon next to main page title to have dark mode enabled. 
+Recipes/page - trash can needs dark mode enabled. 
+
+music/page - Right align both actions buttons
+
+memories/page - Show Upload button needs dark mode enabled, also when clicked it opens two drop zones one underneath the button and one under the filter container, remove the extra drop zone under the filters its not needed. 
+
+memories/page - the icon and memories count need dark mode enabled. 
+memories/page - the section titles need dark mode enabled, text is blending with background hard to see. 

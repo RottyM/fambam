@@ -39,9 +39,9 @@ export default function PlaylistFolder({ folder, isActive, onClick, onDropJam, o
         onClick={onClick}
         className={`relative flex items-center gap-2 px-4 py-2 rounded-full border-2 transition-all font-bold whitespace-nowrap shadow-sm pr-8 ${bgColor} ${borderColor} ${!isActive && !isOver ? 'hover:border-gray-300 dark:hover:border-gray-600' : ''}`}
       >
-        <Icon className={isActive ? 'text-white' : (isOver ? 'text-purple-500' : 'text-gray-400')} />
+        <Icon className={isActive ? 'text-white' : (isOver ? 'text-purple-500' : 'text-gray-700')} />
         <span>{folder.name}</span>
-        {count !== '' && <span className={`text-xs ${isActive ? 'text-purple-200' : 'text-gray-500'}`}>({count})</span>}
+        {count !== '' && <span className={`text-xs ${isActive ? 'text-purple-200' : 'text-gray-700'}`}>({count})</span>}
       </button>
 
       {/* DELETE BUTTON (Red X) - Only shows for custom folders, not 'All' */}

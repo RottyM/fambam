@@ -7,6 +7,7 @@ import { FaSpotify, FaTrash, FaYoutube, FaPlay, FaHeart, FaRegHeart, FaCompactDi
 import { useAuth } from '@/contexts/AuthContext';
 import { useDrag } from 'react-dnd';
 import { ItemTypes } from './PlaylistFolder';
+import Image from 'next/image';
 
 export default function JamCard({ jam, onDelete, onPlayVideo, onToggleLike }) {
   const { getMemberById } = useFamily();
@@ -45,10 +46,12 @@ export default function JamCard({ jam, onDelete, onPlayVideo, onToggleLike }) {
       {/* --- MEDIA SECTION --- */}
       <div className="relative aspect-video w-full overflow-hidden bg-gray-200 dark:bg-gray-800">
         {jam.thumbnail ? (
-          <img 
+          <Image 
             src={jam.thumbnail} 
             alt={jam.title} 
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 bg-gray-100 dark:bg-gray-800">
@@ -95,7 +98,7 @@ export default function JamCard({ jam, onDelete, onPlayVideo, onToggleLike }) {
 
         {jam.note && (
           <div className={`p-2.5 rounded-xl text-sm italic mb-3 grow leading-snug ${currentTheme === 'dark' ? 'bg-gray-800/50 text-gray-400' : 'bg-gray-50 text-gray-600'}`}>
-            "{jam.note}"
+            &quot;{jam.note}&quot;
           </div>
         )}
 

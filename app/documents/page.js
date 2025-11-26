@@ -6,7 +6,7 @@ import { useDocuments } from '@/hooks/useFirestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaFileAlt, FaFilePdf, FaFileImage, FaUpload, FaSearch, FaEye, FaTrash } from 'react-icons/fa';
+import { FaFileAlt, FaFilePdf, FaFileImage, FaUpload, FaSearch, FaEye, FaTrash, FaTimes } from 'react-icons/fa';
 import { storage, db } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { addDoc, collection, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
@@ -16,7 +16,7 @@ import { useDropzone } from 'react-dropzone';
 function DocumentsContent() {
   const { documents, loading } = useDocuments();
   const { userData } = useAuth();
-  const { theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
   const [uploading, setUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -186,26 +186,24 @@ function DocumentsContent() {
 
 {/* Search bar */}
       <div className="mb-6">
-        <div className="flex flex-col md:flex-row gap-3 md:gap-4 items-stretch">
-          <div className="relative flex-1">
-            <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search documents (including OCR text)..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 md:py-3.5 rounded-2xl border-2 border-gray-200 bg-white/80 focus:border-purple-500 focus:outline-none font-semibold text-base md:text-lg shadow-sm hover:border-purple-300 transition-colors"
-            />
-          </div>
-          <button
-            onClick={() => {}}
-            className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-4 md:px-6 py-3 md:py-3.5 rounded-2xl font-bold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-            type="button"
-            aria-label="Search"
-          >
-            <FaSearch />
-            <span className="hidden md:inline">Search</span>
-          </button>
+        <div className="relative">
+          <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search documents (including OCR text)..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-11 pr-10 py-3 md:py-3.5 rounded-2xl border-2 border-gray-200 bg-white/80 focus:border-purple-500 focus:outline-none font-semibold text-base md:text-lg shadow-sm hover:border-purple-300 transition-colors dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-500 dark:focus:border-purple-500"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-gray-600"
+            >
+              <FaTimes />
+            </button>
+          )}
         </div>
       </div>
 
@@ -286,7 +284,7 @@ function DocumentsContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
             onClick={() => !deleting && setDeleteConfirm(null)}
           >
             <motion.div
@@ -294,7 +292,7 @@ function DocumentsContent() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className={`${theme.colors.bgCard} rounded-3xl p-8 max-w-md w-full shadow-2xl`}
+              className={`${theme.colors.bgCard} rounded-3xl p-8 max-w-md w-full shadow-2xl border ${theme.colors.border}`}
             >
               <div className="text-center mb-6">
                 <div className="text-6xl mb-4">🗑️</div>
@@ -311,7 +309,7 @@ function DocumentsContent() {
                 <button
                   onClick={() => setDeleteConfirm(null)}
                   disabled={deleting}
-                  className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 transition-all disabled:opacity-50"
+                  className={`flex-1 ${theme.colors.bgSecondary} ${theme.colors.text} py-3 rounded-xl font-bold hover:opacity-80 transition-all disabled:opacity-50`}
                 >
                   Cancel
                 </button>

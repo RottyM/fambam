@@ -13,6 +13,7 @@ import { ICON_CATEGORIES, getIcon } from '@/lib/icons';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import toast from 'react-hot-toast';
+import UserAvatar from '@/components/UserAvatar';
 
 function ChoresContent() {
   const { chores, loading, addChore } = useChores();
@@ -99,7 +100,7 @@ function ChoresContent() {
                 {currentTheme === 'dark' ? 'Duties' : 'Chore Tracker'}
               </span>
             </h1>
-            <p className="text-base md:text-lg text-gray-800 font-semibold">
+            <p className={`text-base md:text-lg ${theme.colors.textMuted} font-semibold`}>
             {pendingChores.length} pending • {submittedChores.length} submitted • {approvedChores.length} completed
           </p>
         </div>
@@ -111,7 +112,9 @@ function ChoresContent() {
                 className={`flex items-center gap-2 px-4 md:px-5 py-3 rounded-2xl text-sm font-bold transition-all shadow-sm border ${
                   showFilters
                     ? 'bg-purple-500 border-purple-500 text-white'
-                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                    : currentTheme === 'dark'
+                      ? 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'
+                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                 }`}
               >
                 <FaFilter /> Filters
@@ -172,9 +175,7 @@ function ChoresContent() {
                           onClick={() => setFilterMember(member.id)}
                           className={`${pillBase} ${filterMember === member.id ? pillActive : pillInactive}`}
                         >
-                          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-sm font-bold uppercase">
-                            {member.displayName?.[0] || '?'}
-                          </span>
+                          <UserAvatar user={member} size={24} />
                           <span>{member.displayName}</span>
                         </button>
                       ))}
@@ -308,7 +309,7 @@ function ChoresContent() {
       {/* Submitted chores (for parents to approve) */}
       {isParent() && submittedChores.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-2xl font-display font-bold mb-4 flex items-center gap-2">
+          <h2 className={`text-2xl font-display font-bold mb-4 flex items-center gap-2 ${theme.colors.text}`}>
             <span>⏳</span> Pending Approval
             <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-bold">
               {submittedChores.length}
@@ -324,7 +325,7 @@ function ChoresContent() {
 
       {/* Active chores */}
       <div className="mb-8">
-        <h2 className="text-2xl font-display font-bold mb-4 flex items-center gap-2">
+        <h2 className={`text-2xl font-display font-bold mb-4 flex items-center gap-2 ${theme.colors.text}`}>
           <span>🔥</span> {isParent() ? 'Active Chores' : 'Your Chores'}
           {(isParent() ? pendingChores : myChores.filter(c => c.status !== 'approved')).length > 0 && (
             <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold">
@@ -355,7 +356,7 @@ function ChoresContent() {
       {/* Completed chores */}
       {approvedChores.length > 0 && (
         <div>
-          <h2 className="text-2xl font-display font-bold mb-4 flex items-center gap-2">
+          <h2 className={`text-2xl font-display font-bold mb-4 flex items-center gap-2 ${theme.colors.text}`}>
             <span>✅</span> Completed This Week
             <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-bold">
               {approvedChores.length}

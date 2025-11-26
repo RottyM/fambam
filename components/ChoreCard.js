@@ -36,7 +36,7 @@ export default function ChoreCard({ chore }) {
   const handleApprove = async () => {
     try {
       const approveChore = httpsCallable(functions, 'approveChoreAndAwardPoints');
-      const result = await approveChore({
+      await approveChore({
         familyId: userData.familyId,
         choreId: chore.id,
       });
@@ -52,7 +52,11 @@ export default function ChoreCard({ chore }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={`${theme.colors.bgCard} rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all border-4 ${currentTheme === 'dark' ? 'border-gradient-to-r from-pink-700 to-purple-700' : 'border-gradient-to-r from-pink-300 to-purple-300'}`}
+      className={`${theme.colors.bgCard} rounded-2xl p-5 transition-all border-2 ${
+        currentTheme === 'dark'
+          ? 'border-purple-700 shadow-lg shadow-purple-900/50 hover:shadow-xl hover:shadow-purple-900/60'
+          : 'border-purple-300 shadow-lg hover:shadow-xl'
+      }`}
     >
       {/* Header with icon and avatar */}
       <div className="flex items-start gap-4 mb-3">
@@ -61,7 +65,9 @@ export default function ChoreCard({ chore }) {
         </div>
         
         <div className="flex-1">
-          <h3 className={`text-xl font-display font-bold ${theme.colors.text} mb-1`}>
+          <h3 className={`text-xl font-display font-bold mb-1 ${
+            currentTheme === 'dark' ? 'text-purple-400' : 'text-purple-600'
+          }`}>
             {chore.title}
           </h3>
           {chore.description && (

@@ -65,7 +65,7 @@ export default function DailyMeme() {
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-bold text-gray-100 flex items-center gap-1.5">
           <span className="text-lg">{currentTheme === 'dark' ? '🌚' : '😂'}</span>
-          Today's Meme
+          Today&apos;s Meme
         </h3>
         <button
           onClick={handleRefresh}
@@ -80,7 +80,7 @@ export default function DailyMeme() {
         <div className="relative w-full aspect-video">
           <Image
             src={meme.url}
-            alt={meme.title || "Today's meme"}
+            alt={meme.title || "Today&apos;s meme"}
             fill
             className="object-contain rounded-lg"
             unoptimized

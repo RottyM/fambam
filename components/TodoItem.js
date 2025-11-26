@@ -2,6 +2,7 @@ import { FaTrash, FaRegCalendarCheck } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { getIcon } from '@/lib/icons';
 import { useTheme } from '@/contexts/ThemeContext';
+import UserAvatar from './UserAvatar';
 
 function TodoItem({ todo, members = [], userId, onToggle }) {
   const { currentTheme } = useTheme();
@@ -21,8 +22,7 @@ function TodoItem({ todo, members = [], userId, onToggle }) {
   };
 
   // Assigned member handling
-  const assignedMember = members.find((m) => m.id === todo.assignedTo) || { displayName: 'Unassigned', avatar: '' };
-  const avatarUrl = assignedMember?.avatar?.url || assignedMember?.avatar || assignedMember?.photoURL || '/default-avatar.png';
+  const assignedMember = members.find((m) => m.id === todo.assignedTo);
   const displayName = assignedMember?.displayName || assignedMember?.name || 'Unassigned';
   const extraIconList = todo.extraIcons ? Array.from(todo.extraIcons) : [];
   const textMain = currentTheme === 'dark' ? 'text-gray-100' : 'text-gray-800';
@@ -89,17 +89,7 @@ function TodoItem({ todo, members = [], userId, onToggle }) {
           <span className={`${isOverdue ? 'text-red-500 dark:text-red-400' : textSub}`}>Due {dueDate}</span>
         </div>
         <div className="flex items-center gap-2">
-          {avatarUrl && avatarUrl !== '/default-avatar.png' ? (
-            <img
-              src={avatarUrl}
-              alt={displayName}
-              className="w-9 h-9 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold">
-              {displayName?.[0]?.toUpperCase() || '?'}
-            </div>
-          )}
+          <UserAvatar user={assignedMember} size={36} />
           <div className="leading-tight">
             <p className={`font-semibold ${textMain}`}>{displayName}</p>
             <p className={`text-xs ${textSub}`}>Assignee</p>

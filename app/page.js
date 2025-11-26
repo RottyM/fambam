@@ -3,6 +3,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { motion } from 'framer-motion';
 import { FaGoogle, FaListUl, FaTasks, FaUsers, FaCameraRetro } from 'react-icons/fa';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -13,6 +14,7 @@ function HomeContent() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const { signIn, signUp, signInWithGoogle, user } = useAuth();
+  const { currentTheme } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
@@ -41,8 +43,16 @@ function HomeContent() {
     return null; // Or a loading spinner
   }
 
+  const isDark = currentTheme === 'dark';
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8">
+    <div
+      className={`min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 transition-colors duration-300 ${
+        isDark
+          ? 'bg-gray-900 text-gray-100'
+          : 'bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 text-gray-900'
+      }`}
+    >
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -91,7 +101,7 @@ function HomeContent() {
             <span className="gradient-text">Family OS</span>
           </motion.h1>
           <p className="text-xl text-gray-600 font-semibold">
-            Your family's new operating system! 👨‍👩‍👧‍👦✨
+            Your family&apos;s new operating system! 👨‍👩‍👧‍👦✨
           </p>
         </div>
 
@@ -99,16 +109,28 @@ function HomeContent() {
         <motion.div
           initial={{ scale: 0.9 }}
           animate={{ scale: 1 }}
-          className="bg-white rounded-3xl shadow-2xl p-8 border-4 border-purple-200"
+          className={`rounded-3xl shadow-2xl p-8 border-4 transition-colors ${
+            isDark
+              ? 'bg-gray-800 border-gray-700 text-gray-100'
+              : 'bg-white border-purple-200 text-gray-800'
+          }`}
         >
-          <h2 className="text-2xl font-display font-bold text-center mb-6 text-gray-800">
+          <h2
+            className={`text-2xl font-display font-bold text-center mb-6 ${
+              isDark ? 'text-gray-100' : 'text-gray-800'
+            }`}
+          >
             {isSignUp ? '🎉 Create Your Account' : '👋 Log In'}
           </h2>
 
           {/* Google Sign In */}
           <button
             onClick={handleGoogleSignIn}
-            className="w-full bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-50 active:bg-gray-100 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 mb-6 touch-manipulation min-h-[48px]"
+            className={`w-full py-3 rounded-xl font-bold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 mb-6 touch-manipulation min-h-[48px] ${
+              isDark
+                ? 'bg-gray-900 border-2 border-gray-700 text-gray-100 hover:bg-gray-800'
+                : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 active:bg-gray-100'
+            }`}
           >
             <FaGoogle className="text-red-500" />
             Continue with Google
@@ -128,7 +150,11 @@ function HomeContent() {
                 placeholder="Your Name 👤"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                className={`w-full px-4 py-3 rounded-xl border-2 focus:border-purple-500 focus:outline-none font-semibold ${
+                  isDark
+                    ? 'bg-gray-900 border-gray-700 text-gray-100'
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
                 required
               />
             )}
@@ -138,7 +164,11 @@ function HomeContent() {
               placeholder="Email 📧"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+              className={`w-full px-4 py-3 rounded-xl border-2 focus:border-purple-500 focus:outline-none font-semibold ${
+                isDark
+                  ? 'bg-gray-900 border-gray-700 text-gray-100'
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
               required
             />
             
@@ -147,7 +177,11 @@ function HomeContent() {
               placeholder="Password 🔒"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+              className={`w-full px-4 py-3 rounded-xl border-2 focus:border-purple-500 focus:outline-none font-semibold ${
+                isDark
+                  ? 'bg-gray-900 border-gray-700 text-gray-100'
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
               required
             />
 

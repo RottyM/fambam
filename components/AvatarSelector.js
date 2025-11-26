@@ -41,7 +41,7 @@ const darkAvatarStyles = [
   'croodles-neutral',    // Neutral doodles
 ];
 
-export default function AvatarSelector({ userId, currentAvatar, onSelect, size = 80 }) {
+export default function AvatarSelector({ userId, currentAvatar, onSelect, _size = 80 }) {
   const { currentTheme } = useTheme();
   const [selectedStyle, setSelectedStyle] = useState(currentAvatar?.style || null);
   const [seedVariant, setSeedVariant] = useState(0);
@@ -202,7 +202,7 @@ export default function AvatarSelector({ userId, currentAvatar, onSelect, size =
         </div>
         <div className="bg-sky-200/70 dark:bg-blue-900/20 border-2 border-sky-400 dark:border-blue-700 rounded-xl p-3 shadow-sm">
           <p className="text-xs text-gray-900 dark:text-blue-300 font-extrabold">
-            🎲 Use "Variations" to see different looks for each style, or "Random" for a surprise!
+            🎲 Use &quot;Variations&quot; to see different looks for each style, or &quot;Random&quot; for a surprise!
           </p>
         </div>
       </div>

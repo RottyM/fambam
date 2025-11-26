@@ -8,15 +8,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaPlus, FaTrash, FaCheckCircle, FaTimes } from 'react-icons/fa';
 
 const CATEGORIES = {
-  produce: { name: 'Produce', icon: '🥬', color: 'from-green-400 to-green-500' },
-  dairy: { name: 'Dairy', icon: '🥛', color: 'from-blue-400 to-blue-500' },
-  meat: { name: 'Meat & Seafood', icon: '🍖', color: 'from-red-400 to-red-500' },
-  frozen: { name: 'Frozen', icon: '🧊', color: 'from-cyan-400 to-cyan-500' },
-  pantry: { name: 'Pantry', icon: '🥫', color: 'from-yellow-400 to-yellow-500' },
-  bakery: { name: 'Bakery', icon: '🍞', color: 'from-orange-400 to-orange-500' },
-  snacks: { name: 'Snacks', icon: '🍿', color: 'from-purple-400 to-purple-500' },
-  beverages: { name: 'Beverages', icon: '🥤', color: 'from-pink-400 to-pink-500' },
-  other: { name: 'Other', icon: '🛒', color: 'from-gray-400 to-gray-500' },
+  produce: { name: 'Produce', icon: "🥬", color: 'from-green-400 to-green-500' },
+  dairy: { name: 'Dairy', icon: "🥛", color: 'from-blue-400 to-blue-500' },
+  meat: { name: 'Meat & Seafood', icon: "🍖", color: 'from-red-400 to-red-500' },
+  frozen: { name: 'Frozen', icon: "🧊", color: 'from-cyan-400 to-cyan-500' },
+  pantry: { name: 'Pantry', icon: "🥫", color: 'from-yellow-400 to-yellow-500' },
+  bakery: { name: 'Bakery', icon: "🍞", color: 'from-orange-400 to-orange-500' },
+  snacks: { name: 'Snacks', icon: "🍿", color: 'from-purple-400 to-purple-500' },
+  beverages: { name: 'Beverages', icon: "🥤", color: 'from-pink-400 to-pink-500' },
+  condiments: { name: 'Condiments & Spices', icon: "🧂", color: 'from-amber-400 to-red-500' },
+  canned: { name: 'Canned & Jarred', icon: "🥫", color: 'from-emerald-400 to-emerald-600' },
+  baking: { name: 'Baking & Staples', icon: "🧀", color: 'from-yellow-400 to-orange-500' },
+  household: { name: 'Household & Paper', icon: "🧻", color: 'from-slate-400 to-slate-600' },
+  other: { name: 'Other', icon: "🛒", color: 'from-gray-400 to-gray-500' },
 };
 
 function GroceriesContent() {
@@ -91,7 +95,7 @@ function GroceriesContent() {
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 justify-end">
             {groceries.length > 0 && (
               <>
                 {checkedCount > 0 && (
@@ -102,7 +106,6 @@ function GroceriesContent() {
                     className="bg-gradient-to-r from-red-500 to-rose-500 text-white px-4 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
                   >
                     <FaTrash size={14} /> <span className="hidden md:inline">Clear Checked ({checkedCount})</span>
-                    <span className="md:hidden">🗑️</span>
                   </motion.button>
                 )}
                 <motion.button
@@ -116,7 +119,6 @@ function GroceriesContent() {
                   className="bg-gradient-to-r from-slate-600 to-gray-700 text-white px-4 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
                 >
                   <FaTrash size={14} /> <span className="hidden md:inline">Clear All ({groceries.length})</span>
-                  <span className="md:hidden">🗑️ All</span>
                 </motion.button>
               </>
             )}
@@ -127,7 +129,6 @@ function GroceriesContent() {
               className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
             >
               <FaPlus size={14} /> <span className="hidden md:inline">Add Item</span>
-              <span className="md:hidden">➕</span>
             </motion.button>
           </div>
         </div>

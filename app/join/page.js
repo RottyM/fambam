@@ -28,7 +28,7 @@ function JoinFamilyContent() {
     if (familyCode && !familyName) {
       checkFamilyCode(familyCode);
     }
-  }, [familyCode]);
+  }, [familyCode, familyName]);
 
   const checkFamilyCode = async (code) => {
     if (!code) return;
@@ -161,7 +161,7 @@ function JoinFamilyContent() {
               animate={{ opacity: 1, y: 0 }}
               className="bg-green-50 border-2 border-green-200 rounded-xl p-4 text-center"
             >
-              <p className="text-sm text-gray-600 mb-1">You're joining:</p>
+              <p className="text-sm text-gray-600 mb-1">You&apos;re joining:</p>
               <p className="text-xl font-bold text-green-700">✓ {familyName}</p>
             </motion.div>
           )}
@@ -189,7 +189,7 @@ function JoinFamilyContent() {
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-500">
-            Don't have a code?{' '}
+            Don&apos;t have a code?{' '}
             <button
               onClick={() => router.push('/setup')}
               className="text-purple-600 font-bold hover:underline"

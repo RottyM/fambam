@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaTimes, FaMusic, FaSpotify, FaYoutube, FaLink, FaSearch, FaArrowLeft, FaPlus, FaSpinner, FaCalendarAlt } from 'react-icons/fa';
+import { FaTimes, FaMusic, FaSpotify, FaYoutube, FaLink, FaSearch, FaArrowLeft, FaPlus, FaSpinner } from 'react-icons/fa';
 import { useTheme } from '@/contexts/ThemeContext';
+import Image from 'next/image';
 
 export default function AddJamModal({ isOpen, onClose, onAddJam }) {
   const { theme, currentTheme } = useTheme();
@@ -114,7 +115,7 @@ export default function AddJamModal({ isOpen, onClose, onAddJam }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={onClose}
         >
           <motion.div
@@ -122,7 +123,7 @@ export default function AddJamModal({ isOpen, onClose, onAddJam }) {
             animate={{ scale: 1 }}
             exit={{ scale: 0.9 }}
             onClick={(e) => e.stopPropagation()}
-            className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-lg w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]`}
+            className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-lg w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border ${theme.colors.border}`}
           >
             {/* Header */}
             <div className="flex justify-between items-center mb-6 shrink-0">
@@ -179,14 +180,26 @@ export default function AddJamModal({ isOpen, onClose, onAddJam }) {
                 {/* Search Bar */}
                 <form onSubmit={handleSearch} className="flex gap-2 mb-4 shrink-0">
                   <div className="relative flex-1">
+                    <FaSearch className="absolute left-3 top-3.5 text-gray-400" />
                     <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder={`Search ${searchSource === 'spotify' ? 'Spotify' : 'YouTube'}...`}
-                        className={inputStyle + " pl-10"}
+                        className={inputStyle + " pl-10 pr-10"}
                     />
-                    <FaSearch className="absolute left-3 top-3.5 text-gray-400" />
+                    {searchQuery && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSearchQuery('');
+                                setSearchResults([]);
+                            }}
+                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                        >
+                            <FaTimes />
+                        </button>
+                    )}
                   </div>
                   <button
                     type="submit"
@@ -218,7 +231,7 @@ export default function AddJamModal({ isOpen, onClose, onAddJam }) {
                                 : 'hover:bg-gray-50 hover:border-gray-200'
                             }`}
                         >
-                            <img src={result.thumbnail} alt="art" className="w-12 h-12 rounded-md object-cover bg-gray-200" />
+                            <Image src={result.thumbnail} alt="art" width={48} height={48} className="w-12 h-12 rounded-md object-cover bg-gray-200" />
                             <div className="flex-1 min-w-0">
                                 <p className={`font-bold truncate ${theme.colors.text}`}>{result.title}</p>
                                 <p className="text-xs text-gray-500 truncate">
@@ -258,7 +271,7 @@ export default function AddJamModal({ isOpen, onClose, onAddJam }) {
                 {formData.thumbnail && (
                     <div className="flex justify-center mb-6">
                       <div className="relative">
-                        <img src={formData.thumbnail} alt="Selected" className="w-32 h-32 rounded-xl shadow-lg object-cover" />
+                        <Image src={formData.thumbnail} alt="Selected" width={128} height={128} className="w-32 h-32 rounded-xl shadow-lg object-cover" />
                         <div className={`absolute -bottom-2 -right-2 rounded-full p-2 shadow-md ${currentTheme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
                             {formData.link.includes('spotify') ? <FaSpotify className="text-green-500 text-xl"/> : <FaYoutube className="text-red-500 text-xl"/>}
                         </div>

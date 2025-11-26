@@ -45,7 +45,6 @@ function SettingsContent() {
     notificationsEnabled,
     requestPermission,
     disableNotifications,
-    resetNotificationState,
   } = useNotifications();
 
   const [isToggling, setIsToggling] = useState(false);
@@ -136,7 +135,7 @@ function SettingsContent() {
   const handleDeleteAccount = (userId, name) => {
     toast((t) => (
       <div className="flex flex-col gap-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-xl">
-        <p className="font-bold">Delete {name}'s account?</p>
+        <p className="font-bold">Delete {name}&apos;s account?</p>
         <p className="text-sm text-gray-600 dark:text-gray-400">
           This cannot be undone.
         </p>
@@ -153,6 +152,7 @@ function SettingsContent() {
                 await deleteFn({ userId });
                 toast.success(`${name} deleted`);
               } catch (e) {
+                console.error('Delete account failed:', e);
                 toast.error('Delete failed');
               }
             }}
@@ -334,7 +334,7 @@ function SettingsContent() {
               <select
                 value={resetTarget}
                 onChange={(e) => setResetTarget(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
               >
                 <option value="all">All members</option>
                 {members.map(member => (

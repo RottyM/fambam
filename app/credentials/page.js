@@ -173,7 +173,7 @@ function CredentialsContent() {
   const pillBase = `px-4 py-2 rounded-full border-2 font-bold transition-all flex items-center gap-2 whitespace-nowrap`;
   const pillActive = `bg-gradient-to-r from-blue-500 to-purple-500 text-white border-purple-400 shadow-lg`;
   const pillInactive = currentTheme === 'dark'
-    ? 'bg-gray-800 text-gray-100 border-gray-700 hover:border-purple-400'
+    ? 'bg-gray-800 text-gray-200 border-gray-700 hover:border-purple-400'
     : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-purple-300';
 
   const handleSubmit = async (e) => {
@@ -260,7 +260,7 @@ function CredentialsContent() {
             <div>
               <p className="font-bold text-yellow-900 mb-1">Security Notice</p>
               <p className="text-sm text-yellow-800">
-                Credentials are stored securely in your family's Firebase database and only accessible to authenticated family members.
+                Credentials are stored securely in your family&apos;s Firebase database and only accessible to authenticated family members.
                 However, for maximum security with highly sensitive accounts (banking, etc.), consider using a dedicated password manager.
               </p>
             </div>
@@ -334,7 +334,7 @@ function CredentialsContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 overflow-y-auto p-4"
             onClick={handleCloseModal}
           >
             <motion.div
@@ -342,7 +342,7 @@ function CredentialsContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-2xl w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto`}
+              className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-2xl w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto border ${theme.colors.border}`}
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-3xl font-display font-bold gradient-text">
@@ -366,7 +366,7 @@ function CredentialsContent() {
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="e.g., School Portal, Library Account"
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:border-purple-500 focus:outline-none font-semibold"
                     required
                   />
                 </div>
@@ -383,8 +383,8 @@ function CredentialsContent() {
                         onClick={() => setFormData({ ...formData, category: cat.value })}
                         className={`p-3 rounded-xl border-2 transition-all text-center ${
                           formData.category === cat.value
-                            ? 'border-purple-500 bg-purple-50 scale-105'
-                            : 'border-gray-200 hover:border-purple-300'
+                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 scale-105'
+                            : 'border-gray-200 hover:border-purple-300 dark:border-gray-700 dark:hover:border-gray-600'
                         }`}
                       >
                         <div className="text-2xl mb-1"><cat.Icon /></div>
@@ -403,7 +403,7 @@ function CredentialsContent() {
                     value={formData.websiteUrl}
                     onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })}
                     placeholder="https://example.com"
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:border-purple-500 focus:outline-none font-semibold"
                   />
                 </div>
 
@@ -416,7 +416,7 @@ function CredentialsContent() {
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                     placeholder="username or email@example.com"
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:border-purple-500 focus:outline-none font-semibold"
                   />
                 </div>
 
@@ -429,7 +429,7 @@ function CredentialsContent() {
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     placeholder="Enter password"
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold font-mono"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:border-purple-500 focus:outline-none font-semibold font-mono"
                   />
                 </div>
 
@@ -441,7 +441,7 @@ function CredentialsContent() {
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     placeholder="Additional information, security questions, etc."
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:border-purple-500 focus:outline-none font-semibold"
                     rows={3}
                   />
                 </div>

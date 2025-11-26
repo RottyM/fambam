@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaPlus, FaTimes, FaFilter, FaUser, FaArrowUp, FaMinus, FaArrowDown, FaSortAmountDownAlt } from 'react-icons/fa';
+import UserAvatar from '@/components/UserAvatar';
 import { ICON_CATEGORIES, getIcon } from '@/lib/icons';
 
 const PRIORITY_OPTIONS = [
@@ -158,9 +159,7 @@ function TodosContent() {
                             onClick={() => setFilterMember(member.id)}
                             className={`${pillBase} ${filterMember === member.id ? pillActive : pillInactive}`}
                           >
-                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-sm font-bold uppercase">
-                              {member.displayName?.[0] || '?'}
-                            </span>
+                            <UserAvatar user={member} size={24} />
                             <span>{member.displayName}</span>
                           </button>
                         ))}
@@ -221,7 +220,7 @@ function TodosContent() {
 
         {/* Active Todos */}
         <div className="space-y-4 mb-8">
-          <h2 className="text-2xl font-bold text-gray-800">Active Tasks</h2>
+          <h2 className={`text-2xl font-bold ${theme.colors.text}`}> {currentTheme === 'dark' ? 'Cursed' : 'Active Tasks'}</h2>
           {activeTodos.map(todo => (
             <TodoItem
               key={todo.id}
@@ -236,8 +235,8 @@ function TodosContent() {
         {/* Completed Todos */}
         {completedTodos.length > 0 && (
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-gray-500 opacity-70">
-              Completed ({completedTodos.length})
+            <h2 className={`text-2xl font-bold ${theme.colors.textMuted}`}>
+              {currentTheme === 'dark' ? 'Vanquished' : 'Completed'} ({completedTodos.length})
             </h2>
             {completedTodos.map(todo => (
               <TodoItem
@@ -267,7 +266,7 @@ function TodosContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto"
             onClick={() => setShowAddModal(false)}
           >
             <motion.div
@@ -275,13 +274,13 @@ function TodosContent() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className={`${theme.colors.bgCard} rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto`}
+              className={`${theme.colors.bgCard} rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto border ${theme.colors.border}`}
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-3xl font-display font-bold gradient-text">Add New Todo</h2>
                 <button
                   onClick={() => setShowAddModal(false)}
-                  className="text-gray-400 hover:text-gray-600 p-2"
+                  className={`p-2 rounded-xl transition-colors ${currentTheme === 'dark' ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-400 hover:bg-gray-100'}`}
                 >
                   <FaTimes size={24} />
                 </button>
@@ -297,7 +296,7 @@ function TodosContent() {
                     value={newTodo.title}
                     onChange={(e) => setNewTodo({ ...newTodo, title: e.target.value })}
                     placeholder="e.g., Take out the trash, Do homework"
-                    className={`w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold ${theme.colors.bgCard}`}
+                    className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500`}
                     required
                   />
                 </div>
@@ -309,7 +308,7 @@ function TodosContent() {
                   <select
                     value={newTodo.assignedTo}
                     onChange={(e) => setNewTodo({ ...newTodo, assignedTo: e.target.value })}
-                    className={`w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold ${theme.colors.bgCard}`}
+                    className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500`}
                     required
                   >
                     <option value="">Select a family member...</option>
@@ -334,8 +333,8 @@ function TodosContent() {
                         onClick={() => setNewTodo({ ...newTodo, priority: priority.value })}
                         className={`p-3 md:p-4 rounded-xl border-2 transition-all text-center ${
                           newTodo.priority === priority.value
-                            ? 'border-purple-500 bg-purple-50 scale-105'
-                            : 'border-gray-200 hover:border-purple-300'
+                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 scale-105'
+                            : `${theme.colors.border} hover:border-purple-300 dark:hover:border-purple-700`
                         }`}
                       >
                         <div className="text-xl md:text-2xl mb-1 flex items-center justify-center">
@@ -359,8 +358,8 @@ function TodosContent() {
                         onClick={() => setNewTodo({ ...newTodo, iconId: icon.id })}
                         className={`p-2 md:p-3 text-xl md:text-2xl rounded-xl border-2 transition-all ${
                           newTodo.iconId === icon.id
-                            ? 'border-purple-500 bg-purple-50 scale-110'
-                            : 'border-gray-200 hover:border-purple-300'
+                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 scale-110'
+                            : `${theme.colors.border} hover:border-purple-300 dark:hover:border-purple-700`
                         }`}
                       >
                         {getIcon(icon.id)}
@@ -378,7 +377,7 @@ function TodosContent() {
                     value={newTodo.dueDate}
                     onChange={(e) => setNewTodo({ ...newTodo, dueDate: e.target.value })}
                     min={new Date().toISOString().split('T')[0]}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold"
+                    className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500`}
                   />
                 </div>
 
@@ -386,7 +385,7 @@ function TodosContent() {
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 transition-all"
+                    className={`flex-1 ${theme.colors.bgSecondary} ${theme.colors.text} py-3 rounded-xl font-bold hover:opacity-80 transition-all`}
                   >
                     Cancel
                   </button>

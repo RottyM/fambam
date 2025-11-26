@@ -1,10 +1,23 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Camera, Upload, Edit, Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTheme } from '@/contexts/ThemeContext';
+import Image from 'next/image';
+
+const CATEGORIES = {
+  produce: { name: 'Produce', icon: '🥬', color: 'from-green-400 to-green-500' },
+  dairy: { name: 'Dairy', icon: '🥛', color: 'from-blue-400 to-blue-500' },
+  meat: { name: 'Meat & Seafood', icon: '🍖', color: 'from-red-400 to-red-500' },
+  frozen: { name: 'Frozen', icon: '🧊', color: 'from-cyan-400 to-cyan-500' },
+  pantry: { name: 'Pantry', icon: '🥫', color: 'from-yellow-400 to-yellow-500' },
+  bakery: { name: 'Bakery', icon: '🍞', color: 'from-orange-400 to-orange-500' },
+  snacks: { name: 'Snacks', icon: '🍿', color: 'from-purple-400 to-purple-500' },
+  beverages: { name: 'Beverages', icon: '🥤', color: 'from-pink-400 to-pink-500' },
+  other: { name: 'Other', icon: '🛒', color: 'from-gray-400 to-gray-500' },
+};
 
 // --- Helper Logic (Self-Contained) ---
 
@@ -95,7 +108,7 @@ async function scanRecipe(imageFile) {
     return { success: true, recipe: data.recipe };
 
   } catch (error) {
-    console.warn('API Connection failed (likely missing backend), falling back to simulation.');
+    console.warn('API Connection failed (likely missing backend), falling back to simulation.', error);
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 2000));
     return { success: true, recipe: MOCK_RECIPE };
@@ -168,6 +181,7 @@ export default function RecipeScannerModal({ isOpen = false, onClose = () => {},
         setStep('upload'); 
       }
     } catch (error) {
+      console.error('Failed to scan recipe:', error);
       toast.error('Failed to scan recipe.');
       setStep('upload');
     } finally {
@@ -250,13 +264,15 @@ const handleSave = async () => {
                     Take a photo or upload an image of a recipe to automatically extract the ingredients and instructions.
                   </p>
                   </div>
-
+                 
                   {imagePreview ? (
                     <div className={`relative w-full h-64 rounded-2xl overflow-hidden ${currentTheme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} border-2 ${theme.colors.borderLight}`}>
-                      <img
+                      <Image
                         src={imagePreview}
                         alt="Recipe preview"
-                        className="object-contain w-full h-full"
+                        fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        className="object-contain"
                       />
                       <button
                         onClick={() => {setImagePreview(null); setImageFile(null);}}
@@ -444,7 +460,7 @@ const handleSave = async () => {
                     </label>
                     <div className="space-y-2">
                       {scannedRecipe.ingredients.map((ing, index) => (
-                        <div key={index} className="flex gap-2 items-start group">
+                        <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2 items-center group">
                           {editMode ? (
                             <>
                               <input
@@ -452,21 +468,32 @@ const handleSave = async () => {
                                 value={ing.name}
                                 onChange={(e) => handleIngredientChange(index, 'name', e.target.value)}
                                 placeholder="Ingredient"
-                                className={`flex-1 px-3 py-2 rounded-lg border ${theme.colors.borderLight} ${currentTheme === 'dark' ? 'bg-gray-800' : 'bg-white'} ${theme.colors.text} focus:border-purple-500 focus:outline-none text-sm`}
+                                className={`w-full px-3 py-2 rounded-lg border ${theme.colors.borderLight} ${currentTheme === 'dark' ? 'bg-gray-800' : 'bg-white'} ${theme.colors.text} focus:border-purple-500 focus:outline-none text-sm`}
                               />
                               <input
                                 type="text"
                                 value={ing.amount}
                                 onChange={(e) => handleIngredientChange(index, 'amount', e.target.value)}
                                 placeholder="Amount"
-                                className={`w-24 px-3 py-2 rounded-lg border ${theme.colors.borderLight} ${currentTheme === 'dark' ? 'bg-gray-800' : 'bg-white'} ${theme.colors.text} focus:border-purple-500 focus:outline-none text-sm`}
+                                className={`w-full px-3 py-2 rounded-lg border ${theme.colors.borderLight} ${currentTheme === 'dark' ? 'bg-gray-800' : 'bg-white'} ${theme.colors.text} focus:border-purple-500 focus:outline-none text-sm`}
                               />
-                              <button
-                                onClick={() => handleRemoveIngredient(index)}
-                                className={`p-2 text-red-400 hover:text-red-600 ${currentTheme === 'dark' ? 'hover:bg-red-900/20' : 'hover:bg-red-50'} rounded-lg transition-colors`}
-                              >
-                                <X size={16} />
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={ing.category}
+                                  onChange={(e) => handleIngredientChange(index, 'category', e.target.value)}
+                                  className={`w-full px-3 py-2 rounded-lg border ${theme.colors.borderLight} ${currentTheme === 'dark' ? 'bg-gray-800' : 'bg-white'} ${theme.colors.text} focus:border-purple-500 focus:outline-none text-sm`}
+                                >
+                                  {Object.entries(CATEGORIES).map(([key, cat]) => (
+                                    <option key={key} value={key}>{cat.name}</option>
+                                  ))}
+                                </select>
+                                <button
+                                  onClick={() => handleRemoveIngredient(index)}
+                                  className={`p-2 text-red-400 hover:text-red-600 ${currentTheme === 'dark' ? 'hover:bg-red-900/20' : 'hover:bg-red-50'} rounded-lg transition-colors`}
+                                >
+                                  <X size={16} />
+                                </button>
+                              </div>
                             </>
                           ) : (
                             <div className={`flex-1 p-3 ${currentTheme === 'dark' ? 'bg-gray-900' : 'bg-white'} border ${theme.colors.borderLight} rounded-xl flex justify-between items-center shadow-sm hover:shadow-md transition-shadow`}>
@@ -518,12 +545,12 @@ const handleSave = async () => {
                         <textarea
                           value={scannedRecipe.notes}
                           onChange={(e) => setScannedRecipe({ ...scannedRecipe, notes: e.target.value })}
-                          className="w-full px-4 py-3 rounded-xl border-2 border-yellow-200 bg-white focus:border-yellow-500 focus:outline-none font-medium text-yellow-900"
+                          className={`w-full px-4 py-3 rounded-xl border-2 border-yellow-200 focus:border-yellow-500 focus:outline-none font-medium text-yellow-900 ${currentTheme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}
                           rows={3}
                         />
                       ) : (
                         <div className="whitespace-pre-line text-gray-800 italic font-medium">
-                           "{scannedRecipe.notes}"
+                           &quot;{scannedRecipe.notes}&quot;
                         </div>
                       )}
                     </div>
