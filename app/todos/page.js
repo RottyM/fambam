@@ -8,17 +8,17 @@ import { useFamily } from '@/contexts/FamilyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaPlus, FaTimes, FaFilter } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaFilter, FaUser, FaArrowUp, FaMinus, FaArrowDown, FaSortAmountDownAlt } from 'react-icons/fa';
 import { ICON_CATEGORIES, getIcon } from '@/lib/icons';
 
 const PRIORITY_OPTIONS = [
-  { value: 'high', label: 'High Priority', icon: '🔴', color: 'bg-red-50 text-red-700 border-red-200' },
-  { value: 'medium', label: 'Medium Priority', icon: '🟡', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  { value: 'low', label: 'Low Priority', icon: '🔵', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  { value: 'high', label: 'High Priority', Icon: FaArrowUp, light: 'bg-red-50 text-red-700 border-red-200', dark: 'bg-red-950/40 text-red-200 border-red-800/60' },
+  { value: 'medium', label: 'Medium Priority', Icon: FaMinus, light: 'bg-amber-50 text-amber-700 border-amber-200', dark: 'bg-amber-950/40 text-amber-200 border-amber-800/60' },
+  { value: 'low', label: 'Low Priority', Icon: FaArrowDown, light: 'bg-blue-50 text-blue-700 border-blue-200', dark: 'bg-blue-950/40 text-blue-200 border-blue-800/60' },
 ];
 
 function TodosContent() {
-  const { todos, loading, addTodo } = useTodos();
+  const { todos, loading, addTodo, toggleTodo } = useTodos();
   const { members } = useFamily();
   const { userData } = useAuth();
   const { theme, currentTheme } = useTheme();
@@ -53,6 +53,11 @@ function TodosContent() {
     if (filterPriority !== 'all' && todo.priority !== filterPriority) return false;
     return true;
   });
+  const pillBase = 'px-4 py-2 rounded-full border-2 font-bold transition-all flex items-center gap-2 whitespace-nowrap';
+  const pillActive = 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300 shadow-lg';
+  const pillInactive = currentTheme === 'dark'
+    ? 'bg-gray-800 text-gray-200 border-gray-700 hover:border-purple-400'
+    : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-purple-300';
 
   const sortTodos = (todosToSort) => {
     return [...todosToSort].sort((a, b) => {
@@ -93,7 +98,7 @@ function TodosContent() {
               </span>
             </h1>
             <p className={`${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-semibold`}>
-              {allActiveTodos.length} {currentTheme === 'dark' ? 'cursed' : 'active'} • {allCompletedTodos.length} {currentTheme === 'dark' ? 'vanquished' : 'completed'}
+              {allActiveTodos.length} {currentTheme === 'dark' ? 'cursed' : 'active'} / {allCompletedTodos.length} {currentTheme === 'dark' ? 'vanquished' : 'completed'}
             </p>
           </div>
 
@@ -136,47 +141,77 @@ function TodosContent() {
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden mt-2"
               >
-                <div className={`flex flex-col sm:flex-row gap-3 pt-2`}>
-                  <div className="flex-1">
-                    <label className={`text-xs font-bold mb-1 block ml-1 ${theme.colors.textMuted}`}>Assigned To</label>
-                    <select
-                      value={filterMember}
-                      onChange={(e) => setFilterMember(e.target.value)}
-                      className={`w-full px-3 py-2 text-base rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
-                    >
-                      <option value="all">All Members</option>
-                      {members.map(member => (
-                        <option key={member.id} value={member.id}>
-                          {member.displayName}
-                        </option>
-                      ))}
-                    </select>
+                <div className="flex flex-col gap-3 pt-2">
+                  <div>
+                    <label className={`text-xs font-bold mb-2 block ml-1 ${theme.colors.textMuted}`}>Assigned To</label>
+                    <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-1">
+                      <div className="flex gap-3 shrink-0">
+                        <button
+                          onClick={() => setFilterMember('all')}
+                          className={`${pillBase} ${filterMember === 'all' ? pillActive : pillInactive}`}
+                        >
+                          <FaUser size={14} /> <span>All</span>
+                        </button>
+                        {members.map(member => (
+                          <button
+                            key={member.id}
+                            onClick={() => setFilterMember(member.id)}
+                            className={`${pillBase} ${filterMember === member.id ? pillActive : pillInactive}`}
+                          >
+                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-sm font-bold uppercase">
+                              {member.displayName?.[0] || '?'}
+                            </span>
+                            <span>{member.displayName}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex-1">
-                    <label className={`text-xs font-bold mb-1 block ml-1 ${theme.colors.textMuted}`}>Priority</label>
-                    <select
-                      value={filterPriority}
-                      onChange={(e) => setFilterPriority(e.target.value)}
-                      className={`w-full px-3 py-2 text-base rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
-                    >
-                      <option value="all">All Priorities</option>
-                      <option value="high">High</option>
-                      <option value="medium">Medium</option>
-                      <option value="low">Low</option>
-                    </select>
+                  <div>
+                    <label className={`text-xs font-bold mb-2 block ml-1 ${theme.colors.textMuted}`}>Priority</label>
+                    <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-1">
+                      <div className="flex gap-3 shrink-0">
+                        <button
+                          onClick={() => setFilterPriority('all')}
+                          className={`${pillBase} ${filterPriority === 'all' ? pillActive : pillInactive}`}
+                        >
+                          <FaFilter size={14} /> <span>All</span>
+                        </button>
+                        {PRIORITY_OPTIONS.map(option => (
+                          <button
+                            key={option.value}
+                            onClick={() => setFilterPriority(option.value)}
+                            className={`${pillBase} ${filterPriority === option.value ? pillActive : pillInactive}`}
+                          >
+                            <option.Icon size={14} />
+                            <span>{option.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex-1">
-                    <label className={`text-xs font-bold mb-1 block ml-1 ${theme.colors.textMuted}`}>Sort By</label>
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className={`w-full px-3 py-2 text-base rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
-                    >
-                      <option value="date">Newest First</option>
-                      <option value="priority">Priority</option>
-                    </select>
+                  <div>
+                    <label className={`text-xs font-bold mb-2 block ml-1 ${theme.colors.textMuted}`}>Sort By</label>
+                    <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-1">
+                      <div className="flex gap-3 shrink-0">
+                        <button
+                          onClick={() => setSortBy('date')}
+                          className={`${pillBase} ${sortBy === 'date' ? pillActive : pillInactive}`}
+                        >
+                          <FaSortAmountDownAlt size={14} />
+                          <span>Newest</span>
+                        </button>
+                        <button
+                          onClick={() => setSortBy('priority')}
+                          className={`${pillBase} ${sortBy === 'priority' ? pillActive : pillInactive}`}
+                        >
+                          <FaArrowUp size={14} />
+                          <span>Priority</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -188,7 +223,13 @@ function TodosContent() {
         <div className="space-y-4 mb-8">
           <h2 className="text-2xl font-bold text-gray-800">Active Tasks</h2>
           {activeTodos.map(todo => (
-            <TodoItem key={todo.id} todo={todo} />
+            <TodoItem
+              key={todo.id}
+              todo={todo}
+              members={members}
+              userId={userData?.uid}
+              onToggle={() => toggleTodo(todo.id, todo.completed)}
+            />
           ))}
         </div>
 
@@ -199,7 +240,13 @@ function TodosContent() {
               Completed ({completedTodos.length})
             </h2>
             {completedTodos.map(todo => (
-              <TodoItem key={todo.id} todo={todo} />
+              <TodoItem
+                key={todo.id}
+                todo={todo}
+                members={members}
+                userId={userData?.uid}
+                onToggle={() => toggleTodo(todo.id, todo.completed)}
+              />
             ))}
           </div>
         )}
@@ -291,7 +338,9 @@ function TodosContent() {
                             : 'border-gray-200 hover:border-purple-300'
                         }`}
                       >
-                        <div className="text-xl md:text-2xl mb-1">{priority.icon}</div>
+                        <div className="text-xl md:text-2xl mb-1 flex items-center justify-center">
+                          <priority.Icon size={22} />
+                        </div>
                         <div className={`text-xs md:text-sm font-bold ${theme.colors.text}`}>{priority.label}</div>
                       </button>
                     ))}
@@ -364,3 +413,6 @@ export default function TodosPage() {
     </DashboardLayout>
   );
 }
+
+
+

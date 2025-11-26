@@ -31,12 +31,21 @@ export async function GET(request) {
   const data = await response.json();
 
   if (data.access_token) {
-    // Save the token to a cookie so we can use it later to create the playlist
+    // Save access + refresh tokens so we can auto-refresh without re-prompting
+    const accessMaxAge = data.expires_in ? Math.max(data.expires_in - 60, 300) : 3600; // small buffer
     cookies().set('spotify_user_token', data.access_token, { 
-        maxAge: 3600, 
+        maxAge: accessMaxAge, 
         path: '/',
         httpOnly: true,
     });
+    if (data.refresh_token) {
+      // Spotify may not always return a refresh_token if the user already granted access
+      cookies().set('spotify_refresh_token', data.refresh_token, { 
+          maxAge: 60 * 60 * 24 * 30, // 30 days
+          path: '/',
+          httpOnly: true,
+      });
+    }
     // Send user back to Music page with success message
     return NextResponse.redirect(new URL('/music?status=connected', request.url));
   } else {

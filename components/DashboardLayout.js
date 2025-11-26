@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -53,6 +53,7 @@ export default function DashboardLayout({ children }) {
   const { permission, notificationsEnabled, requestPermission, disableNotifications, notificationsSupported } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const [isTogglingNotifications, setIsTogglingNotifications] = useState(false);
+  const mainRef = useRef(null);
 
   const closeSidebar = () => setIsOpen(false);
 
@@ -68,6 +69,42 @@ export default function DashboardLayout({ children }) {
       setIsTogglingNotifications(false);
     }
   }, [notificationsEnabled, disableNotifications, requestPermission]);
+
+  // Auto-attach nav icon to the first page heading so every page title gets its matching sidebar icon
+  useEffect(() => {
+    const container = mainRef.current;
+    if (!container) return;
+
+    const matchedNav = navItems.find((item) => pathname.startsWith(item.href));
+    if (!matchedNav?.emoji) return;
+
+    const attachIcon = () => {
+      const heading = container.querySelector('h1');
+      if (!heading) return;
+      const existingIcon = heading.querySelector('[data-nav-icon]');
+      const iconEl = existingIcon || document.createElement('span');
+      iconEl.dataset.navIcon = 'true';
+      iconEl.textContent = matchedNav.emoji;
+      iconEl.setAttribute('aria-hidden', 'true');
+      iconEl.className = 'ml-3 inline-flex items-center justify-center text-3xl leading-none align-middle';
+
+      heading.classList.add('flex', 'items-baseline', 'gap-2', 'flex-wrap');
+      if (!existingIcon) heading.append(iconEl);
+      return true;
+    };
+
+    const attached = attachIcon();
+
+    const observer = new MutationObserver(() => {
+      const done = attachIcon();
+      if (done) observer.disconnect();
+    });
+    if (!attached) {
+      observer.observe(container, { childList: true, subtree: true });
+    }
+
+    return () => observer.disconnect();
+  }, [pathname]);
 
   return (
     <div className={`min-h-screen ${theme.colors.bg} transition-colors duration-300`}> 
@@ -233,7 +270,7 @@ export default function DashboardLayout({ children }) {
 
       {/* Main content area - Pushed to the right */}
       <div className="lg:pl-72 min-h-screen transition-all duration-300 ease-in-out">
-        <div className="pt-16 px-4 pb-4 md:p-8 lg:p-12 max-w-7xl mx-auto">
+        <div ref={mainRef} className="pt-16 px-4 pb-4 md:p-8 lg:p-12 max-w-7xl mx-auto" data-page-content>
           {children}
         </div>
       </div>

@@ -8,7 +8,7 @@ import { useFamily } from '@/contexts/FamilyContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import UserAvatar from '@/components/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaUpload, FaHeart, FaTimes, FaComment, FaLock, FaUnlock, FaTrash, FaPlus, FaFolder } from 'react-icons/fa';
+import { FaUpload, FaHeart, FaTimes, FaComment, FaLock, FaUnlock, FaTrash, FaPlus, FaFolder, FaFolderOpen, FaFolderPlus, FaFilter, FaChevronUp, FaChevronDown } from 'react-icons/fa';
 import { storage, db, functions } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { addDoc, collection, serverTimestamp, updateDoc, doc, arrayUnion, arrayRemove, onSnapshot, query, orderBy, deleteDoc } from 'firebase/firestore';
@@ -17,13 +17,11 @@ import toast from 'react-hot-toast';
 import { useDropzone } from 'react-dropzone';
 import Image from 'next/image';
 import FolderView from '@/components/FolderView'; // Make sure this path is correct
-import { DndProvider } from 'react-dnd';
+import { DndProvider, useDrop } from 'react-dnd';
 import { MultiBackend } from 'react-dnd-multi-backend';
 import { HTML5toTouch } from 'rdndmb-html5-to-touch';
-import DraggableMemory from '@/components/DraggableMemory';
-import DroppableFolder from '@/components/DroppableFolder';
+import DraggableMemory, { ItemTypes as MemoryItemTypes } from '@/components/DraggableMemory';
 import { format } from 'date-fns';
-import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
 
 // --- UPDATED: Custom Drag & Drop Configuration ---
 // Tuned for better sensitivity (100ms vs 200ms)
@@ -45,12 +43,80 @@ const customDnDOptions = {
   ],
 };
 
+function MemoryFilterPill({
+  label,
+  count,
+  icon: Icon,
+  isActive,
+  onClick,
+  onDropMemory,
+  targetFolderId = null,
+  allowDrop = false,
+  showDelete = false,
+  onDelete,
+}) {
+  const { theme } = useTheme();
+
+  const [{ isOver, canDrop }, drop] = useDrop(
+    () => ({
+      accept: MemoryItemTypes.MEMORY,
+      canDrop: () => allowDrop,
+      drop: (item) => onDropMemory?.(item.id, targetFolderId ?? null),
+      collect: (monitor) => ({
+        isOver: allowDrop && monitor.isOver(),
+        canDrop: allowDrop && monitor.canDrop(),
+      }),
+    }),
+    [allowDrop, onDropMemory, targetFolderId]
+  );
+
+  const isDropping = isOver && canDrop;
+  let bgColor = isActive ? 'bg-purple-500 text-white' : theme.colors.bgCard;
+  let borderColor = isActive ? 'border-purple-500' : theme.colors.border;
+  if (isDropping) {
+    bgColor = 'bg-purple-100 dark:bg-purple-900/30 text-purple-600';
+    borderColor = 'border-purple-300';
+  }
+
+  const hoverClasses = !isActive && !isDropping ? 'hover:border-gray-300 dark:hover:border-gray-600' : '';
+  const iconColor = isActive
+    ? 'text-white'
+    : (isDropping ? 'text-purple-500' : 'text-gray-400');
+  const countColor = isActive ? 'text-purple-200' : 'text-gray-500';
+
+  return (
+    <div ref={allowDrop ? drop : null} className="relative group shrink-0">
+      <button
+        onClick={onClick}
+        className={`relative flex items-center gap-2 px-4 py-2 pr-8 rounded-full border-2 transition-all font-bold whitespace-nowrap shadow-sm ${bgColor} ${borderColor} ${hoverClasses}`}
+      >
+        {Icon && <Icon className={iconColor} />}
+        <span>{label}</span>
+        {count !== undefined && (
+          <span className={`text-xs ${countColor}`}>({count})</span>
+        )}
+      </button>
+
+      {showDelete && (
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
+          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md hover:bg-red-600 z-10"
+        >
+          <FaTimes size={10} />
+        </motion.button>
+      )}
+    </div>
+  );
+}
+
 function MemoriesContent() {
   const { memories, loading: loadingMemories, updateMemory } = useMemories();
   const { folders, loading: loadingFolders, addFolder, deleteFolder } = useMemoriesFolders();
   const { user, userData } = useAuth();
   const { getMemberById, isParent } = useFamily();
-  const { theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [selectedMemory, setSelectedMemory] = useState(null);
@@ -92,6 +158,11 @@ function MemoriesContent() {
   const visibleMemories = filteredMemories.filter(m => !m.isTimeCapsule);
   const lockedMemories = filteredMemories.filter(m => m.isTimeCapsule);
   const unsortedCount = memories.filter(m => !m.folderId).length;
+  const totalMemoriesCount = memories.length;
+  const folderCounts = folders.reduce((acc, folder) => {
+    acc[folder.id] = memories.filter(m => m.folderId === folder.id).length;
+    return acc;
+  }, {});
 
   // Load comments for selected memory
   useEffect(() => {
@@ -346,7 +417,9 @@ function MemoriesContent() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
-            <span className="gradient-text">Memory Vault</span>
+            <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
+              {currentTheme === 'dark' ? 'Archives' : 'Memory Vault'}
+            </span>
           </h1>
           <p className="text-gray-600 font-semibold">
             {filteredMemories.length} memories
@@ -354,16 +427,15 @@ function MemoriesContent() {
           </p>
         </div>
 
-        <div className="flex gap-3">
-          {isParent() && (
-            <button
-              onClick={() => setShowAddFolderModal(true)}
-              className="bg-gradient-to-r from-blue-500 to-teal-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold hover:from-blue-600 hover:to-teal-600 transition-all shadow-lg flex items-center gap-2"
-              aria-label="Add Folder"
-            >
-              <FaPlus /> <span className="hidden md:inline">Add Folder</span>
-            </button>
-          )}
+        <div className="flex gap-3 items-start">
+          <button
+            onClick={() => setUploadAreaExpanded(!uploadAreaExpanded)}
+            className="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-purple-600 transition-colors px-4 py-3 rounded-xl border-2 border-gray-200 bg-white shadow-sm hover:border-purple-300"
+          >
+            <FaUpload className="text-purple-500" />
+            {uploadAreaExpanded ? 'Hide upload' : 'Show upload'}
+            {uploadAreaExpanded ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
           {lockedMemories.length > 0 && (
             <button
               onClick={() => setShowTimeCapsules(!showTimeCapsules)}
@@ -379,116 +451,11 @@ function MemoriesContent() {
         </div>
       </div>
 
-      {/* Upload toggle - moved to top */}
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={() => setUploadAreaExpanded(!uploadAreaExpanded)}
-          className="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-purple-600 transition-colors px-4 py-3 rounded-xl border-2 border-gray-200 bg-white shadow-sm hover:border-purple-300"
-        >
-          <FaUpload className="text-purple-500" />
-          {uploadAreaExpanded ? 'Hide upload' : 'Show upload'}
-          {uploadAreaExpanded ? <FaChevronUp /> : <FaChevronDown />}
-        </button>
-      </div>
-
-      {/* Folders List - Horizontal Scrollable */}
-      <div className="mb-6">
-        <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-3 flex items-center gap-2">
-          <FaFolder /> Folders ({folders.length})
-        </h2>
-        {folders.length === 0 ? (
-          <p className="text-gray-500 italic text-sm">No folders yet. Create one above!</p>
-        ) : (
-          <div className="mb-2 flex items-center gap-2 overflow-x-auto custom-scrollbar pb-4 pt-2 px-1 scroll-smooth">
-            <div className="flex gap-3 shrink-0">
-              <motion.button
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                whileHover={{ scale: 1.02 }}
-                onClick={() => setActiveFilterId('all')}
-                className={`flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-sm md:text-base ${
-                  activeFilterId === 'all'
-                    ? 'border-purple-500 bg-purple-50 text-purple-700'
-                    : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
-                }`}
-              >
-                <FaFolder /> All Memories
-              </motion.button>
-
-              <DroppableFolder folder={null} onDrop={handleMoveMemory}>
-                <motion.button
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  whileHover={{ scale: 1.02 }}
-                  onClick={() => setActiveFilterId('root')}
-                  className={`flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm whitespace-nowrap text-sm md:text-base ${
-                    activeFilterId === 'root'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
-                  }`}
-                >
-                  <FaFolder /> Unsorted ({unsortedCount})
-                </motion.button>
-              </DroppableFolder>
-
-              {folders.map(folder => (
-                <DroppableFolder key={folder.id} folder={folder} onDrop={handleMoveMemory}>
-                  <motion.div
-                    className={`relative group flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full border-2 transition-all shadow-sm cursor-pointer whitespace-nowrap text-sm md:text-base ${
-                      currentFolder?.id === folder.id
-                        ? 'border-purple-500 bg-purple-50 text-purple-700'
-                        : 'border-dashed border-gray-300 bg-white text-gray-700 hover:border-purple-300'
-                    }`}
-                    onClick={() => setActiveFilterId(folder.id)}
-                  >
-                    <FaFolder /> {folder.name} ({memories.filter(m => m.folderId === folder.id).length})
-                    {isParent() && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteFolder(folder.id, folder.name);
-                        }}
-                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-all shadow-md"
-                        title="Delete Folder"
-                      >
-                        <FaTimes />
-                      </button>
-                    )}
-                  </motion.div>
-                </DroppableFolder>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Upload Area - Collapsible on Mobile */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-6"
       >
-        {/* Mobile Drag & Drop Instructions */}
-        {displayMemories.length > 0 && folders.length > 0 && showMobileTip && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-3 md:hidden bg-gradient-to-r from-blue-500 to-teal-500 text-white rounded-2xl p-4"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-sm font-bold text-left">💡 Tip: Press and hold (0.1s) a memory, then drag it to a folder!</p>
-              <button
-                aria-label="Dismiss tip"
-                onClick={hideMobileTip}
-                className="text-white/80 hover:text-white p-1 -mr-1"
-              >
-                <FaTimes />
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Upload Area - compressed by default, expand for options */}
         {uploadAreaExpanded && (
           <div className="overflow-hidden transition-all duration-300">
             <div
@@ -500,9 +467,8 @@ function MemoriesContent() {
               <p className="text-lg md:text-xl font-bold text-gray-700 mb-1 md:mb-2">
                 {uploading ? 'Uploading...' : isDragActive ? 'Drop it here!' : 'Drop photos/videos or tap to upload'}
               </p>
-              <p className="text-sm md:text-base text-gray-500">Share your family moments 📸</p>
+              <p className="text-sm md:text-base text-gray-500">Share your family moments ✨</p>
 
-              {/* Time Capsule Option */}
               <div className="mt-4 md:mt-6 space-y-3 md:space-y-4">
                 <div className="flex items-center justify-center gap-2 md:gap-3">
                   <input
@@ -516,7 +482,140 @@ function MemoriesContent() {
                     className="w-4 h-4 md:w-5 md:h-5 rounded"
                   />
                   <label htmlFor="timecapsule" className="font-bold text-purple-600 cursor-pointer text-sm md:text-base">
-                    🔒 Create Time Capsule (reveal on future date)
+                    🕰️ Create Time Capsule (reveal on future date)
+                  </label>
+                </div>
+
+                {isTimeCapsule && (
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="date"
+                      value={revealDate}
+                      onChange={(e) => setRevealDate(e.target.value)}
+                      min={format(new Date(), 'yyyy-MM-dd')}
+                      className="px-3 py-2 md:px-4 md:py-2 rounded-xl border-2 border-purple-300 focus:border-purple-500 focus:outline-none font-semibold text-sm md:text-base"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </motion.div>
+
+{/* Folders List - Horizontal Scrollable */}
+      <div className="mb-6">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-3 flex items-center gap-2">
+          <FaFolder /> Folders ({folders.length})
+        </h2>
+        {folders.length === 0 ? (
+          <p className="text-gray-500 italic text-sm">No folders yet. Create one above!</p>
+        ) : (
+          <div className="mb-2 flex items-center gap-3 overflow-x-auto custom-scrollbar pb-4 pt-2 px-1 scroll-smooth">
+            <div className="flex gap-3 shrink-0">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                whileHover={{ scale: 1.02 }}
+              >
+                <MemoryFilterPill
+                  label="All Memories"
+                  count={totalMemoriesCount}
+                  icon={FaFilter}
+                  isActive={activeFilterId === 'all'}
+                  onClick={() => setActiveFilterId('all')}
+                />
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                whileHover={{ scale: 1.02 }}
+              >
+                <MemoryFilterPill
+                  label="Unsorted"
+                  count={unsortedCount}
+                  icon={FaFolderOpen}
+                  isActive={activeFilterId === 'root'}
+                  onClick={() => setActiveFilterId('root')}
+                  allowDrop
+                  onDropMemory={handleMoveMemory}
+                />
+              </motion.div>
+
+              {folders.map(folder => (
+                <motion.div
+                  key={folder.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <MemoryFilterPill
+                    label={folder.name}
+                    count={folderCounts[folder.id] || 0}
+                    icon={FaFolder}
+                    isActive={activeFilterId === folder.id}
+                    onClick={() => setActiveFilterId(folder.id)}
+                    targetFolderId={folder.id}
+                    allowDrop
+                    onDropMemory={handleMoveMemory}
+                    showDelete={isParent()}
+                    onDelete={() => handleDeleteFolder(folder.id, folder.name)}
+                  />
+                </motion.div>
+              ))}
+
+              {isParent() && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <button
+                    onClick={() => setShowAddFolderModal(true)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed text-gray-400 hover:text-purple-500 hover:border-purple-400 transition-colors font-bold whitespace-nowrap shrink-0 ${currentTheme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}
+                  >
+                    <FaFolderPlus /> Add Folder
+                  </button>
+                </motion.div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-6"
+      >
+        {uploadAreaExpanded && (
+          <div className="overflow-hidden transition-all duration-300">
+            <div
+              {...getRootProps()}
+              className="p-4 md:p-8 lg:p-12 border-4 border-dashed rounded-3xl text-center cursor-pointer transition-all hover:border-purple-400 hover:bg-purple-50"
+            >
+              <input {...getInputProps()} />
+              <FaUpload className="text-4xl md:text-6xl text-purple-400 mx-auto mb-2 md:mb-4" />
+              <p className="text-lg md:text-xl font-bold text-gray-700 mb-1 md:mb-2">
+                {uploading ? 'Uploading...' : isDragActive ? 'Drop it here!' : 'Drop photos/videos or tap to upload'}
+              </p>
+              <p className="text-sm md:text-base text-gray-500">Share your family moments ✨</p>
+
+              <div className="mt-4 md:mt-6 space-y-3 md:space-y-4">
+                <div className="flex items-center justify-center gap-2 md:gap-3">
+                  <input
+                    type="checkbox"
+                    id="timecapsule"
+                    checked={isTimeCapsule}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setIsTimeCapsule(e.target.checked);
+                    }}
+                    className="w-4 h-4 md:w-5 md:h-5 rounded"
+                  />
+                  <label htmlFor="timecapsule" className="font-bold text-purple-600 cursor-pointer text-sm md:text-base">
+                    🕰️ Create Time Capsule (reveal on future date)
                   </label>
                 </div>
 
@@ -673,7 +772,6 @@ function MemoriesContent() {
           })}
         </div>
       )}
-
       {/* Add Folder Modal */}
       <AnimatePresence>
         {showAddFolderModal && (
@@ -775,3 +873,5 @@ export default function MemoriesPage() {
     </DashboardLayout>
   );
 }
+
+

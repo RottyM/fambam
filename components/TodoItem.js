@@ -1,182 +1,118 @@
-'use client';
-
+import { FaTrash, FaRegCalendarCheck } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { getIcon } from '@/lib/icons';
-import UserAvatar from './UserAvatar';
-import { useFamily } from '@/contexts/FamilyContext';
-import { useTodos } from '@/hooks/useFirestore';
 import { useTheme } from '@/contexts/ThemeContext';
-import { FaTrash } from 'react-icons/fa';
-import { format, isPast, isToday, isTomorrow, parseISO } from 'date-fns';
 
-export default function TodoItem({ todo }) {
-  const { getMemberById, isParent } = useFamily();
-  const { toggleTodo, deleteTodo } = useTodos();
-  const { theme, currentTheme } = useTheme();
-  const assignedMember = getMemberById(todo.assignedTo);
+function TodoItem({ todo, members = [], userId, onToggle }) {
+  const { currentTheme } = useTheme();
+
+  // Priority styles (matching your PRIORITY_OPTIONS)
+  const priorityStyles = {
+    high: currentTheme === 'dark' ? 'border-l-red-600 bg-red-900/30 text-red-200' : 'border-l-red-500 bg-red-50 text-red-700',
+    medium: currentTheme === 'dark' ? 'border-l-amber-600 bg-amber-900/30 text-amber-200' : 'border-l-amber-500 bg-amber-50 text-amber-700',
+    low: currentTheme === 'dark' ? 'border-l-blue-600 bg-blue-900/30 text-blue-200' : 'border-l-blue-500 bg-blue-50 text-blue-700',
+  };
+
+  // Dot styles for priority
+  const dotStyles = {
+    high: 'bg-red-500',
+    medium: 'bg-amber-500',
+    low: 'bg-blue-500',
+  };
+
+  // Assigned member handling
+  const assignedMember = members.find((m) => m.id === todo.assignedTo) || { displayName: 'Unassigned', avatar: '' };
+  const avatarUrl = assignedMember?.avatar?.url || assignedMember?.avatar || assignedMember?.photoURL || '/default-avatar.png';
+  const displayName = assignedMember?.displayName || assignedMember?.name || 'Unassigned';
+  const extraIconList = todo.extraIcons ? Array.from(todo.extraIcons) : [];
+  const textMain = currentTheme === 'dark' ? 'text-gray-100' : 'text-gray-800';
+  const textSub = currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-500';
+  const defaultCardStyles = currentTheme === 'dark' ? 'border-l-gray-500 bg-gray-900/80 text-gray-200' : 'border-l-gray-300 bg-white text-gray-800';
+  const priorityClass = priorityStyles[todo.priority] || defaultCardStyles;
+
+  // Due date formatting (using your current date: Nov 25, 2025)
+  const dueDate = todo.dueDate ? new Date(todo.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No Due Date';
+  const isOverdue = todo.dueDate && new Date(todo.dueDate) < new Date(); // Simple overdue check
 
   const handleToggle = () => {
-    toggleTodo(todo.id, todo.completed);
-  };
-
-  const handleDelete = () => {
-    if (confirm('Delete this todo?')) {
-      deleteTodo(todo.id);
-    }
-  };
-
-  // Handle different date formats (string or Firestore Timestamp)
-  const getDueDate = () => {
-    if (!todo.dueDate) return null;
-
-    // If it's a Firestore Timestamp
-    if (todo.dueDate.seconds) {
-      return new Date(todo.dueDate.seconds * 1000);
-    }
-
-    // If it's a string date
-    if (typeof todo.dueDate === 'string') {
-      return parseISO(todo.dueDate);
-    }
-
-    // If it's already a Date object
-    if (todo.dueDate instanceof Date) {
-      return todo.dueDate;
-    }
-
-    return null;
-  };
-
-  const dueDate = getDueDate();
-
-  const getDueDateLabel = () => {
-    if (!dueDate) return null;
-
-    if (isToday(dueDate)) return 'Due Today';
-    if (isTomorrow(dueDate)) return 'Due Tomorrow';
-    if (isPast(dueDate) && !todo.completed) return 'Overdue';
-    return `Due ${format(dueDate, 'MMM d')}`;
-  };
-
-  const getDueDateColor = () => {
-    if (!dueDate || todo.completed) return theme.colors.textMuted;
-    if (isPast(dueDate)) return 'text-red-600 dark:text-red-400';
-    if (isToday(dueDate)) return 'text-orange-600 dark:text-orange-400';
-    if (isTomorrow(dueDate)) return 'text-yellow-600 dark:text-yellow-400';
-    return theme.colors.textMuted;
-  };
-
-  const getPriorityColor = () => {
-    switch (todo.priority) {
-      case 'high':
-        return 'border-red-400 dark:border-red-600';
-      case 'medium':
-        return 'border-yellow-400 dark:border-yellow-600';
-      case 'low':
-        return 'border-blue-400 dark:border-blue-600';
-      default:
-        return 'border-purple-400 dark:border-purple-600';
-    }
-  };
-
-  const getPriorityBadge = () => {
-    if (!todo.priority) return null;
-
-    const colors = {
-      high:
-        'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700/50',
-      medium:
-        'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700/50',
-      low:
-        'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700/50',
-    };
-
-    const icons = {
-      high: '🔴',
-      medium: '⬤',
-      low: '🔵',
-    };
-
-    const priority = todo.priority || 'medium';
-    return (
-      <span className={`${colors[priority] || colors.medium} px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1`}>
-        {icons[priority]} {priority}
-      </span>
-    );
+    if (onToggle) onToggle(todo.id, todo.completed);
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      className={`${theme.colors.bgCard} rounded-2xl p-4 shadow-md hover:shadow-xl transition-all border-l-4 ${
-        todo.completed ? 'border-green-400 dark:border-green-600' : getPriorityColor()
-      }`}
+      className={`
+        relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 mb-4
+        rounded-xl border-l-4 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02]
+        ${priorityClass}
+        ${isOverdue ? 'border-red-500 dark:border-red-400' : ''}
+      `}
+      whileHover={{ y: -2 }}
     >
-      <div className="flex items-start gap-3">
-        {/* Custom checkbox */}
-        <button
-          onClick={handleToggle}
-          className={`flex-shrink-0 w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all ${
-            todo.completed
-              ? 'bg-green-500 border-green-500'
-              : 'border-gray-300 dark:border-gray-600 hover:border-purple-400 hover:scale-110'
-          }`}
-        >
-          {todo.completed && <span className="text-white text-xl">✓</span>}
-        </button>
-
-        {/* Icon */}
-        <div className="flex-shrink-0 text-3xl">
-          {getIcon(todo.iconId || 'default')}
+      {/* Left: checkbox + icon + fun icons */}
+      <div className="flex items-center gap-3 min-w-[170px]">
+        <input
+          type="checkbox"
+          checked={!!todo.completed}
+          onChange={handleToggle}
+          className="h-5 w-5 accent-purple-500 rounded cursor-pointer bg-transparent"
+          aria-label={`Mark ${todo.title} as ${todo.completed ? 'active' : 'completed'}`}
+        />
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl">
+          {todo.iconId ? getIcon(todo.iconId) : '??'}
         </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          {/* Priority badge on its own line at top */}
-          <div className="mb-2">
-            {getPriorityBadge()}
+        {extraIconList.length > 0 && (
+          <div className="inline-flex flex-wrap items-center gap-1 text-2xl leading-none">
+            {extraIconList.map((icon, idx) => (
+              <span key={`${icon}-${idx}`} className="leading-none">
+                {icon}
+              </span>
+            ))}
           </div>
-
-          {/* Title taking full width */}
-          <h4 className={`font-bold text-lg mb-3 ${todo.completed ? 'line-through opacity-60' : ''} ${theme.colors.text}`}>
-            {todo.title}
-          </h4>
-
-          {/* Meta info: assigned member and due date */}
-          <div className="flex flex-wrap items-center gap-3">
-            {assignedMember && (
-              <div className="flex items-center gap-2">
-                <UserAvatar user={assignedMember} size={24} />
-                <span className={`text-sm font-semibold ${theme.colors.textMuted}`}>
-                  {assignedMember.displayName}
-                </span>
-              </div>
-            )}
-
-            {dueDate && (
-              <div className={`flex items-center gap-1 text-sm font-bold ${getDueDateColor()}`}>
-                📅 {getDueDateLabel()}
-              </div>
-            )}
-          </div>
-        </div>
-
+        )}
       </div>
 
-      {/* Delete button for parents - bottom right, muted style */}
-      {isParent() && (
-        <div className="flex justify-end mt-4">
-          <button
-            onClick={handleDelete}
-            className="p-2 text-gray-300 hover:text-red-400 transition-colors"
-            title="Delete todo"
-          >
+      {/* Middle: Title + Priority Dot */}
+      <div className="flex-1 flex items-center gap-3">
+        <div className={`w-3 h-3 rounded-full ${dotStyles[todo.priority] || 'bg-gray-400'}`} />
+        <div className="flex flex-col">
+          <h3 className="font-bold text-lg">{todo.title}</h3>
+          <p className={`text-sm ${isOverdue ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+            {todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}
+          </p>
+        </div>
+      </div>
+
+      {/* Right: Due + Assignee stacked (stack on mobile) */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-start gap-3 sm:gap-6 text-sm w-full sm:w-auto text-left">
+        <div className="flex items-center gap-2">
+          <FaRegCalendarCheck className="text-purple-500 dark:text-purple-400" size={14} />
+          <span className={`${isOverdue ? 'text-red-500 dark:text-red-400' : textSub}`}>Due {dueDate}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {avatarUrl && avatarUrl !== '/default-avatar.png' ? (
+            <img
+              src={avatarUrl}
+              alt={displayName}
+              className="w-9 h-9 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold">
+              {displayName?.[0]?.toUpperCase() || '?'}
+            </div>
+          )}
+          <div className="leading-tight">
+            <p className={`font-semibold ${textMain}`}>{displayName}</p>
+            <p className={`text-xs ${textSub}`}>Assignee</p>
+          </div>
+        </div>
+        {userId === todo.createdBy && (
+          <button className="sm:ml-auto text-gray-400 hover:text-red-500 dark:hover:text-red-400" aria-label="Delete todo">
             <FaTrash size={16} />
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </motion.div>
   );
 }
+
+export default TodoItem;

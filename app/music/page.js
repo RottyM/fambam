@@ -59,11 +59,17 @@ function MusicContent() {
   const [isPlaying, setIsPlaying] = useState(false);
 
   const { 
-      jams, folders, loading, addJam, deleteJam, 
+      jams, allJams, folders, loading, addJam, deleteJam, 
       toggleLike, createFolder, deleteFolder, assignJamToFolder
   } = useMusicJams(activeFilterId);
   const countForFolder = (folderId) =>
-    folderId === 'all' ? jams.length : jams.filter(j => j.folderId === folderId).length;
+    folderId === 'all'
+      ? allJams.length
+      : allJams.filter(j => j.folderIds?.includes(folderId) || j.folderId === folderId).length;
+  const filteredCount = jams.length;
+  const activeFolderName = activeFilterId === 'all'
+    ? 'All Jams'
+    : folders.find(f => f.id === activeFilterId)?.name || 'Playlist';
 
   // --- PLAYBACK HANDLERS ---
   
@@ -156,12 +162,46 @@ function MusicContent() {
         // 2. Success!
         if (data.success) {
             toast.dismiss(toastId);
+            const openSpotify = (uri, webLink) => {
+              if (!uri && !webLink) return;
+              const fallback = webLink || '';
+              if (uri) {
+                const start = Date.now();
+                window.location.href = uri;
+                setTimeout(() => {
+                  // If nothing handled it, open web link
+                  if (Date.now() - start < 1200 && fallback) {
+                    window.open(fallback, '_blank', 'noopener,noreferrer');
+                  }
+                }, 1000);
+              } else if (fallback) {
+                window.open(fallback, '_blank', 'noopener,noreferrer');
+              }
+            };
+
             toast.success(
-                <div className="flex flex-col gap-1">
-                    <span><b>Created Playlist!</b> ({data.count} songs)</span>
-                    <a href={data.link} target="_blank" rel="noreferrer" className="underline text-sm text-green-200">Open in Spotify</a>
-                </div>,
-                { duration: 5000, style: { background: '#1DB954', color: '#fff' } }
+              <div className="flex flex-col gap-2">
+                <span><b>Created Playlist!</b> ({data.count} songs)</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openSpotify(data.uri, data.link)}
+                    className="bg-black/20 hover:bg-black/30 text-white text-sm px-3 py-1 rounded-md font-semibold transition-colors"
+                  >
+                    Open in Spotify
+                  </button>
+                  {data.link && (
+                    <a
+                      href={data.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="bg-white/15 hover:bg-white/25 text-white text-sm px-3 py-1 rounded-md font-semibold transition-colors"
+                    >
+                      Open in Browser
+                    </a>
+                  )}
+                </div>
+              </div>,
+              { duration: 6000, style: { background: '#1DB954', color: '#fff' } }
             );
         } else {
             toast.dismiss(toastId);
@@ -197,9 +237,12 @@ function MusicContent() {
         <div>
           <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
             <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
-              Family Jams
-            </span> 🎸
+              {currentTheme === 'dark' ? 'Dark Harmonies' : 'Family Jams'}
+            </span>
           </h1>
+          <p className={`${currentTheme === 'dark' ? 'text-purple-200' : 'text-purple-600'} font-semibold`}>
+            {activeFolderName} • {filteredCount} {filteredCount === 1 ? 'song' : 'songs'}
+          </p>
           <p className={`${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-semibold`}>
             Share your favorite tunes of the week!
           </p>
@@ -284,11 +327,12 @@ function MusicContent() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch">
           <AnimatePresence mode="popLayout">
             {jams.map((jam) => (
               <motion.div
                 key={jam.id}
+                className="h-full"
                 layout 
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}

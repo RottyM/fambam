@@ -208,7 +208,9 @@ function SettingsContent() {
   return (
     <div className="space-y-6 md:space-y-8 pb-12">
       <h1 className="text-4xl md:text-5xl font-display font-bold">
-        <span className="gradient-text">Settings & Profile</span>
+        <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
+          {currentTheme === 'dark' ? 'The Inner Sanctum' : 'Settings & Profile'}
+        </span>
       </h1>
 
       {/* Profile */}

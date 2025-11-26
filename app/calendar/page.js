@@ -11,8 +11,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, isSameMonth, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
 import { 
   FaPlus, FaTrash, FaClock, FaMapMarkerAlt, FaUser, FaTimes, 
-  FaCalendarAlt, FaList, FaCalendarWeek, FaGoogle, FaLink, 
-  FaCheckCircle, FaFilter, FaChevronLeft, FaChevronRight 
+  FaCalendarAlt, FaFilter, FaChevronLeft, FaChevronRight,
+  FaBirthdayCake, FaRunning, FaSchool, FaBell, FaUsers, FaAsterisk
 } from 'react-icons/fa';
 import { httpsCallable } from 'firebase/functions';
 import { functions, db } from '@/lib/firebase';
@@ -21,13 +21,13 @@ import toast from 'react-hot-toast';
 import UserAvatar from '@/components/UserAvatar';
 
 const EVENT_CATEGORIES = [
-  { value: 'appointment', label: 'Appointment', icon: '🏥', color: 'from-blue-400 to-blue-500', bgColor: 'bg-blue-100', textColor: 'text-blue-800' },
-  { value: 'birthday', label: 'Birthday', icon: '🎂', color: 'from-pink-400 to-pink-500', bgColor: 'bg-pink-100', textColor: 'text-pink-800' },
-  { value: 'activity', label: 'Activity', icon: '⚽', color: 'from-green-400 to-green-500', bgColor: 'bg-green-100', textColor: 'text-green-800' },
-  { value: 'school', label: 'School', icon: '📚', color: 'from-yellow-400 to-yellow-500', bgColor: 'bg-yellow-100', textColor: 'text-yellow-800' },
-  { value: 'reminder', label: 'Reminder', icon: '⏰', color: 'from-purple-400 to-purple-500', bgColor: 'bg-purple-100', textColor: 'text-purple-800' },
-  { value: 'social', label: 'Social', icon: '🎉', color: 'from-orange-400 to-orange-500', bgColor: 'bg-orange-100', textColor: 'text-orange-800' },
-  { value: 'other', label: 'Other', icon: '📌', color: 'from-gray-400 to-gray-500', bgColor: 'bg-gray-100', textColor: 'text-gray-800' },
+  { value: 'appointment', label: 'Appointment', Icon: FaCalendarAlt, lightBg: 'bg-blue-100 text-blue-800', darkBg: 'bg-blue-900/60 text-blue-100' },
+  { value: 'birthday', label: 'Birthday', Icon: FaBirthdayCake, lightBg: 'bg-pink-100 text-pink-800', darkBg: 'bg-pink-900/60 text-pink-100' },
+  { value: 'activity', label: 'Activity', Icon: FaRunning, lightBg: 'bg-green-100 text-green-800', darkBg: 'bg-emerald-900/60 text-emerald-100' },
+  { value: 'school', label: 'School', Icon: FaSchool, lightBg: 'bg-yellow-100 text-yellow-800', darkBg: 'bg-amber-900/60 text-amber-100' },
+  { value: 'reminder', label: 'Reminder', Icon: FaBell, lightBg: 'bg-purple-100 text-purple-800', darkBg: 'bg-violet-900/60 text-purple-100' },
+  { value: 'social', label: 'Social', Icon: FaUsers, lightBg: 'bg-orange-100 text-orange-800', darkBg: 'bg-orange-900/60 text-orange-100' },
+  { value: 'other', label: 'Other', Icon: FaAsterisk, lightBg: 'bg-gray-200 text-gray-800', darkBg: 'bg-gray-800 text-gray-100' },
 ];
 
 function CalendarContent() {
@@ -36,31 +36,28 @@ function CalendarContent() {
   const { members, isParent } = useFamily();
   const { theme, currentTheme } = useTheme(); 
   
-  // UI States
   const [showAddModal, setShowAddModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false); 
   const [viewMode, setViewMode] = useState('list'); 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
   
-  // Data States
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterMember, setFilterMember] = useState('all');
   const [newEvent, setNewEvent] = useState({
     title: '', description: '', start: '', end: '', category: 'other', location: '', assignedTo: [], allDay: false, recurring: 'none',
   });
   
-  // Google Calendar States
   const [syncing, setSyncing] = useState(false);
-  const [showGoogleSetup, setShowGoogleSetup] = useState(false);
   const [googleCalendarId, setGoogleCalendarId] = useState(null);
   const [settingUpGoogle, setSettingUpGoogle] = useState(false);
-  const [calendarShareLink, setCalendarShareLink] = useState('');
 
   const isDarkMode = currentTheme === 'dark';
-
-  // --- Effects & Handlers ---
-
+  const pillBase = 'px-4 py-2 rounded-full border-2 font-bold transition-all flex items-center gap-2 whitespace-nowrap';
+  const pillActive = 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-purple-300 shadow-lg';
+  const pillInactive = isDarkMode
+    ? 'bg-gray-800 text-gray-200 border-gray-700 hover:border-purple-400'
+    : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-purple-300';
   useEffect(() => {
     const checkGoogleCalendar = async () => {
       if (!userData?.familyId) return;
@@ -69,7 +66,7 @@ function CalendarContent() {
         const familyData = familyDoc.data();
         if (familyData?.googleCalendarId) {
           setGoogleCalendarId(familyData.googleCalendarId);
-          setCalendarShareLink(`https://calendar.google.com/calendar/u/0?cid=${encodeURIComponent(familyData.googleCalendarId)}`);
+          // share link available via googleCalendarId if needed
         }
       } catch (error) {
         console.error('Error checking Google Calendar:', error);
@@ -87,8 +84,6 @@ function CalendarContent() {
       if (result.data.calendarId) {
         await updateDoc(doc(db, 'families', userData.familyId), { googleCalendarId: result.data.calendarId });
         setGoogleCalendarId(result.data.calendarId);
-        setCalendarShareLink(`https://calendar.google.com/calendar/u/0?cid=${encodeURIComponent(result.data.calendarId)}`);
-        setShowGoogleSetup(true);
         toast.success('Google Calendar created! 🎉');
       }
     } catch (error) {
@@ -121,6 +116,7 @@ function CalendarContent() {
       setShowAddModal(false);
       setNewEvent({ title: '', description: '', start: '', end: '', category: 'other', location: '', assignedTo: [], allDay: false, recurring: 'none' });
     } catch (error) {
+      console.error('Failed to add event', error);
       toast.error('Failed to add event');
     } finally {
       setSyncing(false);
@@ -138,6 +134,7 @@ function CalendarContent() {
       toast.success('Event deleted!');
       setSelectedEvent(null);
     } catch (error) {
+      console.error('Failed to delete event', error);
       toast.error('Failed to delete event');
     }
   };
@@ -147,7 +144,6 @@ function CalendarContent() {
     setNewEvent({ ...newEvent, assignedTo: current.includes(memberId) ? current.filter(id => id !== memberId) : [...current, memberId] });
   };
 
-  // --- Filtering & Date Logic ---
   const filteredEvents = events.filter(event => {
     if (filterCategory !== 'all' && event.category !== filterCategory) return false;
     if (filterMember !== 'all' && !event.assignedTo?.includes(filterMember)) return false;
@@ -169,34 +165,33 @@ function CalendarContent() {
 
   return (
     <>
-      {/* --- HEADER SECTION --- */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-4xl md:text-5xl font-display font-bold">
-              <span className="gradient-text">Family Calendar</span>
+              <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
+                {currentTheme === 'dark' ? 'Ominous Engagements' : 'Family Calendar'}
+              </span>
             </h1>
             <p className={`text-base ${theme.colors.textMuted}`}>
               {format(currentMonth, 'MMMM yyyy')} • {filteredEvents.length} events
             </p>
           </div>
 
-          {/* ADD BUTTON (Squircle) */}
           {isParent() && (
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white w-10 h-10 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center"
+              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 md:px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2"
               aria-label="Add Event"
             >
-              <FaPlus size={14} />
+              <FaPlus size={16} />
+              <span className="hidden sm:inline">Add Event</span>
             </button>
           )}
         </div>
 
-        {/* --- CONTROLS ROW (Filters & View) --- */}
         <div className="flex flex-col gap-3 mb-4">
           <div className="flex items-center justify-between gap-2">
-            {/* View Toggle */}
             <div className={`flex rounded-xl p-1 ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
               {['month', 'week', 'list'].map((mode) => {
                 const isActive = viewMode === mode;
@@ -207,7 +202,7 @@ function CalendarContent() {
                     className={`px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${
                       isActive
                         ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md'
-                        : `text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200`
+                        : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
                     }`}
                   >
                     {mode}
@@ -216,7 +211,6 @@ function CalendarContent() {
               })}
             </div>
 
-            {/* Filter Toggle Button - FIXED FOR LIGHT/DARK MODES */}
             <button 
               onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm border ${
@@ -231,7 +225,6 @@ function CalendarContent() {
             </button>
           </div>
 
-          {/* Collapsible Filters */}
           <AnimatePresence>
             {showFilters && (
               <motion.div 
@@ -240,28 +233,55 @@ function CalendarContent() {
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden"
               >
-                <div className="flex flex-col sm:flex-row gap-2 pt-2">
-                  <div className="flex-1">
-                    <label className={`text-xs font-bold mb-1 block ml-1 ${theme.colors.textMuted}`}>Category</label>
-                    <select
-                      value={filterCategory}
-                      onChange={(e) => setFilterCategory(e.target.value)}
-                      className={`w-full px-3 py-2 text-base rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
-                    >
-                      <option value="all">All Categories</option>
-                      {EVENT_CATEGORIES.map(cat => <option key={cat.value} value={cat.value}>{cat.icon} {cat.label}</option>)}
-                    </select>
+                <div className="flex flex-col gap-3 pt-2">
+                  <div>
+                    <label className={`text-xs font-bold mb-2 block ml-1 ${theme.colors.textMuted}`}>Category</label>
+                    <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-1">
+                      <div className="flex gap-3 shrink-0">
+                        <button
+                          onClick={() => setFilterCategory('all')}
+                          className={`${pillBase} ${filterCategory === 'all' ? pillActive : pillInactive}`}
+                        >
+                          <FaFilter size={14} />
+                          <span>All</span>
+                        </button>
+                        {EVENT_CATEGORIES.map(cat => (
+                          <button
+                            key={cat.value}
+                            onClick={() => setFilterCategory(cat.value)}
+                            className={`${pillBase} ${filterCategory === cat.value ? pillActive : pillInactive}`}
+                          >
+                            <cat.Icon size={14} />
+                            <span>{cat.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <label className={`text-xs font-bold mb-1 block ml-1 ${theme.colors.textMuted}`}>Member</label>
-                    <select
-                      value={filterMember}
-                      onChange={(e) => setFilterMember(e.target.value)}
-                      className={`w-full px-3 py-2 text-base rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
-                    >
-                      <option value="all">All Members</option>
-                      {members.map(m => <option key={m.id} value={m.id}>{m.displayName}</option>)}
-                    </select>
+
+                  <div>
+                    <label className={`text-xs font-bold mb-2 block ml-1 ${theme.colors.textMuted}`}>Member</label>
+                    <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-1">
+                      <div className="flex gap-3 shrink-0">
+                        <button
+                          onClick={() => setFilterMember('all')}
+                          className={`${pillBase} ${filterMember === 'all' ? pillActive : pillInactive}`}
+                        >
+                          <FaUser size={14} />
+                          <span>All</span>
+                        </button>
+                        {members.map(m => (
+                          <button
+                            key={m.id}
+                            onClick={() => setFilterMember(m.id)}
+                            className={`${pillBase} ${filterMember === m.id ? pillActive : pillInactive}`}
+                          >
+                            <UserAvatar user={m} size={24} />
+                            <span>{m.displayName}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -269,7 +289,6 @@ function CalendarContent() {
           </AnimatePresence>
         </div>
 
-        {/* --- NAVIGATION (Month/Week only) --- */}
         {(viewMode === 'month' || viewMode === 'week') && (
           <div className={`${theme.colors.bgCard} rounded-xl p-3 shadow-sm mb-4 flex items-center justify-between border ${theme.colors.border}`}>
             <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${isDarkMode ? 'hover:bg-gray-700 text-white' : 'text-gray-700'}`}>
@@ -284,17 +303,13 @@ function CalendarContent() {
           </div>
         )}
       </div>
-
-      {/* --- MONTH VIEW --- */}
       {viewMode === 'month' && (
         <div className={`${theme.colors.bgCard} rounded-2xl p-2 md:p-6 shadow-lg border ${theme.colors.border}`}>
-          {/* Days Header */}
           <div className="grid grid-cols-7 gap-1 md:gap-2 mb-2">
             {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
               <div key={day} className={`text-center font-bold text-sm md:text-base py-2 ${theme.colors.text}`}>{day}</div>
             ))}
           </div>
-          {/* Calendar Grid */}
           <div className="grid grid-cols-7 gap-1 md:gap-2">
             {calendarDays.map((day, idx) => {
               const dayEvents = getEventsForDay(day);
@@ -324,10 +339,11 @@ function CalendarContent() {
                     {format(day, 'd')}
                   </div>
                   
-                  {/* Events Container */}
                   <div className="flex-1 flex flex-col gap-1 overflow-hidden">
                     {dayEvents.map(event => {
                       const category = EVENT_CATEGORIES.find(c => c.value === event.category);
+                      const badgeBg = isDarkMode ? category?.darkBg : category?.lightBg;
+                      const CatIcon = category?.Icon;
                       return (
                         <div 
                           key={event.id} 
@@ -337,15 +353,13 @@ function CalendarContent() {
                           }}
                           className="cursor-pointer group"
                         >
-                          {/* Mobile View: LARGE MINI BLOCK */}
-                          <div className={`md:hidden flex items-center gap-1 p-1 rounded-md mb-1 ${category?.bgColor} ${category?.textColor}`}>
-                            <span className="text-[10px]">{category?.icon}</span>
+                          <div className={`md:hidden flex items-center gap-1 p-1 rounded-md mb-1 ${badgeBg}`}>
+                            {CatIcon && <CatIcon className="text-[10px]" />}
                             <span className="text-[9px] font-bold truncate leading-tight">{event.title}</span>
                           </div>
-                          
-                          {/* Desktop View: Full Badge */}
-                          <div className={`hidden md:block text-xs px-1.5 py-0.5 rounded truncate ${category?.bgColor} ${category?.textColor}`}>
-                            {category?.icon} {event.title}
+                          <div className={`hidden md:flex items-center gap-1 text-xs px-1.5 py-0.5 rounded truncate ${badgeBg}`}>
+                            {CatIcon && <CatIcon size={10} />}
+                            <span className="truncate">{event.title}</span>
                           </div>
                         </div>
                       );
@@ -357,8 +371,6 @@ function CalendarContent() {
           </div>
         </div>
       )}
-
-      {/* --- WEEK VIEW --- */}
       {viewMode === 'week' && (
         <div className={`${theme.colors.bgCard} rounded-2xl p-4 shadow-lg border ${theme.colors.border}`}>
           <div className="space-y-4">
@@ -377,13 +389,15 @@ function CalendarContent() {
                     {dayEvents.length === 0 && <span className="text-xs text-gray-400 italic">No events</span>}
                     {dayEvents.map(event => {
                       const category = EVENT_CATEGORIES.find(c => c.value === event.category);
+                      const badgeBg = isDarkMode ? category?.darkBg : category?.lightBg;
+                      const CatIcon = category?.Icon;
                       return (
                          <div 
                             key={event.id} 
                             onClick={() => setSelectedEvent(event)}
-                            className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:opacity-80 transition-opacity ${category?.bgColor} ${category?.textColor}`}
+                            className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:opacity-80 transition-opacity ${badgeBg}`}
                          >
-                           <span>{category?.icon}</span>
+                           {CatIcon && <CatIcon size={14} />}
                            <span className="font-bold text-sm flex-1">{event.title}</span>
                            <span className="text-xs opacity-75">{format(event.start?.toDate ? event.start.toDate() : new Date(event.start), 'h:mm a')}</span>
                          </div>
@@ -396,26 +410,26 @@ function CalendarContent() {
           </div>
         </div>
       )}
-
-      {/* --- LIST VIEW --- */}
       {viewMode === 'list' && (
         <div className="space-y-3">
           {filteredEvents.length === 0 ? (
             <div className={`${theme.colors.bgCard} rounded-2xl p-12 text-center shadow-lg border ${theme.colors.border}`}>
-              <div className="text-6xl mb-4">📅</div>
+              <div className="text-6xl mb-4">📭</div>
               <p className={`text-xl font-bold ${theme.colors.textMuted}`}>No events found</p>
             </div>
           ) : (
             filteredEvents.map(event => {
               const category = EVENT_CATEGORIES.find(c => c.value === event.category);
+              const badgeBg = isDarkMode ? category?.darkBg : category?.lightBg;
+              const CatIcon = category?.Icon;
               return (
                 <div 
                    key={event.id} 
                    onClick={() => setSelectedEvent(event)}
                    className={`${theme.colors.bgCard} p-4 rounded-xl shadow-sm border ${theme.colors.border} flex items-center gap-4 cursor-pointer hover:shadow-md transition-all`}
                 >
-                   <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl flex-shrink-0 ${category?.bgColor}`}>
-                      {category?.icon}
+                   <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl flex-shrink-0 ${badgeBg}`}>
+                      {CatIcon && <CatIcon />}
                    </div>
                    <div className="flex-1">
                       <h3 className={`font-bold ${theme.colors.text}`}>{event.title}</h3>
@@ -428,7 +442,6 @@ function CalendarContent() {
         </div>
       )}
 
-      {/* --- BOTTOM SECTION: SYNC COMPONENT --- */}
       <div className="mt-8 mb-4">
         {!googleCalendarId && isParent() ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`${theme.colors.bgCard} border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl p-6 text-center`}>
@@ -440,14 +453,11 @@ function CalendarContent() {
             </button>
           </motion.div>
         ) : googleCalendarId ? (
-          // Pass isDarkMode to ensure the child component styles correctly
           <div className={`${theme.colors.bgCard} rounded-2xl shadow-sm border ${theme.colors.border} overflow-hidden`}>
              <CalendarShare id={googleCalendarId} isDarkMode={isDarkMode} />
           </div>
         ) : null}
       </div>
-
-      {/* --- MODAL 1: QUICK VIEW EVENT --- */}
       <AnimatePresence>
         {selectedEvent && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedEvent(null)}>
@@ -460,17 +470,19 @@ function CalendarContent() {
              >
                 {(() => {
                    const category = EVENT_CATEGORIES.find(c => c.value === selectedEvent.category);
+                   const badgeBg = isDarkMode ? category?.darkBg : category?.lightBg;
+                   const CatIcon = category?.Icon;
                    const assigned = members.filter(m => selectedEvent.assignedTo?.includes(m.id));
                    return (
                       <>
-                        <div className={`-mt-6 -mx-6 p-6 ${category?.bgColor} mb-4 flex items-start justify-between`}>
+                        <div className={`-mt-6 -mx-6 p-6 ${badgeBg} mb-4 flex items-start justify-between`}>
                            <div>
-                              <div className="text-4xl mb-2">{category?.icon}</div>
-                              <h3 className={`text-xl font-bold ${category?.textColor} leading-tight`}>{selectedEvent.title}</h3>
-                              <p className={`text-sm font-semibold opacity-80 ${category?.textColor}`}>{category?.label}</p>
+                              <div className="text-4xl mb-2">{CatIcon && <CatIcon />}</div>
+                              <h3 className="text-xl font-bold leading-tight">{selectedEvent.title}</h3>
+                              <p className="text-sm font-semibold opacity-80">{category?.label}</p>
                            </div>
                            <button onClick={() => setSelectedEvent(null)} className="bg-white/50 p-2 rounded-full hover:bg-white/80 transition-colors">
-                              <FaTimes size={14} className={category?.textColor} />
+                              <FaTimes size={14} className={theme.colors.text} />
                            </button>
                         </div>
                         
@@ -511,7 +523,6 @@ function CalendarContent() {
                            )}
                         </div>
 
-                        {/* Actions */}
                         {isParent() && (
                            <button 
                               onClick={() => handleDeleteEvent(selectedEvent)} 
@@ -528,7 +539,6 @@ function CalendarContent() {
         )}
       </AnimatePresence>
 
-      {/* --- MODAL 2: ADD EVENT (RESTORED FEATURE RICH) --- */}
       <AnimatePresence>
         {showAddModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddModal(false)}>
@@ -538,13 +548,11 @@ function CalendarContent() {
                 <button onClick={() => setShowAddModal(false)} className="text-gray-400"><FaTimes size={20}/></button>
               </div>
               <form onSubmit={handleAddEvent} className="space-y-4">
-                {/* TITLE */}
                 <div>
                   <label className={`block text-xs font-bold ${theme.colors.textMuted} mb-1`}>Title</label>
                   <input type="text" value={newEvent.title} onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })} className={`w-full p-3 rounded-xl border ${theme.colors.border} bg-transparent ${theme.colors.text}`} placeholder="Event Title" required />
                 </div>
                 
-                {/* DATES */}
                 <div className="grid grid-cols-2 gap-4">
                    <div>
                       <label className={`block text-xs font-bold ${theme.colors.textMuted} mb-1`}>Start</label>
@@ -556,7 +564,6 @@ function CalendarContent() {
                    </div>
                 </div>
 
-                {/* ALL DAY TOGGLE */}
                 <div className="flex items-center gap-3">
                   <input
                     type="checkbox"
@@ -570,19 +577,18 @@ function CalendarContent() {
                   </label>
                 </div>
 
-                {/* CATEGORY */}
                 <div>
                    <label className={`block text-xs font-bold ${theme.colors.textMuted} mb-1`}>Category</label>
                    <div className="flex gap-2 overflow-x-auto pb-2">
                       {EVENT_CATEGORIES.map(cat => (
                          <button type="button" key={cat.value} onClick={() => setNewEvent({...newEvent, category: cat.value})} className={`p-2 rounded-lg border whitespace-nowrap text-xs flex items-center gap-1 ${newEvent.category === cat.value ? 'bg-purple-100 border-purple-500 text-purple-700' : `${theme.colors.border} ${theme.colors.textMuted}`}`}>
-                            {cat.icon} {cat.label}
+                            <cat.Icon size={12} />
+                            {cat.label}
                          </button>
                       ))}
                    </div>
                 </div>
 
-                {/* LOCATION */}
                 <div>
                   <label className={`block text-xs font-bold ${theme.colors.textMuted} mb-1`}>Location (optional)</label>
                   <input
@@ -594,7 +600,6 @@ function CalendarContent() {
                   />
                 </div>
 
-                {/* ASSIGN TO */}
                 <div>
                   <label className={`block text-xs font-bold ${theme.colors.textMuted} mb-1`}>Assign To (optional)</label>
                   <div className="flex flex-wrap gap-2">
@@ -616,7 +621,6 @@ function CalendarContent() {
                   </div>
                 </div>
 
-                {/* RECURRING */}
                 <div>
                   <label className={`block text-xs font-bold ${theme.colors.textMuted} mb-1`}>Repeat</label>
                   <select
@@ -632,7 +636,6 @@ function CalendarContent() {
                   </select>
                 </div>
 
-                {/* DESCRIPTION */}
                 <div>
                   <label className={`block text-xs font-bold ${theme.colors.textMuted} mb-1`}>Description (optional)</label>
                   <textarea
@@ -644,7 +647,6 @@ function CalendarContent() {
                   />
                 </div>
 
-                {/* SUBMIT */}
                 <button type="submit" disabled={syncing} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-xl font-bold shadow-lg mt-2">
                    {syncing ? 'Adding...' : 'Save Event'}
                 </button>

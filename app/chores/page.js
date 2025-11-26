@@ -8,7 +8,7 @@ import { useFamily } from '@/contexts/FamilyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaPlus, FaTrophy, FaTrash, FaTimes, FaFilter } from 'react-icons/fa';
+import { FaPlus, FaTrophy, FaTrash, FaTimes, FaFilter, FaUser, FaClock, FaPaperPlane, FaCheckCircle } from 'react-icons/fa';
 import { ICON_CATEGORIES, getIcon } from '@/lib/icons';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -18,7 +18,7 @@ function ChoresContent() {
   const { chores, loading, addChore } = useChores();
   const { members, isParent } = useFamily();
   const { userData } = useAuth();
-  const { theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filterMember, setFilterMember] = useState('all');
@@ -72,6 +72,11 @@ function ChoresContent() {
   const submittedChores = filteredChores.filter(c => c.status === 'submitted');
   const approvedChores = filteredChores.filter(c => c.status === 'approved');
   const myChores = filteredChores.filter(c => c.assignedTo === userData?.uid || c.assignedTo === userData?.id);
+  const pillBase = 'px-4 py-2 rounded-full border-2 font-bold transition-all flex items-center gap-2 whitespace-nowrap';
+  const pillActive = 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300 shadow-lg';
+  const pillInactive = currentTheme === 'dark'
+    ? 'bg-gray-800 text-gray-200 border-gray-700 hover:border-purple-400'
+    : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-purple-300';
 
   if (loading) {
     return (
@@ -90,9 +95,11 @@ function ChoresContent() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <div>
             <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
-              <span className="gradient-text">Chore Tracker</span>
+              <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
+                {currentTheme === 'dark' ? 'Duties' : 'Chore Tracker'}
+              </span>
             </h1>
-          <p className="text-base md:text-lg text-gray-800 font-semibold">
+            <p className="text-base md:text-lg text-gray-800 font-semibold">
             {pendingChores.length} pending • {submittedChores.length} submitted • {approvedChores.length} completed
           </p>
         </div>
@@ -147,35 +154,68 @@ function ChoresContent() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden mt-2"
             >
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <div className="flex-1">
-                  <label className={`text-xs font-bold mb-1 block ml-1 ${theme.colors.textMuted}`}>Member</label>
-                  <select
-                    value={filterMember}
-                    onChange={(e) => setFilterMember(e.target.value)}
-                    className={`w-full px-3 py-2 text-base rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
-                  >
-                    <option value="all">All Members</option>
-                    {members.map(member => (
-                      <option key={member.id} value={member.id}>
-                        {member.displayName}
-                      </option>
-                    ))}
-                  </select>
+              <div className="flex flex-col gap-3 pt-2">
+                <div>
+                  <label className={`text-xs font-bold mb-2 block ml-1 ${theme.colors.textMuted}`}>Member</label>
+                  <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-1">
+                    <div className="flex gap-3 shrink-0">
+                      <button
+                        onClick={() => setFilterMember('all')}
+                        className={`${pillBase} ${filterMember === 'all' ? pillActive : pillInactive}`}
+                      >
+                        <FaUser size={14} />
+                        <span>All</span>
+                      </button>
+                      {members.map(member => (
+                        <button
+                          key={member.id}
+                          onClick={() => setFilterMember(member.id)}
+                          className={`${pillBase} ${filterMember === member.id ? pillActive : pillInactive}`}
+                        >
+                          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-sm font-bold uppercase">
+                            {member.displayName?.[0] || '?'}
+                          </span>
+                          <span>{member.displayName}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex-1">
-                  <label className={`text-xs font-bold mb-1 block ml-1 ${theme.colors.textMuted}`}>Status</label>
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className={`w-full px-3 py-2 text-base rounded-xl border-2 focus:border-purple-500 outline-none font-semibold ${theme.colors.bgCard} ${theme.colors.text} ${theme.colors.border}`}
-                  >
-                    <option value="all">All</option>
-                    <option value="pending">Pending</option>
-                    <option value="submitted">Submitted</option>
-                    <option value="approved">Approved</option>
-                  </select>
+                <div>
+                  <label className={`text-xs font-bold mb-2 block ml-1 ${theme.colors.textMuted}`}>Status</label>
+                  <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-1">
+                    <div className="flex gap-3 shrink-0">
+                      <button
+                        onClick={() => setFilterStatus('all')}
+                        className={`${pillBase} ${filterStatus === 'all' ? pillActive : pillInactive}`}
+                      >
+                        <FaFilter size={14} />
+                        <span>All</span>
+                      </button>
+                      <button
+                        onClick={() => setFilterStatus('pending')}
+                        className={`${pillBase} ${filterStatus === 'pending' ? pillActive : pillInactive}`}
+                      >
+                        <FaClock size={14} />
+                        <span>Pending</span>
+                      </button>
+                      <button
+                        onClick={() => setFilterStatus('submitted')}
+                        className={`${pillBase} ${filterStatus === 'submitted' ? pillActive : pillInactive}`}
+                      >
+                        <FaPaperPlane size={14} />
+                        <span>Submitted</span>
+                      </button>
+                      <button
+                        onClick={() => setFilterStatus('approved')}
+                        className={`${pillBase} ${filterStatus === 'approved' ? pillActive : pillInactive}`}
+                      >
+                        <FaCheckCircle size={14} />
+                        <span>Approved</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </motion.div>

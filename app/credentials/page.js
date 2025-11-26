@@ -6,22 +6,23 @@ import { useCredentials } from '@/hooks/useFirestore';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaPlus, FaTimes, FaEdit, FaTrash, FaEye, FaEyeSlash, FaExternalLinkAlt, FaCopy, FaLock } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaEdit, FaTrash, FaEye, FaEyeSlash, FaExternalLinkAlt, FaCopy, FaLock, FaSchool, FaBook, FaStethoscope, FaBolt, FaFilm, FaWallet, FaAsterisk } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 const CATEGORIES = [
-  { value: 'school', label: 'School', icon: '🏫', color: 'bg-blue-100 border-blue-300' },
-  { value: 'library', label: 'Library', icon: '📚', color: 'bg-purple-100 border-purple-300' },
-  { value: 'medical', label: 'Medical', icon: '🏥', color: 'bg-red-100 border-red-300' },
-  { value: 'utilities', label: 'Utilities', icon: '💡', color: 'bg-yellow-100 border-yellow-300' },
-  { value: 'entertainment', label: 'Entertainment', icon: '🎬', color: 'bg-pink-100 border-pink-300' },
-  { value: 'banking', label: 'Banking', icon: '🏦', color: 'bg-green-100 border-green-300' },
-  { value: 'other', label: 'Other', icon: '📌', color: 'bg-gray-100 border-gray-300' },
+  { value: 'school', label: 'School', Icon: FaSchool, light: 'bg-blue-100 border-blue-300', dark: 'bg-blue-950/40 border-blue-700/60' },
+  { value: 'library', label: 'Library', Icon: FaBook, light: 'bg-purple-100 border-purple-300', dark: 'bg-purple-950/40 border-purple-700/60' },
+  { value: 'medical', label: 'Medical', Icon: FaStethoscope, light: 'bg-red-100 border-red-300', dark: 'bg-red-950/40 border-red-700/60' },
+  { value: 'utilities', label: 'Utilities', Icon: FaBolt, light: 'bg-yellow-100 border-yellow-300', dark: 'bg-amber-950/40 border-amber-700/60' },
+  { value: 'entertainment', label: 'Entertainment', Icon: FaFilm, light: 'bg-pink-100 border-pink-300', dark: 'bg-pink-950/40 border-pink-700/60' },
+  { value: 'banking', label: 'Banking', Icon: FaWallet, light: 'bg-green-100 border-green-300', dark: 'bg-emerald-950/40 border-emerald-700/60' },
+  { value: 'other', label: 'Other', Icon: FaAsterisk, light: 'bg-gray-100 border-gray-300', dark: 'bg-gray-900/60 border-gray-700' },
 ];
 
-function CredentialCard({ credential, onEdit, onDelete, isParent }) {
+function CredentialCard({ credential, onEdit, onDelete, isParent, currentTheme }) {
   const [showPassword, setShowPassword] = useState(false);
   const category = CATEGORIES.find(c => c.value === credential.category) || CATEGORIES[CATEGORIES.length - 1];
+  const categoryTone = currentTheme === 'dark' ? category.dark : category.light;
 
   const copyToClipboard = (text, label) => {
     navigator.clipboard.writeText(text);
@@ -33,14 +34,14 @@ function CredentialCard({ credential, onEdit, onDelete, isParent }) {
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      className={`${category.color} border-2 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all`}
+      className={`${categoryTone} border-2 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all`}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <span className="text-3xl flex-shrink-0">{category.icon}</span>
+          <span className="text-3xl flex-shrink-0"><category.Icon /></span>
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-gray-900 text-lg truncate">{credential.name}</h3>
-            <span className="text-xs font-semibold text-gray-600 bg-white/50 px-2 py-1 rounded-full">
+            <h3 className={`font-bold text-lg truncate ${currentTheme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>{credential.name}</h3>
+            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${currentTheme === 'dark' ? 'text-gray-100 bg-white/10 border border-white/10' : 'text-gray-600 bg-white/50'}`}>
               {category.label}
             </span>
           </div>
@@ -49,7 +50,7 @@ function CredentialCard({ credential, onEdit, onDelete, isParent }) {
           <div className="flex gap-2 flex-shrink-0">
             <button
               onClick={() => onEdit(credential)}
-              className="text-blue-600 hover:text-blue-800 p-2 hover:bg-white/50 rounded-lg transition-all"
+              className={`${currentTheme === 'dark' ? 'text-blue-300 hover:text-blue-100 hover:bg-white/10' : 'text-blue-600 hover:text-blue-800 hover:bg-white/50'} p-2 rounded-lg transition-all`}
               title="Edit"
             >
               <FaEdit size={16} />
@@ -60,7 +61,7 @@ function CredentialCard({ credential, onEdit, onDelete, isParent }) {
                   onDelete(credential.id);
                 }
               }}
-              className="text-red-600 hover:text-red-800 p-2 hover:bg-white/50 rounded-lg transition-all"
+              className={`${currentTheme === 'dark' ? 'text-red-300 hover:text-red-200 hover:bg-white/10' : 'text-red-600 hover:text-red-800 hover:bg-white/50'} p-2 rounded-lg transition-all`}
               title="Delete"
             >
               <FaTrash size={16} />
@@ -75,7 +76,7 @@ function CredentialCard({ credential, onEdit, onDelete, isParent }) {
             href={credential.websiteUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-blue-700 hover:text-blue-900 font-semibold flex items-center gap-2 hover:underline"
+            className={`text-sm font-semibold flex items-center gap-2 hover:underline ${currentTheme === 'dark' ? 'text-blue-200 hover:text-blue-100' : 'text-blue-700 hover:text-blue-900'}`}
           >
             <FaExternalLinkAlt /> {credential.websiteUrl}
           </a>
@@ -84,15 +85,15 @@ function CredentialCard({ credential, onEdit, onDelete, isParent }) {
 
       <div className="space-y-2">
         {credential.username && (
-          <div className="bg-white/70 rounded-xl p-3">
+          <div className={`${currentTheme === 'dark' ? 'bg-gray-900/60 border border-gray-800' : 'bg-white/70'} rounded-xl p-3`}>
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-gray-600 mb-1">Username</p>
-                <p className="text-sm font-bold text-gray-900 truncate">{credential.username}</p>
+                <p className={`text-xs font-semibold mb-1 ${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Username</p>
+                <p className={`text-sm font-bold truncate ${currentTheme === 'dark' ? 'text-gray-50' : 'text-gray-900'}`}>{credential.username}</p>
               </div>
               <button
                 onClick={() => copyToClipboard(credential.username, 'Username')}
-                className="text-gray-600 hover:text-gray-900 p-2 hover:bg-white rounded-lg transition-all flex-shrink-0"
+                className={`${currentTheme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-white/10' : 'text-gray-600 hover:text-gray-900 hover:bg-white'} p-2 rounded-lg transition-all flex-shrink-0`}
                 title="Copy username"
               >
                 <FaCopy size={14} />
@@ -102,25 +103,25 @@ function CredentialCard({ credential, onEdit, onDelete, isParent }) {
         )}
 
         {credential.password && (
-          <div className="bg-white/70 rounded-xl p-3">
+          <div className={`${currentTheme === 'dark' ? 'bg-gray-900/60 border border-gray-800' : 'bg-white/70'} rounded-xl p-3`}>
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-gray-600 mb-1">Password</p>
-                <p className="text-sm font-bold text-gray-900 font-mono truncate">
+                <p className={`text-xs font-semibold mb-1 ${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Password</p>
+                <p className={`text-sm font-bold font-mono truncate ${currentTheme === 'dark' ? 'text-gray-50' : 'text-gray-900'}`}>
                   {showPassword ? credential.password : '••••••••'}
                 </p>
               </div>
               <div className="flex gap-2 flex-shrink-0">
                 <button
                   onClick={() => setShowPassword(!showPassword)}
-                  className="text-gray-600 hover:text-gray-900 p-2 hover:bg-white rounded-lg transition-all"
+                  className={`${currentTheme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-white/10' : 'text-gray-600 hover:text-gray-900 hover:bg-white'} p-2 rounded-lg transition-all`}
                   title={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <FaEyeSlash size={14} /> : <FaEye size={14} />}
                 </button>
                 <button
                   onClick={() => copyToClipboard(credential.password, 'Password')}
-                  className="text-gray-600 hover:text-gray-900 p-2 hover:bg-white rounded-lg transition-all"
+                  className={`${currentTheme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-white/10' : 'text-gray-600 hover:text-gray-900 hover:bg-white'} p-2 rounded-lg transition-all`}
                   title="Copy password"
                 >
                   <FaCopy size={14} />
@@ -131,15 +132,15 @@ function CredentialCard({ credential, onEdit, onDelete, isParent }) {
         )}
 
         {credential.notes && (
-          <div className="bg-white/70 rounded-xl p-3">
-            <p className="text-xs font-semibold text-gray-600 mb-1">Notes</p>
-            <p className="text-sm text-gray-700">{credential.notes}</p>
+          <div className={`${currentTheme === 'dark' ? 'bg-gray-900/60 border border-gray-800' : 'bg-white/70'} rounded-xl p-3`}>
+            <p className={`text-xs font-semibold mb-1 ${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Notes</p>
+            <p className={`text-sm ${currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>{credential.notes}</p>
           </div>
         )}
       </div>
 
-      <div className="mt-3 pt-3 border-t border-gray-300/50">
-        <p className="text-xs text-gray-600">
+      <div className={`mt-3 pt-3 border-t ${currentTheme === 'dark' ? 'border-gray-800' : 'border-gray-300/50'}`}>
+        <p className={`text-xs ${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
           Last updated: {credential.updatedAt?.toDate?.()?.toLocaleDateString() || 'N/A'}
         </p>
       </div>
@@ -162,6 +163,18 @@ function CredentialsContent() {
     category: 'other',
     notes: '',
   });
+  const categoryCounts = credentials.reduce((acc, c) => {
+    const key = c.category || 'other';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const totalCount = credentials.length;
+
+  const pillBase = `px-4 py-2 rounded-full border-2 font-bold transition-all flex items-center gap-2 whitespace-nowrap`;
+  const pillActive = `bg-gradient-to-r from-blue-500 to-purple-500 text-white border-purple-400 shadow-lg`;
+  const pillInactive = currentTheme === 'dark'
+    ? 'bg-gray-800 text-gray-100 border-gray-700 hover:border-purple-400'
+    : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-purple-300';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -221,7 +234,7 @@ function CredentialsContent() {
           <div>
             <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
               <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
-                {currentTheme === 'dark' ? 'Secret Vault' : 'Family Credentials'}
+                {currentTheme === 'dark' ? 'Dark Secrets' : 'Family Credentials'}
               </span>
             </h1>
             <p className={`text-sm md:text-base ${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-semibold`}>
@@ -257,33 +270,29 @@ function CredentialsContent() {
         {/* Category Filter */}
         <div className={`${theme.colors.bgCard} rounded-2xl p-4 shadow-lg mb-6`}>
           <h3 className={`font-bold ${theme.colors.text} mb-3`}>Filter by Category</h3>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setFilterCategory('all')}
-              className={`px-4 py-2 rounded-xl font-bold transition-all ${
-                filterCategory === 'all'
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              All ({credentials.length})
-            </button>
-            {CATEGORIES.map(cat => {
-              const count = credentials.filter(c => c.category === cat.value).length;
-              return (
+          <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-1">
+            <div className="flex gap-3 shrink-0">
+              <button
+                onClick={() => setFilterCategory('all')}
+                className={`${pillBase} ${filterCategory === 'all' ? pillActive : pillInactive}`}
+              >
+                <span>All</span>
+                <span className={`text-xs px-2 py-1 rounded-full ${filterCategory === 'all' ? 'bg-white/30 text-white' : currentTheme === 'dark' ? 'bg-gray-700 text-gray-100' : 'bg-white/70 text-gray-800'}`}>{totalCount}</span>
+              </button>
+              {CATEGORIES.map(cat => (
                 <button
                   key={cat.value}
                   onClick={() => setFilterCategory(cat.value)}
-                  className={`px-4 py-2 rounded-xl font-bold transition-all ${
-                    filterCategory === cat.value
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
+                  className={`${pillBase} ${filterCategory === cat.value ? pillActive : pillInactive}`}
                 >
-                  {cat.icon} {cat.label} ({count})
+                  <cat.Icon size={14} />
+                  <span>{cat.label}</span>
+                  <span className={`text-xs px-2 py-1 rounded-full ${filterCategory === cat.value ? 'bg-white/30 text-white' : currentTheme === 'dark' ? 'bg-gray-700 text-gray-100' : 'bg-white/70 text-gray-800'}`}>
+                    {categoryCounts[cat.value] || 0}
+                  </span>
                 </button>
-              );
-            })}
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -311,6 +320,7 @@ function CredentialsContent() {
                 onEdit={handleEdit}
                 onDelete={deleteCredential}
                 isParent={isParent()}
+                currentTheme={currentTheme}
               />
             ))}
           </AnimatePresence>
@@ -377,7 +387,7 @@ function CredentialsContent() {
                             : 'border-gray-200 hover:border-purple-300'
                         }`}
                       >
-                        <div className="text-2xl mb-1">{cat.icon}</div>
+                        <div className="text-2xl mb-1"><cat.Icon /></div>
                         <div className={`text-xs font-bold ${theme.colors.text}`}>{cat.label}</div>
                       </button>
                     ))}
@@ -467,3 +477,6 @@ export default function CredentialsPage() {
     </DashboardLayout>
   );
 }
+
+
+

@@ -135,7 +135,9 @@ function DocumentsContent() {
     <>
       <div className="mb-8">
         <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
-          <span className="gradient-text">Family Documents</span>
+          <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
+            {currentTheme === 'dark' ? 'The Tome' : 'Family Documents'}
+          </span>
         </h1>
         <p className="text-sm md:text-base text-gray-600 font-semibold">
           {documents.length} documents stored securely

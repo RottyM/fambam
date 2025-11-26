@@ -29,7 +29,7 @@ function GroceriesContent() {
     clearCheckedItems,
     clearAllItems,
   } = useGroceries();
-  const { theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newItem, setNewItem] = useState({
@@ -73,7 +73,9 @@ function GroceriesContent() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <div>
             <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
-              <span className="gradient-text">Grocery List</span>
+              <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
+                {currentTheme === 'dark' ? 'Crypt Rations' : 'Grocery List'}
+              </span>
             </h1>
             <p className="text-sm sm:text-base text-gray-600 font-semibold">
               {uncheckedCount} items to buy

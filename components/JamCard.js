@@ -39,7 +39,7 @@ export default function JamCard({ jam, onDelete, onPlayVideo, onToggleLike }) {
     <div 
       ref={drag}
       style={{ opacity: isDragging ? 0.5 : 1 }}
-      className={`group relative ${theme.colors.bgCard} rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-purple-100 flex flex-col cursor-grab active:cursor-grabbing`}
+      className={`group relative ${theme.colors.bgCard} rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-purple-100 flex flex-col cursor-grab active:cursor-grabbing h-full`}
     >
       
       {/* --- MEDIA SECTION --- */}

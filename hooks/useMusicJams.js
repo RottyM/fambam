@@ -180,6 +180,7 @@ export function useMusicJams(activeFilterId = null) {
 
   return { 
       jams: filteredJams, 
+      allJams,
       folders, 
       loading, 
       addJam, 

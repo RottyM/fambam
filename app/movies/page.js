@@ -192,7 +192,7 @@ function MoviesContent() {
   
   const { user } = useAuth();
   const { getMemberById } = useFamily();
-  const { theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
@@ -261,7 +261,9 @@ function MoviesContent() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
-            <span className="gradient-text">Movie Night</span> 🎬
+            <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
+              {currentTheme === 'dark' ? 'Midnight Screening' : 'Movie Night'}
+            </span>
           </h1>
           <p className={`${theme.colors.textLight} font-semibold`}>
             Vote on what to watch next!

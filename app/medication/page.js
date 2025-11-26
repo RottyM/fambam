@@ -7,7 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useFamily } from '../../contexts/FamilyContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNotifications } from '../../contexts/NotificationContext';
-import { FaPlus, FaTrash, FaClock, FaPills, FaCalendar, FaUser, FaTimes, FaPrescriptionBottleAlt, FaExclamationTriangle, FaNotesMedical, FaBan, FaShieldAlt, FaBoxOpen, FaInfoCircle } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaClock, FaPills, FaCalendar, FaUser, FaTimes, FaPrescriptionBottleAlt, FaExclamationTriangle, FaNotesMedical, FaBan, FaShieldAlt, FaBoxOpen, FaInfoCircle, FaAsterisk } from 'react-icons/fa';
 import DashboardLayout from '../../components/DashboardLayout';
 import { motion, AnimatePresence } from 'framer-motion';
 import UserAvatar from '@/components/UserAvatar';
@@ -74,6 +74,11 @@ const MedicationPage = () => {
   const filteredMedications = activeFilterId === 'all'
     ? medications
     : medications.filter(med => med.assignedTo === activeFilterId);
+  const pillBase = 'px-4 py-2 rounded-full border-2 font-bold transition-all flex items-center gap-2 whitespace-nowrap';
+  const pillActive = 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300 shadow-lg';
+  const pillInactive = currentTheme === 'dark'
+    ? 'bg-gray-800 text-gray-200 border-gray-700 hover:border-purple-400'
+    : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-purple-300';
 
 
   const [newMedication, setNewMedication] = useState({
@@ -244,7 +249,9 @@ const MedicationPage = () => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
-              <span className="gradient-text">Medication Tracker</span>
+              <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
+                {currentTheme === 'dark' ? 'Elixirs' : 'Medication Tracker'}
+              </span>
             </h1>
             <p className={`text-sm md:text-base font-semibold ${theme.colors.textMuted}`}>
               {medications.length} active prescription{medications.length !== 1 ? 's' : ''}
@@ -265,23 +272,16 @@ const MedicationPage = () => {
         <div className="flex gap-4 shrink-0">
           <button
             onClick={() => setActiveFilterId('all')}
-            className={`px-4 py-2 rounded-full font-bold transition-all ${
-              activeFilterId === 'all'
-                ? 'bg-purple-500 text-white shadow-lg'
-                : `bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600`
-            }`}
+            className={`${pillBase} ${activeFilterId === 'all' ? pillActive : pillInactive}`}
           >
-            All
+            <FaUser size={14} />
+            <span>All</span>
           </button>
           {members.map(member => (
             <button
               key={member.id}
               onClick={() => setActiveFilterId(member.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold transition-all ${
-                activeFilterId === member.id
-                  ? 'bg-purple-500 text-white shadow-lg'
-                  : `bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600`
-              }`}
+              className={`${pillBase} ${activeFilterId === member.id ? pillActive : pillInactive}`}
             >
               <UserAvatar user={member} size={24} />
               <span>{member.displayName}</span>
@@ -676,3 +676,6 @@ export default function MedicationPageWrapper() {
     </DashboardLayout>
   );
 }
+
+
+

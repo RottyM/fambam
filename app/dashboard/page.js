@@ -117,7 +117,7 @@ function DashboardContent() {
 
   const EVENT_CATEGORIES = {
     appointment: {
-      icon: '🏥',
+      icon: '🕯️',
       bgLight: 'bg-blue-50 border-blue-200',
       bgDark: 'bg-blue-900/30 border-blue-700/70',
       textLight: 'text-blue-900',
@@ -131,7 +131,7 @@ function DashboardContent() {
       textDark: 'text-pink-100',
     },
     activity: {
-      icon: '⚽',
+      icon: '⚔️',
       bgLight: 'bg-green-50 border-green-200',
       bgDark: 'bg-green-900/30 border-green-700/70',
       textLight: 'text-green-900',
@@ -145,21 +145,21 @@ function DashboardContent() {
       textDark: 'text-amber-100',
     },
     reminder: {
-      icon: '⏰',
+      icon: '☠️',
       bgLight: 'bg-purple-50 border-purple-200',
       bgDark: 'bg-purple-900/30 border-purple-700/70',
       textLight: 'text-purple-900',
       textDark: 'text-purple-100',
     },
     social: {
-      icon: '🎉',
+      icon: currentTheme === 'dark' ? '🦇' : '🎉',
       bgLight: 'bg-orange-50 border-orange-200',
       bgDark: 'bg-orange-900/30 border-orange-700/70',
       textLight: 'text-orange-900',
       textDark: 'text-orange-100',
     },
     other: {
-      icon: '📌',
+      icon: '🔮',
       bgLight: 'bg-slate-50 border-slate-200',
       bgDark: 'bg-slate-800/60 border-slate-700',
       textLight: 'text-slate-900',
@@ -393,7 +393,7 @@ function DashboardContent() {
           >
             <p className="text-gray-100 font-semibold mb-1 md:mb-2 text-sm md:text-base">Your Points</p>
             <p className="text-3xl md:text-5xl font-display font-bold text-gray-100">
-              ⭐ {userData?.points || 0}
+              {currentTheme === 'dark' ? '🩸' : '⭐'} {userData?.points || 0}
             </p>
           </motion.div>
         )}
@@ -402,8 +402,8 @@ function DashboardContent() {
       {/* Stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
         <StatsCard
-          icon={currentTheme === 'dark' ? '☑️' : '✅'}
-          title={currentTheme === 'dark' ? 'Pending Tasks' : 'To-Dos'}
+          icon={currentTheme === 'dark' ? '🕸️' : '✅'}
+          title={currentTheme === 'dark' ? 'Dark Deeds' : 'To-Dos'}
           value={pendingTodos}
           color={`bg-gradient-to-br ${theme.colors.statBlue}`}
           href="/todos"
@@ -416,8 +416,8 @@ function DashboardContent() {
           href="/chores"
         />
         <StatsCard
-          icon="📅"
-          title="Events"
+          icon={currentTheme === 'dark' ? '🕯️' : '📆'}
+          title={currentTheme === 'dark' ? 'Omens' : 'Events'}
           value={upcomingEvents.length}
           color="bg-gradient-to-br from-blue-400 to-purple-500"
           href="/calendar"
@@ -443,9 +443,9 @@ function DashboardContent() {
           >
             <div className="flex items-center justify-between mb-4 md:mb-6">
               <h2 className="text-lg md:text-2xl font-display font-bold flex items-center gap-2">
-                <span className="text-xl md:text-2xl">📅</span>
-                <span className="hidden sm:inline">Upcoming Events</span>
-                <span className="sm:hidden">Events</span>
+                <span className="text-xl md:text-2xl">{currentTheme === 'dark' ? '🕯️' : '📅'}</span>
+                <span className="hidden sm:inline">{currentTheme === 'dark' ? 'Ominous Engagements' : 'Upcoming Events'}</span>
+                <span className="sm:hidden">{currentTheme === 'dark' ? 'Omens' : 'Events'}</span>
               </h2>
               <Link
                 href="/calendar"
@@ -457,9 +457,13 @@ function DashboardContent() {
 
             {upcomingEvents.length === 0 ? (
               <div className="text-center py-12 text-gray-400">
-                <p className="text-5xl mb-3">📆</p>
-                <p className="font-semibold text-gray-600">No upcoming events</p>
-                <p className="text-sm">Your calendar is clear!</p>
+                <p className="text-5xl mb-3">{currentTheme === 'dark' ? '🦇' : '📆'}</p>
+                <p className="font-semibold text-gray-600">
+                  {currentTheme === 'dark' ? 'No omens on the horizon' : 'No upcoming events'}
+                </p>
+                <p className="text-sm">
+                  {currentTheme === 'dark' ? 'The night is quiet...' : 'Your calendar is clear!'}
+                </p>
               </div>
             ) : (
               <div className="space-y-2 md:space-y-3">
@@ -539,8 +543,8 @@ function DashboardContent() {
             className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl`}
           >
             <h2 className="text-lg md:text-2xl font-display font-bold mb-3 md:mb-4 flex items-center gap-2">
-              <span className="text-xl md:text-2xl">⚡</span>
-              Quick Actions
+              <span className="text-xl md:text-2xl">{currentTheme === 'dark' ? '🧪' : '⚡'}</span>
+              {currentTheme === 'dark' ? 'Sketchy Paths' : 'Quick Actions'}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
               <Link href="/movies">
@@ -629,9 +633,9 @@ function DashboardContent() {
             className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl`}
           >
             <h2 className="text-lg md:text-2xl font-display font-bold mb-3 md:mb-4 flex items-center gap-2">
-              <span className="text-xl md:text-2xl">🔥</span>
-              <span className="hidden sm:inline">Recent Activity</span>
-              <span className="sm:hidden">Activity</span>
+              <span className="text-xl md:text-2xl">{currentTheme === 'dark' ? '🦴' : '✨'}</span>
+              <span className="hidden sm:inline">{currentTheme === 'dark' ? 'Recent Rituals' : 'Recent Activity'}</span>
+              <span className="sm:hidden">{currentTheme === 'dark' ? 'Rituals' : 'Activity'}</span>
             </h2>
 
             <div className="space-y-2 md:space-y-3">
@@ -672,9 +676,9 @@ function DashboardContent() {
               {todos.filter(t => t.completed).length === 0 &&
                chores.filter(c => c.status === 'approved').length === 0 && (
                 <div className="text-center py-8 text-gray-400">
-                  <p className="text-4xl mb-2">🌟</p>
-                  <p className="font-semibold">No recent activity</p>
-                  <p className="text-sm">Complete tasks to see them here</p>
+                  <p className="text-4xl mb-2">{currentTheme === 'dark' ? '🕸️' : '😴'}</p>
+                  <p className="font-semibold">{currentTheme === 'dark' ? 'No fresh incantations' : 'No recent activity'}</p>
+                  <p className="text-sm">{currentTheme === 'dark' ? 'Finish a task to rouse the spirits' : 'Complete tasks to see them here'}</p>
                 </div>
               )}
             </div>
@@ -709,7 +713,7 @@ function DashboardContent() {
                   {/* Time Capsule Badge */}
                   {spotlightMemory.isTimeCapsule && (
                     <div className={`absolute top-3 right-3 ${currentTheme === 'dark' ? 'bg-purple-600' : 'bg-purple-500'} text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg animate-pulse`}>
-                      {currentTheme === 'dark' ? '🔮' : '🔓'} {currentTheme === 'dark' ? 'Capsule Unlocked!' : 'Time Capsule Revealed!'}
+                      {currentTheme === 'dark' ? '⏳' : '⏳'} {currentTheme === 'dark' ? 'Coffin Unsealed!' : 'Time Capsule Revealed!'}
                     </div>
                   )}
 
@@ -726,7 +730,9 @@ function DashboardContent() {
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
                     <div className="flex items-center justify-between">
                       <span className="text-3xl">
-                        {spotlightMemory.isTimeCapsule ? (currentTheme === 'dark' ? '🔮' : '🔓') : (currentTheme === 'dark' ? '💀' : '📸')}
+                        {spotlightMemory.isTimeCapsule
+                          ? (currentTheme === 'dark' ? '⚰️' : '⏱️')
+                          : (currentTheme === 'dark' ? '🕯️' : '📸')}
                       </span>
                       <p className="text-white font-semibold text-sm">
                         {spotlightMemory.uploadedAt?.toDate
@@ -753,8 +759,8 @@ function DashboardContent() {
         className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl`}
       >
         <h2 className="text-lg md:text-2xl font-display font-bold mb-4 md:mb-6 flex items-center gap-2">
-          <span className="text-xl md:text-2xl">👨‍👩‍👧‍👦</span>
-          Family Members
+          <span className="text-xl md:text-2xl">{currentTheme === 'dark' ? '🕯️' : '👪'}</span>
+          {currentTheme === 'dark' ? 'Coven Members' : 'Family Members'}
         </h2>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 md:gap-4">
@@ -777,11 +783,13 @@ function DashboardContent() {
                 {member.displayName}
               </p>
               <p className={`text-[10px] md:text-xs ${theme.colors.textMuted}`}>
-                {member.role === 'parent' ? '👑 Parent' : '🎮 Kid'}
+                {member.role === 'parent'
+                  ? (currentTheme === 'dark' ? '🧛 Parent' : '👑 Parent')
+                  : (currentTheme === 'dark' ? '🧟 Kid' : '🎮 Kid')}
               </p>
               {member.role !== 'parent' && (
                 <p className="text-[10px] md:text-xs font-bold text-yellow-600 mt-0.5 md:mt-1">
-                  ⭐ {member.points || 0}
+                  {currentTheme === 'dark' ? '🩸' : '⭐'} {member.points || 0}
                 </p>
               )}
             </motion.div>
@@ -814,7 +822,9 @@ function DashboardContent() {
                       {selectedMember.displayName}
                     </h2>
                     <p className="text-gray-600">
-                      {selectedMember.role === 'parent' ? '👑 Parent' : '🎮 Kid'}
+                      {selectedMember.role === 'parent'
+                        ? (currentTheme === 'dark' ? '🧛 Parent' : '👑 Parent')
+                        : (currentTheme === 'dark' ? '🧟 Kid' : '🎮 Kid')}
                     </p>
                   </div>
                 </div>
@@ -831,7 +841,7 @@ function DashboardContent() {
                 <div className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-2xl p-4 mb-6 text-center">
                   <p className="text-gray-100 font-semibold mb-1">Total Points</p>
                   <p className="text-4xl font-display font-bold text-gray-100">
-                    ⭐ {selectedMember.points || 0}
+                    {currentTheme === 'dark' ? '🩸' : '⭐'} {selectedMember.points || 0}
                   </p>
                 </div>
               )}

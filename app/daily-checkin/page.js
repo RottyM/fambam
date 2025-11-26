@@ -134,7 +134,9 @@ function DailyCheckInContent() {
     <>
       <div className="mb-8">
         <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
-          <span className="gradient-text">Daily Check-In</span>
+          <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
+            {currentTheme === 'dark' ? 'Midnight Musings' : 'Daily Check-In'}
+          </span>
         </h1>
         <p className={`${theme.colors.textMuted} font-semibold`}>
           Share your day with the family ❤️
