@@ -512,7 +512,7 @@ function CalendarContent() {
           ) : (
             filteredEvents.map(event => {
               const category = EVENT_CATEGORIES.find(c => c.value === event.category) || FALLBACK_CATEGORY;
-              const badgeBg = isDarkMode ? category.darkBg : category.lightBg;
+
               const gradient = category.gradient || 'from-gray-400 to-gray-600';
               
               return (

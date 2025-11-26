@@ -125,33 +125,17 @@ const MedicationPage = () => {
   const handleAddMedication = async (e) => {
     e.preventDefault();
 
-    console.log('🔍 === MEDICATION SAVE STARTED ===');
-    console.log('1. user.familyId:', user?.familyId);
-    console.log('2. user.uid:', user?.uid);
-    console.log('3. newMedication:', newMedication);
-    console.log('🎯 Custom Days being saved:', newMedication.customDays);
-    console.log('🎯 Custom Days length:', newMedication.customDays.length);
-
     if (!user?.familyId) {
-      console.log('❌ BLOCKED: No familyId');
       toast.error('You must be in a family to add medications.');
       return;
     }
 
     try {
-      const path = `families/${user.familyId}/medications`;
-      console.log('4. Firestore path:', path);
-      console.log('5. Calling addDoc...');
-
-      const docRef = await addDoc(collection(db, 'families', user.familyId, 'medications'), {
+      await addDoc(collection(db, 'families', user.familyId, 'medications'), {
         ...newMedication,
         createdBy: user.uid,
         createdAt: serverTimestamp(),
       });
-
-      console.log('✅ 6. Document created!');
-      console.log('7. Document ID:', docRef.id);
-      console.log('8. Full path:', docRef.path);
 
       setNewMedication({
         name: '',
@@ -168,33 +152,9 @@ const MedicationPage = () => {
       });
       setShowAddModal(false);
       toast.success('Medication added successfully! 💊');
-      console.log('✅ 9. Success toast shown');
     } catch (error) {
-      console.log('❌ ERROR CAUGHT:', error);
-      console.log('Error code:', error.code);
-      console.log('Error message:', error.message);
-      console.log('Full error:', error);
       toast.error('Failed to add medication.');
       console.error("Error adding medication: ", error);
-    }
-  };
-
-  const ignoredHandleMarkAsTaken = async (medicationId, time) => {
-    if (!user?.familyId) {
-      toast.error('You must be in a family to mark medications as taken.');
-      return;
-    }
-    try {
-      const medicationRef = doc(db, 'families', user.familyId, 'medications', medicationId);
-      await addDoc(collection(medicationRef, 'taken_log'), {
-        takenAt: serverTimestamp(),
-        takenBy: user.uid,
-        scheduledTime: time,
-      });
-      toast.success('Medication marked as taken! ✅');
-    } catch (error) {
-      toast.error('Failed to mark medication as taken.');
-      console.error('Error marking medication as taken: ', error);
     }
   };
 

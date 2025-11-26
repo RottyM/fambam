@@ -251,9 +251,9 @@ function MemoriesContent() {
         }
       );
     } catch (error) {
+      console.error('Error updating like:', error);
       toast.error('Failed to update like');
-    }
-  };
+    }  };
 
   const addComment = async (e) => {
     e.preventDefault();
