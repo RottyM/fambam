@@ -11,7 +11,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, isSameMonth, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
 import { 
   FaPlus, FaTrash, FaClock, FaMapMarkerAlt, FaUser, FaTimes, 
-  FaFilter, FaChevronLeft, FaChevronRight
+  FaFilter, FaChevronLeft, FaChevronRight, FaCalendarAlt,
+  FaBirthdayCake, FaRunning, FaSchool, FaBell, FaUsers, FaAsterisk
 } from 'react-icons/fa';
 import { httpsCallable } from 'firebase/functions';
 import { functions, db } from '@/lib/firebase';
@@ -26,7 +27,17 @@ const EVENT_CATEGORIES = [
   { value: 'school', label: 'School', emoji: '📚', Icon: FaSchool, lightBg: 'bg-yellow-100 text-yellow-800', darkBg: 'bg-amber-900/60 text-amber-100', gradient: 'from-yellow-400 to-amber-600' },
   { value: 'reminder', label: 'Reminder', emoji: '⏰', Icon: FaBell, lightBg: 'bg-purple-100 text-purple-800', darkBg: 'bg-violet-900/60 text-purple-100', gradient: 'from-purple-400 to-violet-600' },
   { value: 'social', label: 'Social', emoji: '🎉', Icon: FaUsers, lightBg: 'bg-orange-100 text-orange-800', darkBg: 'bg-orange-900/60 text-orange-100', gradient: 'from-orange-400 to-orange-600' },
-  { value: 'other', label: 'Other', emoji: '📌', Icon: FaAsterisk, lightBg: 'bg-gray-200 text-gray-800', darkBg: 'bg-gray-800 text-gray-100', gradient: 'from-gray-400 to-gray-600' },
+  { value: 'other', label: 'Other', emoji: '⭐', Icon: FaAsterisk, lightBg: 'bg-gray-200 text-gray-800', darkBg: 'bg-gray-800 text-gray-100', gradient: 'from-gray-400 to-gray-600' },
+];
+
+const REMINDER_OPTIONS = [
+  { value: 15, label: '15 min before', icon: '⏰' },
+  { value: 30, label: '30 min before', icon: '⏰' },
+  { value: 60, label: '1 hour before', icon: '⏰' },
+  { value: 120, label: '2 hours before', icon: '⏰' },
+  { value: 1440, label: '1 day before', icon: '📅' },
+  { value: 2880, label: '2 days before', icon: '📅' },
+  { value: 10080, label: '1 week before', icon: '📅' },
 ];
 
 function CalendarContent() {
@@ -40,16 +51,18 @@ function CalendarContent() {
   const [viewMode, setViewMode] = useState('list'); 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
-  
-  const [filterCategory, setFilterCategory] = useState('all');
-  const [filterMember, setFilterMember] = useState('all');
   const [newEvent, setNewEvent] = useState({
-    title: '', description: '', start: '', end: '', category: 'other', location: '', assignedTo: [], allDay: false, recurring: 'none',
+    title: '', description: '', start: '', end: '', 
+    category: 'other', location: '', assignedTo: [], 
+    allDay: false, recurring: 'none',
+    reminders: []  // ADD THIS
   });
   
   const [syncing, setSyncing] = useState(false);
   const [googleCalendarId, setGoogleCalendarId] = useState(null);
   const [settingUpGoogle, setSettingUpGoogle] = useState(false);
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterMember, setFilterMember] = useState('all');
 
   const isDarkMode = currentTheme === 'dark';
   const pillBase = 'px-4 py-2 rounded-full border-2 font-bold transition-all flex items-center gap-2 whitespace-nowrap';
@@ -101,7 +114,7 @@ function CalendarContent() {
       const eventRef = await addDoc(collection(db, 'families', userData.familyId, 'calendar-events'), {
         title: newEvent.title, description: newEvent.description, start: new Date(newEvent.start), end: new Date(newEvent.end),
         category: newEvent.category, location: newEvent.location, assignedTo: newEvent.assignedTo, allDay: newEvent.allDay,
-        recurring: newEvent.recurring, createdBy: userData.uid, createdAt: serverTimestamp(),
+        recurring: newEvent.recurring, reminders: newEvent.reminders || [], createdBy: userData.uid, createdAt: serverTimestamp(),
       });
       try {
         const syncEvent = httpsCallable(functions, 'syncEventToGoogleCalendar');
@@ -113,7 +126,7 @@ function CalendarContent() {
 
       toast.success('Event added!');
       setShowAddModal(false);
-      setNewEvent({ title: '', description: '', start: '', end: '', category: 'other', location: '', assignedTo: [], allDay: false, recurring: 'none' });
+      setNewEvent({ title: '', description: '', start: '', end: '', category: 'other', location: '', assignedTo: [], allDay: false, recurring: 'none', reminders: [] });
     } catch (error) {
       console.error('Failed to add event', error);
       toast.error('Failed to add event');
@@ -143,7 +156,18 @@ function CalendarContent() {
     setNewEvent({ ...newEvent, assignedTo: current.includes(memberId) ? current.filter(id => id !== memberId) : [...current, memberId] });
   };
 
-  const filteredEvents = events.filter(event => {
+  const toggleReminder = (minutes) => {
+  const current = newEvent.reminders || [];
+  setNewEvent({ 
+    ...newEvent, 
+    reminders: current.includes(minutes) 
+      ? current.filter(m => m !== minutes) 
+      : [...current, minutes] 
+  });
+};
+
+  const filteredEvents = (events || []).filter(event => {
+    if (!event) return false;
     if (filterCategory !== 'all' && event.category !== filterCategory) return false;
     if (filterMember !== 'all' && !event.assignedTo?.includes(filterMember)) return false;
     return true;
@@ -487,8 +511,9 @@ function CalendarContent() {
             </motion.div>
           ) : (
             filteredEvents.map(event => {
-              const category = EVENT_CATEGORIES.find(c => c.value === event.category);
-              const badgeBg = isDarkMode ? category?.darkBg : category?.lightBg;
+              const category = EVENT_CATEGORIES.find(c => c.value === event.category) || FALLBACK_CATEGORY;
+              const badgeBg = isDarkMode ? category.darkBg : category.lightBg;
+              const gradient = category.gradient || 'from-gray-400 to-gray-600';
               
               return (
                 <motion.div
@@ -719,6 +744,39 @@ function CalendarContent() {
                     <option value="monthly">Monthly</option>
                     <option value="yearly">Yearly</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className={`block text-xs font-bold ${theme.colors.textMuted} mb-2 flex items-center gap-2`}>
+                    <FaBell /> Reminders (optional)
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {REMINDER_OPTIONS.map(reminder => (
+                      <motion.button
+                        key={reminder.value}
+                        type="button"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => toggleReminder(reminder.value)}
+                        className={`p-2.5 rounded-xl border-2 text-xs flex items-center gap-2 font-semibold transition-all ${
+                          newEvent.reminders?.includes(reminder.value)
+                            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent shadow-md'
+                            : currentTheme === 'dark'
+                              ? 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600'
+                              : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <span className="text-base">{reminder.icon}</span>
+                        <span className="leading-tight">{reminder.label}</span>
+                      </motion.button>
+                    ))}
+                  </div>
+                  {newEvent.reminders?.length > 0 && (
+                    <p className={`text-xs ${theme.colors.textMuted} mt-2 italic flex items-center gap-1`}>
+                      <FaBell size={10} />
+                      {newEvent.reminders.length} reminder{newEvent.reminders.length !== 1 ? 's' : ''} set
+                    </p>
+                  )}
                 </div>
 
                 <div>
