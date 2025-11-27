@@ -50,7 +50,9 @@ function TodoItem({ todo, members = [], userId, onToggle, onUpdate, onDelete }) 
   };
   
   const handleUpdate = () => {
-    onUpdate(todo.id, editedTodo);
+    const { title, assignedTo, priority, dueDate } = editedTodo;
+    const updates = { title, assignedTo, priority, dueDate };
+    onUpdate(todo.id, updates);
     setIsEditing(false);
   };
 
@@ -71,6 +73,11 @@ function TodoItem({ todo, members = [], userId, onToggle, onUpdate, onDelete }) 
     const d = date.toDate ? date.toDate() : new Date(date);
     if (isNaN(d.getTime())) return '';
     return d.toISOString().split('T')[0];
+  };
+  
+  const handleEditClick = () => {
+    setEditedTodo({ ...todo });
+    setIsEditing(true);
   };
 
   if (isEditing) {
@@ -104,7 +111,7 @@ function TodoItem({ todo, members = [], userId, onToggle, onUpdate, onDelete }) 
           <input
             type="date"
             value={getInputValue(editedTodo.dueDate)}
-            onChange={(e) => setEditedTodo({ ...editedTodo, dueDate: e.target.value ? new Date(e.target.value) : null })}
+            onChange={(e) => setEditedTodo({ ...editedTodo, dueDate: e.target.value ? new Date(e.target.value.replace(/-/g, '/')) : null })}
             className={`w-full px-3 py-2 rounded-lg border-2 font-semibold bg-transparent ${currentTheme === 'dark' ? 'border-gray-600' : 'border-gray-300'} focus:border-purple-500`}
           />
         </div>
@@ -157,7 +164,7 @@ function TodoItem({ todo, members = [], userId, onToggle, onUpdate, onDelete }) 
 
       {(userId === todo.assignedBy || userId === todo.assignedTo) && (
         <div className="flex items-center gap-2">
-          <button onClick={() => setIsEditing(true)} className={`p-2 rounded-full transition-colors ${currentTheme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`} aria-label="Edit todo"><FaEdit /></button>
+          <button onClick={handleEditClick} className={`p-2 rounded-full transition-colors ${currentTheme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`} aria-label="Edit todo"><FaEdit /></button>
           <button onClick={handleDelete} className={`p-2 rounded-full transition-colors ${currentTheme === 'dark' ? 'text-gray-400 hover:text-red-500 hover:bg-gray-700' : 'text-gray-500 hover:text-red-600 hover:bg-gray-200'}`} aria-label="Delete todo"><FaTrash /></button>
         </div>
       )}

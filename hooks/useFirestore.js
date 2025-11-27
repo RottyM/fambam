@@ -53,7 +53,8 @@ export function useTodos() {
 
       // Convert dueDate string to a Date object for Firestore
       if (dataToAdd.dueDate) {
-        dataToAdd.dueDate = new Date(dataToAdd.dueDate);
+        // Replace dashes with slashes to parse in local timezone
+        dataToAdd.dueDate = new Date(dataToAdd.dueDate.replace(/-/g, '/'));
       } else {
         delete dataToAdd.dueDate; // Ensure it's not stored if empty
       }
@@ -71,18 +72,7 @@ export function useTodos() {
     }
   };
 
-  const updateTodo = async (todoId, updates) => {
-    try {
-      await updateDoc(
-        doc(db, 'families', userData.familyId, 'todos', todoId),
-        updates
-      );
-      toast.success('Todo updated!');
-    } catch (error) {
-      toast.error('Failed to update todo');
-      console.error(error);
-    }
-  };
+
 
   const updateTodo = async (todoId, updates) => {
     try {
