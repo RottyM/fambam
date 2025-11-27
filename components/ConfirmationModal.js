@@ -11,7 +11,6 @@ export default function ConfirmationModal({
   onCancel,
   confirmText = 'Delete',
   cancelText = 'Cancel',
-  icon: Icon = FaTrash,
   confirmButtonClass = 'bg-red-600 hover:bg-red-700',
 }) {
   const { theme } = useTheme();
@@ -41,7 +40,7 @@ export default function ConfirmationModal({
                   animate={{ scale: 1, rotate: 0 }}
                   transition={{ delay: 0.1, type: 'spring', stiffness: 400, damping: 15 }}
                 >
-                  <Icon className="text-red-500" size={24} />
+                  <FaTrash className="text-red-500" size={24} /> {/* Hardcoded FaTrash */}
                 </motion.div>
               </div>
             </div>
