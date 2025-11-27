@@ -4,6 +4,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { FamilyProvider } from '@/contexts/FamilyContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import { ConfirmationProvider } from '@/contexts/ConfirmationContext';
 import { Toaster } from 'react-hot-toast';
 import ClientLayout from '@/components/ClientLayout';
 
@@ -60,36 +61,38 @@ export default function RootLayout({ children }) {
         <ThemeProvider>
           <AuthProvider>
             <FamilyProvider>
-              <NotificationProvider>
-                <ClientLayout>
-                  {children}
-                  <Toaster
-                    position="top-right"
-                    toastOptions={{
-                      duration: 3000,
-                      style: {
-                        background: '#fff',
-                        color: '#363636',
-                        fontWeight: '600',
-                        borderRadius: '12px',
-                        padding: '16px',
-                      },
-                      success: {
-                        iconTheme: {
-                          primary: '#10b981',
-                          secondary: '#fff',
+              <ConfirmationProvider>
+                <NotificationProvider>
+                  <ClientLayout>
+                    {children}
+                    <Toaster
+                      position="top-right"
+                      toastOptions={{
+                        duration: 3000,
+                        style: {
+                          background: '#fff',
+                          color: '#363636',
+                          fontWeight: '600',
+                          borderRadius: '12px',
+                          padding: '16px',
                         },
-                      },
-                      error: {
-                        iconTheme: {
-                          primary: '#ef4444',
-                          secondary: '#fff',
+                        success: {
+                          iconTheme: {
+                            primary: '#10b981',
+                            secondary: '#fff',
+                          },
                         },
-                      },
-                    }}
-                  />
-                </ClientLayout>
-              </NotificationProvider>
+                        error: {
+                          iconTheme: {
+                            primary: '#ef4444',
+                            secondary: '#fff',
+                          },
+                        },
+                      }}
+                    />
+                  </ClientLayout>
+                </NotificationProvider>
+              </ConfirmationProvider>
             </FamilyProvider>
           </AuthProvider>
         </ThemeProvider>
