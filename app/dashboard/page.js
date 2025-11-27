@@ -50,10 +50,30 @@ function StatsCard({ icon, title, value, color, href }) {
   );
 }
 
+import { useRouter } from 'next/navigation'; // Import useRouter
+
 function DashboardContent() {
-  const { userData } = useAuth();
+  const { user, userData, loading } = useAuth(); // Destructure user and loading
   const { family, members } = useFamily();
   const { theme, currentTheme } = useTheme();
+  const router = useRouter(); // Initialize useRouter
+
+  // Redirect if not authenticated and not loading
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/'); // Redirect to login page
+    }
+  }, [user, loading, router]);
+
+  // Show loading indicator or redirect early
+  if (loading || !user) {
+    return (
+      <div className="flex justify-center items-center h-screen text-2xl font-semibold">
+        {/* You can replace this with a more elaborate spinner/loader */}
+        Loading Dashboard...
+      </div>
+    );
+  }
   const { todos } = useTodos();
   const { chores } = useChores();
   const { memories } = useMemories();
