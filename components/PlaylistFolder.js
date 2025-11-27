@@ -3,6 +3,7 @@
 import { useDrop } from 'react-dnd';
 import { FaFolder, FaFolderOpen, FaTimes, FaPlay } from 'react-icons/fa';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useConfirmation } from '@/contexts/ConfirmationContext';
 
 export const ItemTypes = {
     JAM: 'jam',
@@ -10,6 +11,7 @@ export const ItemTypes = {
 
 export default function PlaylistFolder({ folder, isActive, onClick, onDropJam, onDelete, onPlay, count }) {
   const { theme } = useTheme();
+  const { showConfirmation } = useConfirmation();
 
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
     accept: ItemTypes.JAM,
@@ -49,9 +51,11 @@ export default function PlaylistFolder({ folder, isActive, onClick, onDropJam, o
         <button
           onClick={(e) => {
             e.stopPropagation(); // Prevent clicking the folder itself
-            if(confirm(`Delete playlist "${folder.name}"? (Songs won't be deleted)`)) {
-                onDelete(folder.id);
-            }
+            showConfirmation({
+              title: 'Delete Playlist',
+              message: `Are you sure you want to delete the playlist "${folder.name}"? The songs inside will not be deleted.`,
+              onConfirm: () => onDelete(folder.id),
+            });
           }}
           className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 z-10"
           title="Delete Playlist"

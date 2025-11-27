@@ -5,6 +5,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { useCredentials } from '@/hooks/useFirestore';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useConfirmation } from '@/contexts/ConfirmationContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaPlus, FaTimes, FaEdit, FaTrash, FaEye, FaEyeSlash, FaExternalLinkAlt, FaCopy, FaLock, FaSchool, FaBook, FaStethoscope, FaBolt, FaFilm, FaWallet, FaAsterisk } from 'react-icons/fa';
 import toast from 'react-hot-toast';
@@ -20,6 +21,7 @@ const CATEGORIES = [
 ];
 
 function CredentialCard({ credential, onEdit, onDelete, isParent, currentTheme }) {
+  const { showConfirmation } = useConfirmation();
   const [showPassword, setShowPassword] = useState(false);
   const category = CATEGORIES.find(c => c.value === credential.category) || CATEGORIES[CATEGORIES.length - 1];
   const categoryTone = currentTheme === 'dark' ? category.dark : category.light;
@@ -57,9 +59,11 @@ function CredentialCard({ credential, onEdit, onDelete, isParent, currentTheme }
             </button>
             <button
               onClick={() => {
-                if (confirm(`Delete "${credential.name}"?`)) {
-                  onDelete(credential.id);
-                }
+                showConfirmation({
+                  title: 'Delete Credential',
+                  message: `Are you sure you want to permanently delete the credential for "${credential.name}"?`,
+                  onConfirm: () => onDelete(credential.id),
+                });
               }}
               className={`${currentTheme === 'dark' ? 'text-red-300 hover:text-red-200 hover:bg-white/10' : 'text-red-600 hover:text-red-800 hover:bg-white/50'} p-2 rounded-lg transition-all`}
               title="Delete"

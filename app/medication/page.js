@@ -6,6 +6,7 @@ import { collection, query, orderBy, onSnapshot, addDoc, deleteDoc, doc, serverT
 import { useAuth } from '../../contexts/AuthContext';
 import { useFamily } from '../../contexts/FamilyContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useConfirmation } from '@/contexts/ConfirmationContext';
 import { FaPlus, FaTrash, FaCalendar, FaUser, FaTimes, FaPrescriptionBottleAlt, FaExclamationTriangle } from 'react-icons/fa';
 import DashboardLayout from '../../components/DashboardLayout';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -36,6 +37,7 @@ const MedicationPage = () => {
   const { userData: user } = useAuth();
   const { members } = useFamily();
   const { theme, currentTheme } = useTheme();
+  const { showConfirmation } = useConfirmation();
   const [medications, setMedications] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -158,20 +160,24 @@ const MedicationPage = () => {
     }
   };
 
-  const handleDeleteMedication = async (id, medName) => {
-    if (confirm(`Delete ${medName}?`)) {
-      if (!user?.familyId) {
-        toast.error('You must be in a family to delete medications.');
-        return;
-      }
-      try {
-        await deleteDoc(doc(db, 'families', user.familyId, 'medications', id));
-        toast.success('Medication deleted');
-      } catch (error) {
-        toast.error('Failed to delete medication.');
-      console.error('Failed to delete medication:', error);
-      }
-    }
+  const handleDeleteMedication = (id, medName) => {
+    showConfirmation({
+      title: 'Delete Medication',
+      message: `Are you sure you want to delete ${medName}?`,
+      onConfirm: async () => {
+        if (!user?.familyId) {
+          toast.error('You must be in a family to delete medications.');
+          return;
+        }
+        try {
+          await deleteDoc(doc(db, 'families', user.familyId, 'medications', id));
+          toast.success('Medication deleted');
+        } catch (error) {
+          toast.error('Failed to delete medication.');
+          console.error('Failed to delete medication:', error);
+        }
+      },
+    });
   };
 
   const handleExpandDrugInfo = async (medId, medName) => {

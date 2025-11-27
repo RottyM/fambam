@@ -3,6 +3,7 @@
 import { useFamily } from '@/contexts/FamilyContext';
 import UserAvatar from '@/components/UserAvatar';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useConfirmation } from '@/contexts/ConfirmationContext';
 import { FaSpotify, FaTrash, FaYoutube, FaPlay, FaHeart, FaRegHeart, FaCompactDisc } from 'react-icons/fa'; 
 import { useAuth } from '@/contexts/AuthContext';
 import { useDrag } from 'react-dnd';
@@ -13,6 +14,7 @@ export default function JamCard({ jam, onDelete, onPlayVideo, onToggleLike }) {
   const { getMemberById } = useFamily();
   const { theme, currentTheme } = useTheme();
   const { userData } = useAuth();
+  const { showConfirmation } = useConfirmation();
 
   const uploader = getMemberById(jam.userId);
   const isOwner = userData?.uid === jam.userId;
@@ -113,7 +115,14 @@ export default function JamCard({ jam, onDelete, onPlayVideo, onToggleLike }) {
             <span className="text-[10px] text-gray-400 uppercase tracking-wide">{date}</span>
             {isOwner && (
                 <button
-                    onClick={(e) => { e.stopPropagation(); if (confirm('Delete?')) onDelete(jam.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      showConfirmation({
+                        title: 'Delete Jam',
+                        message: `Are you sure you want to delete "${jam.title}"?`,
+                        onConfirm: () => onDelete(jam.id),
+                      });
+                    }}
                     className="text-gray-300 hover:text-red-400 transition-colors ml-1"
                 >
                     <FaTrash size={12} />

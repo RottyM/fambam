@@ -5,6 +5,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { useRecipes, useGroceries } from '@/hooks/useFirestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useConfirmation } from '@/contexts/ConfirmationContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { searchRecipes, getRecipeInformation, getRecipeNutrition } from '@/lib/spoonacular';
 import { enrichRecipeWithUSDA, formatNutrientName } from '@/lib/usdaEnrichment';
@@ -59,6 +60,7 @@ function RecipesContent() {
   const { addGroceryItem } = useGroceries();
   const { userData } = useAuth();
   const { theme, currentTheme } = useTheme();
+  const { showConfirmation } = useConfirmation();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showScanModal, setShowScanModal] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
@@ -655,19 +657,20 @@ function RecipesContent() {
                       >
                         <FaShoppingCart /> Add to List
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm(`Delete "${recipe.name}"?`)) {
-                            deleteRecipe(recipe.id);
-                          }
-                        }}
-                      className="text-red-600 p-2 rounded-xl transition-all flex items-center justify-center font-bold hover:text-red-700"
-                      title="Delete recipe"
-                    >
-                      <FaTrash />
-                    </button>
-                    </div>
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                showConfirmation({
+                                                  title: 'Delete Recipe',
+                                                  message: `Are you sure you want to delete "${recipe.name}"?`,
+                                                  onConfirm: () => deleteRecipe(recipe.id),
+                                                });
+                                              }}
+                                              className="text-red-600 p-2 rounded-xl transition-all flex items-center justify-center font-bold hover:text-red-700"
+                                              title="Delete recipe"
+                                            >
+                                              <FaTrash />
+                                            </button>                    </div>
                   </div>
                 </motion.div>
               ))}
@@ -767,8 +770,14 @@ function RecipesContent() {
               <div className="flex gap-2">
                 <button
                   onClick={() => {
-                    deleteRecipe(selectedRecipe.id);
-                    setSelectedRecipe(null);
+                    showConfirmation({
+                      title: 'Delete Recipe',
+                      message: `Are you sure you want to delete "${selectedRecipe.name}"?`,
+                      onConfirm: () => {
+                        deleteRecipe(selectedRecipe.id);
+                        setSelectedRecipe(null);
+                      },
+                    });
                   }}
                       className="text-red-500 px-3 py-2 rounded-full font-bold hover:text-red-600"
                       title="Delete recipe"

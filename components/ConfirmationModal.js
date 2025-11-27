@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
-import { FaExclamationTriangle, FaTimes } from 'react-icons/fa';
+import { FaTrash, FaTimes } from 'react-icons/fa';
 
 export default function ConfirmationModal({
   title = 'Are you sure?',
@@ -11,7 +11,7 @@ export default function ConfirmationModal({
   onCancel,
   confirmText = 'Delete',
   cancelText = 'Cancel',
-  icon: Icon = FaExclamationTriangle,
+  icon: Icon = FaTrash,
   confirmButtonClass = 'bg-red-600 hover:bg-red-700',
 }) {
   const { theme } = useTheme();
@@ -29,13 +29,20 @@ export default function ConfirmationModal({
           initial={{ scale: 0.9, y: 20 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.9, y: 20 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           onClick={(e) => e.stopPropagation()}
           className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-md w-full shadow-2xl border ${theme.colors.border}`}
         >
           <div className="flex items-start">
             <div className="mr-4 flex-shrink-0">
-              <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-full">
-                <Icon className="text-red-500" size={24} />
+              <div className={`p-3 rounded-full ${theme.colors.bg}`}>
+                <motion.div
+                  initial={{ scale: 0, rotate: -45 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ delay: 0.1, type: 'spring', stiffness: 400, damping: 15 }}
+                >
+                  <Icon className="text-red-500" size={24} />
+                </motion.div>
               </div>
             </div>
             <div className="flex-1">
@@ -48,9 +55,7 @@ export default function ConfirmationModal({
             </div>
             <button
               onClick={onCancel}
-              className={`-mt-2 -mr-2 p-2 rounded-xl transition-colors ${
-                theme.colors.bg === 'bg-white' ? 'hover:bg-gray-100' : 'hover:bg-gray-700'
-              }`}
+              className={`-mt-2 -mr-2 p-2 rounded-full transition-colors ${theme.colors.textMuted} hover:${theme.colors.text}`}
             >
               <FaTimes />
             </button>
@@ -61,9 +66,7 @@ export default function ConfirmationModal({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onCancel}
-              className={`px-6 py-3 rounded-xl font-bold transition-colors ${
-                theme.colors.bg === 'bg-white' ? 'bg-gray-200 hover:bg-gray-300' : 'bg-gray-700 hover:bg-gray-600'
-              }`}
+              className={`px-6 py-3 rounded-xl font-bold transition-colors border-2 ${theme.colors.border} ${theme.colors.textMuted} hover:${theme.colors.text}`}
             >
               {cancelText}
             </motion.button>
