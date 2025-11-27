@@ -268,7 +268,7 @@ export default function DashboardLayout({ children }) {
 
       {/* Main content area - Pushed to the right */}
       <div className="lg:pl-72 min-h-screen transition-all duration-300 ease-in-out">
-        <div ref={mainRef} className="pt-16 px-4 pb-4 md:p-8 lg:p-12 max-w-7xl mx-auto" data-page-content>
+        <div ref={mainRef} className="pt-16 px-4 pb-24 md:p-8 lg:p-12 max-w-7xl mx-auto" data-page-content>
           {children}
         </div>
       </div>
