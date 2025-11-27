@@ -49,8 +49,17 @@ export function useTodos() {
 
   const addTodo = async (todoData) => {
     try {
+      const dataToAdd = { ...todoData };
+
+      // Convert dueDate string to a Date object for Firestore
+      if (dataToAdd.dueDate) {
+        dataToAdd.dueDate = new Date(dataToAdd.dueDate);
+      } else {
+        delete dataToAdd.dueDate; // Ensure it's not stored if empty
+      }
+
       await addDoc(collection(db, 'families', userData.familyId, 'todos'), {
-        ...todoData,
+        ...dataToAdd,
         assignedBy: userData.uid,
         completed: false,
         createdAt: serverTimestamp(),
@@ -68,6 +77,17 @@ export function useTodos() {
         doc(db, 'families', userData.familyId, 'todos', todoId),
         updates
       );
+      toast.success('Todo updated!');
+    } catch (error) {
+      toast.error('Failed to update todo');
+      console.error(error);
+    }
+  };
+
+  const updateTodo = async (todoId, updates) => {
+    try {
+      const todoRef = doc(db, 'families', userData.familyId, 'todos', todoId);
+      await updateDoc(todoRef, updates);
       toast.success('Todo updated!');
     } catch (error) {
       toast.error('Failed to update todo');

@@ -19,7 +19,7 @@ const PRIORITY_OPTIONS = [
 ];
 
 function TodosContent() {
-  const { todos, loading, addTodo, toggleTodo } = useTodos();
+  const { todos, loading, addTodo, toggleTodo, updateTodo, deleteTodo } = useTodos();
   const { members } = useFamily();
   const { userData } = useAuth();
   const { theme, currentTheme } = useTheme();
@@ -228,6 +228,8 @@ function TodosContent() {
               members={members}
               userId={userData?.uid}
               onToggle={() => toggleTodo(todo.id, todo.completed)}
+              onUpdate={updateTodo}
+              onDelete={deleteTodo}
             />
           ))}
         </div>
@@ -245,6 +247,8 @@ function TodosContent() {
                 members={members}
                 userId={userData?.uid}
                 onToggle={() => toggleTodo(todo.id, todo.completed)}
+                onUpdate={updateTodo}
+                onDelete={deleteTodo}
               />
             ))}
           </div>
