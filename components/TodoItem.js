@@ -166,7 +166,7 @@ function TodoItem({ todo, members = [], userId, onToggle, onUpdate, onDelete }) 
 
       {/* Third Row: Avatar + Name, Edit + Delete Buttons */}
       {(assignedMember || (userId === todo.assignedBy || userId === todo.assignedTo)) && ( /* Only show if assigned or has actions */
-        <div className="flex items-center justify-between w-full mt-2 pt-2 border-t border-gray-100 dark:border-gray-600">
+        <div className="flex items-center justify-between w-full mt-2 pt-2 border-t border-gray-100 dark:border-gray-500">
           {/* Assigned Member */}
           <div className="flex items-center gap-2 flex-grow">
             <UserAvatar user={assignedMember} size={28} />
