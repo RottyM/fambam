@@ -130,49 +130,58 @@ function TodoItem({ todo, members = [], userId, onToggle, onUpdate, onDelete }) 
 
   return (
     <motion.div
-      className={`relative flex flex-wrap items-center justify-between gap-4 p-4 mb-4 rounded-xl border-l-4 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02] ${priorityClass} ${isOverdue ? 'border-red-500 dark:border-red-400' : ''}`}
+      className={`relative flex flex-col gap-2 p-4 mb-4 rounded-xl border-l-4 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02] ${priorityClass} ${isOverdue ? 'border-red-500 dark:border-red-400' : ''}`}
       whileHover={{ y: -2 }}
     >
-      {/* Left Block: Checkbox, Icon, Title, Priority, Due Date */}
-      <div className="flex items-center gap-3 flex-1 min-w-0"> {/* flex-1 min-w-0 allows this block to take space and shrink */}
-        <input
-          type="checkbox"
-          checked={!!todo.completed}
-          onChange={handleToggle}
-          className="h-5 w-5 accent-purple-500 rounded cursor-pointer bg-transparent"
-        />
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl">
-          {todo.iconId ? getIcon(todo.iconId) : '??'}
-        </div>
-        <div className="flex flex-col">
-          <h3 className={`font-bold text-lg ${todo.completed ? 'line-through' : ''}`}>{todo.title}</h3>
-          <p className={`text-sm ${isOverdue ? 'text-red-500 dark:text-red-400' : textSub}`}>
-            {todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)} Priority
-          </p>
-          {/* Due Date moved closer to title */}
-          <div className="flex items-center gap-2 text-sm mt-1">
-            <FaRegCalendarCheck className="text-purple-500 dark:text-purple-400" size={14} />
-            <span className={`${isOverdue ? 'text-red-500 font-bold' : textSub}`}>Due {getDueDate(todo.dueDate)}</span>
+      {/* First Row: Checkbox, Icon, Title */}
+      <div className="flex items-center justify-between w-full">
+        {/* Left: Checkbox + Icon */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <input
+            type="checkbox"
+            checked={!!todo.completed}
+            onChange={handleToggle}
+            className="h-5 w-5 accent-purple-500 rounded cursor-pointer bg-transparent"
+          />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl">
+            {todo.iconId ? getIcon(todo.iconId) : '??'}
           </div>
+        </div>
+        {/* Right: Title (can now flow freely) */}
+        <h3 className={`flex-grow font-bold text-lg ${todo.completed ? 'line-through' : ''}`}>{todo.title}</h3>
+      </div>
+
+      {/* Second Row: Priority, Due Date */}
+      <div className="flex items-center justify-between w-full text-sm">
+        {/* Left: Priority */}
+        <p className={`flex-grow ${isOverdue ? 'text-red-500 dark:text-red-400' : textSub}`}>
+          {todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)} Priority
+        </p>
+        {/* Right: Due Date */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <FaRegCalendarCheck className="text-purple-500 dark:text-purple-400" size={14} />
+          <span className={`${isOverdue ? 'text-red-500 font-bold' : textSub}`}>Due {getDueDate(todo.dueDate)}</span>
         </div>
       </div>
 
-      {/* Right Block: Avatar + Name, Edit + Delete Buttons */}
-      <div className="flex items-center gap-4 ml-auto"> {/* ml-auto pushes this block to the right */}
-        {/* Assigned Member */}
-        <div className="flex items-center gap-2">
-          <UserAvatar user={assignedMember} size={28} />
-          <p className={`font-semibold ${textMain}`}>{displayName}</p>
-        </div>
-
-        {/* Edit and Delete Buttons */}
-        {(userId === todo.assignedBy || userId === todo.assignedTo) && (
-          <div className="flex items-center gap-2">
-            <button onClick={handleEditClick} className={`p-2 rounded-full transition-colors ${currentTheme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`} aria-label="Edit todo"><FaEdit /></button>
-            <button onClick={handleDelete} className={`p-2 rounded-full transition-colors ${currentTheme === 'dark' ? 'text-gray-400 hover:text-red-500 hover:bg-gray-700' : 'text-gray-500 hover:text-red-600 hover:bg-gray-200'}`} aria-label="Delete todo"><FaTrash /></button>
+      {/* Third Row: Avatar + Name, Edit + Delete Buttons */}
+      {(assignedMember || (userId === todo.assignedBy || userId === todo.assignedTo)) && ( /* Only show if assigned or has actions */
+        <div className="flex items-center justify-between w-full mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+          {/* Assigned Member */}
+          <div className="flex items-center gap-2 flex-grow">
+            <UserAvatar user={assignedMember} size={28} />
+            <p className={`font-semibold ${textMain}`}>{displayName}</p>
           </div>
-        )}
-      </div>
+
+          {/* Edit and Delete Buttons */}
+          {(userId === todo.assignedBy || userId === todo.assignedTo) && (
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button onClick={handleEditClick} className={`p-2 rounded-full transition-colors ${currentTheme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`} aria-label="Edit todo"><FaEdit /></button>
+              <button onClick={handleDelete} className={`p-2 rounded-full transition-colors ${currentTheme === 'dark' ? 'text-gray-400 hover:text-red-500 hover:bg-gray-700' : 'text-gray-500 hover:text-red-600 hover:bg-gray-200'}`} aria-label="Delete todo"><FaTrash /></button>
+            </div>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 }
