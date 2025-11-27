@@ -71,9 +71,9 @@ export default function MusicContent() {
 
   // --- PLAYBACK HANDLERS ---
   
-  const handlePlaySingle = (clickedLink) => {
+  const handlePlaySingle = (clickedJam) => {
       // When clicking a card, set the current view (jams) as the queue
-      const index = jams.findIndex(j => j.link === clickedLink);
+      const index = jams.findIndex(j => j.id === clickedJam.id);
       if (index !== -1) {
           setQueue(jams);
           setCurrentIndex(index);
@@ -417,6 +417,7 @@ export default function MusicContent() {
               {/* YOUTUBE: Smart Component (Auto-Advances) */}
               {youtubeId && (
                   <YouTube
+                    key={youtubeId}
                     videoId={youtubeId}
                     opts={{
                       height: '100%',
