@@ -53,7 +53,7 @@ function TodoItem({ todo, members = [], userId, onToggle, onUpdate, onDelete }) 
   
   const handleUpdate = () => {
     const { title, assignedTo, priority, dueDate } = editedTodo;
-    const updates = { title, assignedTo, priority, dueDate };
+    const updates = { title, assignedTo, priority, dueDate: dueDate || null };
     onUpdate(todo.id, updates);
     setIsEditing(false);
   };
@@ -166,7 +166,7 @@ function TodoItem({ todo, members = [], userId, onToggle, onUpdate, onDelete }) 
 
       {/* Third Row: Avatar + Name, Edit + Delete Buttons */}
       {(assignedMember || (userId === todo.assignedBy || userId === todo.assignedTo)) && ( /* Only show if assigned or has actions */
-        <div className="flex items-center justify-between w-full mt-2 pt-2 border-t border-gray-100 dark:border-gray-500">
+        <div className="flex items-center justify-between w-full mt-2 pt-2">
           {/* Assigned Member */}
           <div className="flex items-center gap-2 flex-grow">
             <UserAvatar user={assignedMember} size={28} />
