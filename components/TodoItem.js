@@ -53,7 +53,7 @@ function TodoItem({ todo, members = [], userId, onToggle, onUpdate, onDelete }) 
   
   const handleUpdate = () => {
     const { title, assignedTo, priority, dueDate } = editedTodo;
-    const updates = { title, assignedTo, priority, dueDate };
+    const updates = { title, assignedTo, priority, dueDate: dueDate || null };
     onUpdate(todo.id, updates);
     setIsEditing(false);
   };
