@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useMemories, useMemoriesFolders } from '@/hooks/useFirestore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -111,9 +112,11 @@ function MemoryFilterPill({
 }
 
 function MemoriesContent() {
+  const { user, userData, loading: authLoading } = useAuth();
+  const router = useRouter();
+
   const { memories, loading: loadingMemories, updateMemory } = useMemories();
   const { folders, loading: loadingFolders, addFolder, deleteFolder } = useMemoriesFolders();
-  const { user, userData } = useAuth();
   const { getMemberById, isParent } = useFamily();
   const { theme, currentTheme } = useTheme();
   const [uploading, setUploading] = useState(false);
@@ -128,14 +131,22 @@ function MemoriesContent() {
   const [showAddFolderModal, setShowAddFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [activeFilterId, setActiveFilterId] = useState('all'); // 'all' | 'root' | folderId
-  const currentFolder = activeFilterId === 'all' || activeFilterId === 'root'
-    ? null
-    : folders.find(f => f.id === activeFilterId) || null;
   const [folderView, setFolderView] = useState({ isOpen: false, memories: [], initialIndex: 0, detailsOpen: false });
   const [uploadAreaExpanded, setUploadAreaExpanded] = useState(false);
 
+  // Auth guard
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/');
+    }
+  }, [user, authLoading, router]);
+
   // Combine loading states
-  const loading = loadingMemories || loadingFolders;
+  const loading = authLoading || loadingMemories || loadingFolders;
+
+  const currentFolder = activeFilterId === 'all' || activeFilterId === 'root'
+    ? null
+    : folders.find(f => f.id === activeFilterId) || null;
 
   // Filter memories based on reveal date and current folder
   const today = new Date();
@@ -372,7 +383,7 @@ function MemoriesContent() {
     });
   };
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
