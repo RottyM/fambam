@@ -83,8 +83,8 @@ function MemoryFilterPill({
   const hoverClasses = !isActive && !isDropping ? 'hover:border-gray-300 dark:hover:border-gray-600' : '';
   const iconColor = isActive
     ? 'text-white'
-    : (isDropping ? 'text-purple-500' : (currentTheme === 'dark' ? 'text-gray-400' : 'text-black'));
-  const countColor = isActive ? 'text-purple-200' : (currentTheme === 'dark' ? 'text-gray-500' : 'text-gray-700');
+    : (isDropping ? 'text-purple-500' : theme.colors.textLight); // Use theme.colors.textLight for inactive icon
+  const countColor = isActive ? 'text-purple-200' : theme.colors.textMuted; // Use theme.colors.textMuted for inactive count
 
   return (
     <div ref={allowDrop ? drop : null} className="relative group shrink-0">
@@ -92,7 +92,7 @@ function MemoryFilterPill({
         onClick={onClick}
         className={`relative flex items-center gap-2 px-4 py-2 pr-8 rounded-full border-2 transition-all whitespace-nowrap shadow-sm ${bgColor} ${borderColor} ${hoverClasses}`}      >
         {Icon && <Icon className={iconColor} />}
-        <span className={`font-bold ${currentTheme === 'dark' ? 'text-gray-300' : 'text-black'}`}>{label}</span>
+        <span className={`font-bold ${isActive ? 'text-white' : theme.colors.text}`}>{label}</span> {/* Use theme.colors.text for inactive label */}
         {count !== undefined && (
           <span className={`text-xs ${countColor}`}>({count})</span>
         )}
