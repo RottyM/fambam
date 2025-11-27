@@ -271,7 +271,7 @@ function GroceriesContent() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-md w-full shadow-2xl border ${theme.colors.border}`}
+              className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-md w-full shadow-2xl border ${theme.colors.border} overflow-y-auto max-h-[90vh]`}
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className={`text-2xl md:text-3xl font-bold ${currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}`}>
