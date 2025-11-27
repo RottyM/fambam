@@ -64,7 +64,11 @@ export default function JamCard({ jam, onDelete, onPlayVideo, onToggleLike }) {
         {/* Play Overlay */}
         <div 
             className="absolute inset-0 z-20 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer" 
-            onClick={() => onPlayVideo(jam)}
+            onClick={() => {
+              if (!isDragging) {
+                onPlayVideo(jam);
+              }
+            }}
         >
            <div className="bg-white/90 text-black p-3 rounded-full transform scale-90 group-hover:scale-100 transition-all shadow-lg backdrop-blur-sm">
              <FaPlay size={20} className="ml-1" />
