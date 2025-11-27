@@ -3,6 +3,7 @@ import { FaTrash, FaRegCalendarCheck, FaEdit, FaSave, FaTimes } from 'react-icon
 import { motion } from 'framer-motion';
 import { getIcon } from '@/lib/icons';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useConfirmation } from '@/contexts/ConfirmationContext';
 import UserAvatar from './UserAvatar';
 
 const PRIORITY_OPTIONS = [
@@ -13,6 +14,7 @@ const PRIORITY_OPTIONS = [
 
 function TodoItem({ todo, members = [], userId, onToggle, onUpdate, onDelete }) {
   const { currentTheme } = useTheme();
+  const { showConfirmation } = useConfirmation();
   const [isEditing, setIsEditing] = useState(false);
   const [editedTodo, setEditedTodo] = useState({ ...todo });
 
@@ -57,9 +59,11 @@ function TodoItem({ todo, members = [], userId, onToggle, onUpdate, onDelete }) 
   };
 
   const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this todo?')) {
-      onDelete(todo.id);
-    }
+    showConfirmation({
+      title: 'Delete To-Do',
+      message: `Are you sure you want to permanently delete "${todo.title}"?`,
+      onConfirm: () => onDelete(todo.id),
+    });
   };
 
   const handleCancel = () => {

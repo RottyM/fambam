@@ -5,6 +5,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { useDocuments } from '@/hooks/useFirestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useConfirmation } from '@/contexts/ConfirmationContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaFileAlt, FaFilePdf, FaFileImage, FaUpload, FaSearch, FaEye, FaTrash, FaTimes } from 'react-icons/fa';
 import { storage, db } from '@/lib/firebase';
@@ -17,9 +18,9 @@ function DocumentsContent() {
   const { documents, loading } = useDocuments();
   const { userData } = useAuth();
   const { theme, currentTheme } = useTheme();
+  const { showConfirmation } = useConfirmation();
   const [uploading, setUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [uploadExpanded, setUploadExpanded] = useState(false);
 
@@ -84,30 +85,34 @@ function DocumentsContent() {
     return <FaFileAlt className="text-gray-500" />;
   };
 
-  const handleDeleteDocument = async (document) => {
+  const handleDeleteClick = (document) => {
     if (!document || document.uploadedBy !== userData?.uid) {
       toast.error('You can only delete your own documents');
       return;
     }
 
-    try {
-      setDeleting(true);
+    showConfirmation({
+      title: 'Delete Document',
+      message: `Are you sure you want to permanently delete "${document.name}"?`,
+      onConfirm: async () => {
+        setDeleting(true);
+        try {
+          // Delete from Storage
+          const storageRef = ref(storage, document.storagePath);
+          await deleteObject(storageRef);
 
-      // Delete from Storage
-      const storageRef = ref(storage, document.storagePath);
-      await deleteObject(storageRef);
+          // Delete from Firestore
+          await deleteDoc(doc(db, 'families', userData.familyId, 'documents', document.id));
 
-      // Delete from Firestore
-      await deleteDoc(doc(db, 'families', userData.familyId, 'documents', document.id));
-
-      toast.success('Document deleted successfully');
-      setDeleteConfirm(null);
-    } catch (error) {
-      console.error('Delete error:', error);
-      toast.error('Failed to delete document');
-    } finally {
-      setDeleting(false);
-    }
+          toast.success('Document deleted successfully');
+        } catch (error) {
+          console.error('Delete error:', error);
+          toast.error('Failed to delete document');
+        } finally {
+          setDeleting(false);
+        }
+      },
+    });
   };
 
   const handlePreview = (document) => {
@@ -264,7 +269,7 @@ function DocumentsContent() {
 
                 {doc.uploadedBy === userData?.uid && (
                   <button
-                    onClick={() => setDeleteConfirm(doc)}
+                    onClick={() => handleDeleteClick(doc)}
                     className="px-4 bg-gray-100 text-gray-500 rounded-xl font-bold hover:bg-gray-200 hover:text-red-500 transition-all"
                     title="Delete document"
                   >
@@ -277,60 +282,7 @@ function DocumentsContent() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      <AnimatePresence>
-        {deleteConfirm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => !deleting && setDeleteConfirm(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className={`${theme.colors.bgCard} rounded-3xl p-8 max-w-md w-full shadow-2xl border ${theme.colors.border}`}
-            >
-              <div className="text-center mb-6">
-                <div className="text-6xl mb-4">🗑️</div>
-                <h2 className={`text-2xl font-display font-bold mb-2 ${theme.colors.text}`}>
-                  Delete Document?
-                </h2>
-                <p className={theme.colors.textMuted}>
-                  Are you sure you want to delete{' '}
-                  <strong>{deleteConfirm.name}</strong>? This action cannot be undone.
-                </p>
-              </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setDeleteConfirm(null)}
-                  disabled={deleting}
-                  className={`flex-1 ${theme.colors.bgSecondary} ${theme.colors.text} py-3 rounded-xl font-bold hover:opacity-80 transition-all disabled:opacity-50`}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleDeleteDocument(deleteConfirm)}
-                  disabled={deleting}
-                  className="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold hover:bg-red-600 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {deleting ? (
-                    <>Deleting...</>
-                  ) : (
-                    <>
-                      <FaTrash /> Delete
-                    </>
-                  )}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </>
   );
 }

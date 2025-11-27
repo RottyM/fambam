@@ -4,6 +4,7 @@ import { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useGroceries } from '@/hooks/useFirestore';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useConfirmation } from '@/contexts/ConfirmationContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaPlus, FaTrash, FaCheckCircle, FaTimes } from 'react-icons/fa';
 
@@ -34,6 +35,7 @@ function GroceriesContent() {
     clearAllItems,
   } = useGroceries();
   const { theme, currentTheme } = useTheme();
+  const { showConfirmation } = useConfirmation();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newItem, setNewItem] = useState({
@@ -112,9 +114,11 @@ function GroceriesContent() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => {
-                    if (confirm(`Clear ALL ${groceries.length} items? This cannot be undone.`)) {
-                      clearAllItems();
-                    }
+                    showConfirmation({
+                      title: 'Clear All Groceries',
+                      message: `Are you sure you want to clear all ${groceries.length} items? This cannot be undone.`,
+                      onConfirm: clearAllItems,
+                    });
                   }}
                   className="bg-gradient-to-r from-slate-600 to-gray-700 text-white px-4 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
                 >

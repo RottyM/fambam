@@ -7,6 +7,7 @@ import { useChores } from '@/hooks/useFirestore';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useConfirmation } from '@/contexts/ConfirmationContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaPlus, FaTrophy, FaTrash, FaTimes, FaFilter, FaUser, FaClock, FaPaperPlane, FaCheckCircle } from 'react-icons/fa';
 import { ICON_CATEGORIES, getIcon } from '@/lib/icons';
@@ -20,6 +21,7 @@ function ChoresContent() {
   const { members, isParent } = useFamily();
   const { userData } = useAuth();
   const { theme, currentTheme } = useTheme();
+  const { showConfirmation } = useConfirmation();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filterMember, setFilterMember] = useState('all');
@@ -45,22 +47,27 @@ function ChoresContent() {
     });
   };
 
-  const handleClearCompletedChores = async () => {
+  const handleClearCompletedChores = () => {
     if (!userData?.familyId) return;
-    if (!confirm('Clear all completed chores? This cannot be undone.')) return;
 
-    try {
-      const completedChores = chores.filter(c => c.status === 'approved');
-      await Promise.all(
-        completedChores.map(chore =>
-          deleteDoc(doc(db, 'families', userData.familyId, 'chores', chore.id))
-        )
-      );
-      toast.success('Completed chores cleared! 🧹');
-    } catch (error) {
-      console.error('Error clearing chores:', error);
-      toast.error('Failed to clear completed chores');
-    }
+    showConfirmation({
+      title: 'Clear Completed Chores',
+      message: 'Are you sure you want to clear all completed chores? This cannot be undone.',
+      onConfirm: async () => {
+        try {
+          const completedChores = chores.filter(c => c.status === 'approved');
+          await Promise.all(
+            completedChores.map(chore =>
+              deleteDoc(doc(db, 'families', userData.familyId, 'chores', chore.id))
+            )
+          );
+          toast.success('Completed chores cleared! 🧹');
+        } catch (error) {
+          console.error('Error clearing chores:', error);
+          toast.error('Failed to clear completed chores');
+        }
+      },
+    });
   };
 
   const filteredChores = chores.filter(c => {

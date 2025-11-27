@@ -7,6 +7,7 @@ import { useCalendarEvents } from '@/hooks/useFirestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useConfirmation } from '@/contexts/ConfirmationContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, isSameMonth, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
 import { 
@@ -44,7 +45,8 @@ function CalendarContent() {
   const { events, loading } = useCalendarEvents();
   const { userData } = useAuth();
   const { members, isParent } = useFamily();
-  const { theme, currentTheme } = useTheme(); 
+  const { theme, currentTheme } = useTheme();
+  const { showConfirmation } = useConfirmation(); 
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false); 
@@ -135,20 +137,27 @@ function CalendarContent() {
     }
   };
 
-  const handleDeleteEvent = async (event) => {
-    if (!userData?.familyId || !confirm(`Delete "${event.title}"?`)) return;
-    try {
-      if (event.googleEventId) {
-        const deleteGoogleEvent = httpsCallable(functions, 'deleteEventFromGoogleCalendar');
-        deleteGoogleEvent({ familyId: userData.familyId, googleEventId: event.googleEventId });
-      }
-      await deleteDoc(doc(db, 'families', userData.familyId, 'calendar-events', event.id));
-      toast.success('Event deleted!');
-      setSelectedEvent(null);
-    } catch (error) {
-      console.error('Failed to delete event', error);
-      toast.error('Failed to delete event');
-    }
+  const handleDeleteEvent = (event) => {
+    if (!userData?.familyId) return;
+
+    showConfirmation({
+      title: 'Delete Event',
+      message: `Are you sure you want to delete the event "${event.title}"?`,
+      onConfirm: async () => {
+        try {
+          if (event.googleEventId) {
+            const deleteGoogleEvent = httpsCallable(functions, 'deleteEventFromGoogleCalendar');
+            deleteGoogleEvent({ familyId: userData.familyId, googleEventId: event.googleEventId });
+          }
+          await deleteDoc(doc(db, 'families', userData.familyId, 'calendar-events', event.id));
+          toast.success('Event deleted!');
+          setSelectedEvent(null);
+        } catch (error) {
+          console.error('Failed to delete event', error);
+          toast.error('Failed to delete event');
+        }
+      },
+    });
   };
 
   const toggleMemberAssignment = (memberId) => {

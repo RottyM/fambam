@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { useConfirmation } from '@/contexts/ConfirmationContext';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -46,6 +47,7 @@ function SettingsContent() {
     requestPermission,
     disableNotifications,
   } = useNotifications();
+  const { showConfirmation } = useConfirmation();
 
   const [isToggling, setIsToggling] = useState(false);
   const [isEditingAvatar, setIsEditingAvatar] = useState(false);
@@ -98,7 +100,7 @@ function SettingsContent() {
     }
   };
 
-  const handleResetChorePoints = async () => {
+  const handleResetChorePoints = () => {
     if (!isParent() || !userData?.familyId) return;
     const targets = resetTarget === 'all'
       ? members
@@ -109,22 +111,27 @@ function SettingsContent() {
     }
 
     const names = resetTarget === 'all' ? 'all members' : targets[0]?.displayName || 'member';
-    if (!confirm(`Reset points for ${names}? This cannot be undone.`)) return;
-
-    setResettingPoints(true);
-    try {
-      await Promise.all(
-        targets.map(member =>
-          updateDoc(firestoreDoc(db, 'users', member.id), { points: 0 })
-        )
-      );
-      toast.success(`Points reset for ${names}`);
-    } catch (e) {
-      console.error('Reset points error:', e);
-      toast.error('Failed to reset points');
-    } finally {
-      setResettingPoints(false);
-    }
+    
+    showConfirmation({
+      title: `Reset points for ${names}?`,
+      message: 'This will set their chore points to 0. This action cannot be undone.',
+      onConfirm: async () => {
+        setResettingPoints(true);
+        try {
+          await Promise.all(
+            targets.map(member =>
+              updateDoc(firestoreDoc(db, 'users', member.id), { points: 0 })
+            )
+          );
+          toast.success(`Points reset for ${names}`);
+        } catch (e) {
+          console.error('Reset points error:', e);
+          toast.error('Failed to reset points');
+        } finally {
+          setResettingPoints(false);
+        }
+      },
+    });
   };
 
   const getInviteUrl = () =>

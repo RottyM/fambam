@@ -7,6 +7,7 @@ import { useMemories, useMemoriesFolders } from '@/hooks/useFirestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useConfirmation } from '@/contexts/ConfirmationContext';
 import UserAvatar from '@/components/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaUpload, FaHeart, FaTimes, FaComment, FaLock, FaUnlock, FaTrash, FaFolder, FaFolderOpen, FaFolderPlus, FaFilter, FaChevronUp, FaChevronDown } from 'react-icons/fa';
@@ -119,6 +120,7 @@ function MemoriesContent() {
   const { folders, loading: loadingFolders, addFolder, deleteFolder } = useMemoriesFolders();
   const { getMemberById, isParent } = useFamily();
   const { theme, currentTheme } = useTheme();
+  const { showConfirmation } = useConfirmation();
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [selectedMemory, setSelectedMemory] = useState(null);
@@ -289,42 +291,49 @@ function MemoriesContent() {
     }
   };
 
-  const handleDeleteComment = async (commentId) => {
-    if (!window.confirm('Are you sure you want to delete this comment?')) return;
-
-    try {
-      const commentRef = doc(
-        db,
-        'families',
-        userData.familyId,
-        'memories',
-        selectedMemory.id,
-        'comments',
-        commentId
-      );
-      await deleteDoc(commentRef);
-      toast.success('Comment deleted');
-    } catch (error) {
-      console.error('Error deleting comment:', error);
-      toast.error('Failed to delete comment');
-    }
+  const handleDeleteComment = (commentId) => {
+    showConfirmation({
+      title: 'Delete Comment',
+      message: 'Are you sure you want to permanently delete this comment?',
+      onConfirm: async () => {
+        try {
+          const commentRef = doc(
+            db,
+            'families',
+            userData.familyId,
+            'memories',
+            selectedMemory.id,
+            'comments',
+            commentId
+          );
+          await deleteDoc(commentRef);
+          toast.success('Comment deleted');
+        } catch (error) {
+          console.error('Error deleting comment:', error);
+          toast.error('Failed to delete comment');
+        }
+      },
+    });
   };
 
-  const handleDelete = async (memoryId, storagePath) => {
-    if (!window.confirm('Are you sure you want to delete this memory forever?')) return;
-    
-    setDeleting(memoryId);
-
-    try {
-      const deleteMemory = httpsCallable(functions, 'deleteMemory');
-      await deleteMemory({ familyId: userData.familyId, memoryId, storagePath });
-      toast.success('Memory deleted');
-    } catch (error) {
-      console.error('Delete error:', error);
-      toast.error(`Failed to delete memory: ${error.message}`);
-    } finally {
-      setDeleting(null);
-    }
+  const handleDelete = (memoryId, storagePath) => {
+    showConfirmation({
+      title: 'Delete Memory',
+      message: 'Are you sure you want to delete this memory forever? This action cannot be undone.',
+      onConfirm: async () => {
+        setDeleting(memoryId);
+        try {
+          const deleteMemory = httpsCallable(functions, 'deleteMemory');
+          await deleteMemory({ familyId: userData.familyId, memoryId, storagePath });
+          toast.success('Memory deleted');
+        } catch (error) {
+          console.error('Delete error:', error);
+          toast.error(`Failed to delete memory: ${error.message}`);
+        } finally {
+          setDeleting(null);
+        }
+      },
+    });
   };
 
   const handleMoveMemory = async (memoryId, newFolderId) => {
@@ -354,21 +363,28 @@ function MemoriesContent() {
     }
   };
 
-  const handleDeleteFolder = async (folderId, folderName) => {
-    if (!isParent() && !window.confirm(`Deleting folder "${folderName}" will NOT delete the memories inside it. They will return to the main vault. Are you sure?`)) return;
-    if (isParent() && !window.confirm(`As a parent, you can delete this folder "${folderName}". Memories inside it will return to the main vault. Are you sure?`)) return;
+  const handleDeleteFolder = (folderId, folderName) => {
+    const message = isParent()
+      ? `As a parent, you can delete this folder "${folderName}". Memories inside it will return to the main vault. Are you sure?`
+      : `Deleting folder "${folderName}" will NOT delete the memories inside it. They will return to the main vault. Are you sure?`;
 
-    try {
-      await deleteFolder(folderId);
-      // If the deleted folder was the current one, reset to root
-      if (currentFolder?.id === folderId) {
-        setActiveFilterId('all');
-      }
-      toast.success('Folder deleted!');
-    } catch (error) {
-      console.error('Error deleting folder:', error);
-      toast.error('Failed to delete folder');
-    }
+    showConfirmation({
+      title: `Delete Folder "${folderName}"?`,
+      message: message,
+      onConfirm: async () => {
+        try {
+          await deleteFolder(folderId);
+          // If the deleted folder was the current one, reset to root
+          if (currentFolder?.id === folderId) {
+            setActiveFilterId('all');
+          }
+          toast.success('Folder deleted!');
+        } catch (error) {
+          console.error('Error deleting folder:', error);
+          toast.error('Failed to delete folder');
+        }
+      },
+    });
   };
 
   const openFolderView = (clickedMemory, { openDetails = false } = {}) => {
