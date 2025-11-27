@@ -268,6 +268,111 @@ function DashboardContent() {
     );
   }
 
+  const pendingTodos = todos.filter(t => !t.completed).length;
+  const pendingChores = chores.filter(c => c.status !== 'approved').length;
+  const recentMemories = memories.length;
+
+  // Get spotlight memory - prioritize revealed time capsules, otherwise latest memory
+  const getSpotlightMemory = () => {
+    const today = new Date();
+
+    // Check for revealed time capsules (past reveal date)
+    const revealedCapsules = memories.filter(m => {
+      if (!m.isTimeCapsule || !m.revealDate) return false;
+      const revealDate = m.revealDate.toDate ? m.revealDate.toDate() : new Date(m.revealDate.seconds * 1000);
+      return revealDate <= today;
+    });
+
+    // If we have revealed capsules, return the most recently revealed one
+    if (revealedCapsules.length > 0) {
+      return revealedCapsules.sort((a, b) => {
+        const dateA = a.revealDate.toDate ? a.revealDate.toDate() : new Date(a.revealDate.seconds * 1000);
+        const dateB = b.revealDate.toDate ? b.revealDate.toDate() : new Date(b.revealDate.seconds * 1000);
+        return dateB - dateA;
+      })[0];
+    }
+
+    // Otherwise return the most recent regular memory
+    const regularMemories = memories.filter(m => !m.isTimeCapsule || !m.revealDate);
+    if (regularMemories.length > 0) {
+      return regularMemories.sort((a, b) => {
+        const dateA = a.uploadedAt?.toDate ? a.uploadedAt.toDate() : new Date();
+        const dateB = b.uploadedAt?.toDate ? b.uploadedAt.toDate() : new Date();
+        return dateB - dateA;
+      })[0];
+    }
+
+    return null;
+  };
+
+  const spotlightMemory = getSpotlightMemory();
+
+  const upcomingEvents = events
+    .filter(event => {
+      const eventDate = event.start?.toDate ? event.start.toDate() : new Date(event.start);
+      return isFuture(eventDate) || isToday(eventDate);
+    })
+    .slice(0, 4);
+
+  const getEventDateLabel = (event) => {
+    const eventDate = event.start?.toDate ? event.start.toDate() : new Date(event.start);
+    if (isToday(eventDate)) return 'Today';
+    if (isTomorrow(eventDate)) return 'Tomorrow';
+    return format(eventDate, 'MMM d');
+  };
+
+  const EVENT_CATEGORIES = {
+    appointment: {
+      icon: '🕯️',
+      bgLight: 'bg-blue-50 border-blue-200',
+      bgDark: 'bg-blue-900/30 border-blue-700/70',
+      textLight: 'text-blue-900',
+      textDark: 'text-blue-100',
+    },
+    birthday: {
+      icon: '🎂',
+      bgLight: 'bg-pink-50 border-pink-200',
+      bgDark: 'bg-pink-900/30 border-pink-700/70',
+      textLight: 'text-pink-900',
+      textDark: 'text-pink-100',
+    },
+    activity: {
+      icon: '⚔️',
+      bgLight: 'bg-green-50 border-green-200',
+      bgDark: 'bg-green-900/30 border-green-700/70',
+      textLight: 'text-green-900',
+      textDark: 'text-green-100',
+    },
+    school: {
+      icon: '📚',
+      bgLight: 'bg-amber-50 border-amber-200',
+      bgDark: 'bg-amber-900/30 border-amber-700/70',
+      textLight: 'text-amber-900',
+      textDark: 'text-amber-100',
+    },
+    reminder: {
+      icon: '☠️',
+      bgLight: 'bg-purple-50 border-purple-200',
+      bgDark: 'bg-purple-900/30 border-purple-700/70',
+      textLight: 'text-purple-900',
+      textDark: 'text-purple-100',
+    },
+    social: {
+      icon: currentTheme === 'dark' ? '🦇' : '🎉',
+      bgLight: 'bg-orange-50 border-orange-200',
+      bgDark: 'bg-orange-900/30 border-orange-700/70',
+      textLight: 'text-orange-900',
+      textDark: 'text-orange-100',
+    },
+    other: {
+      icon: '🔮',
+      bgLight: 'bg-slate-50 border-slate-200',
+      bgDark: 'bg-slate-800/60 border-slate-700',
+      textLight: 'text-slate-900',
+      textDark: 'text-slate-100',
+    },
+  };
+
   return (
     <div className="space-y-3 md:space-y-6">
       {/* Welcome header */}
