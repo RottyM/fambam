@@ -34,6 +34,25 @@ const HTML5toTouch = {
   ],
 };
 
+// Tuned for better sensitivity (100ms vs 200ms)
+const customDnDOptions = {
+  backends: [
+    {
+      ...HTML5toTouch.backends[0], // Keep HTML5 (Mouse) settings as-is
+    },
+    {
+      ...HTML5toTouch.backends[1], // Modify Touch settings
+      options: {
+        ...HTML5toTouch.backends[1].options,
+        enableTouchEvents: true,
+        enableMouseEvents: true,
+        delayTouchStart: 100, // Make touch drag start quickly to avoid scroll stealing
+        ignoreContextMenu: true,
+      },
+    },
+  ],
+};
+
 // Helpers
 const getYouTubeId = (url) => {
   if (!url) return null;
@@ -259,7 +278,7 @@ export default function MusicContent() {
   }
 
   return (
-    <DndProvider backend={MultiBackend} options={HTML5toTouch}>
+    <DndProvider backend={MultiBackend} options={customDnDOptions}>
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
