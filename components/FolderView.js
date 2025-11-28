@@ -26,6 +26,7 @@ export default function FolderView({
   isParent,
   folders = [],
   onMoveMemory,
+  onDeleteMemory, // <-- ADDED THIS PROP
 }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isDetailsOpen, setIsDetailsOpen] = useState(detailsOpen);
@@ -35,10 +36,7 @@ export default function FolderView({
     setCurrentIndex(initialIndex);
   }, [initialIndex]);
 
-  useEffect(() => {
-    if (!isOpen || memories.length === 0) return;
-    onMemoryChange?.(memories[initialIndex]);
-  }, [isOpen, initialIndex, memories, onMemoryChange]);
+
 
   useEffect(() => {
     setIsDetailsOpen(detailsOpen);
@@ -159,10 +157,58 @@ export default function FolderView({
                     fill
                     className="object-contain"
                     unoptimized
+                    priority
                   />
                 )}
               </div>
             </div>
+
+            {/* Overlay controls near the media */}
+            {showChrome && (
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 bg-black/50 text-white px-4 py-2 rounded-full shadow-lg backdrop-blur">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleLike?.(currentMemory.id, currentMemory.likes || []);
+                  }}
+                  className={`flex items-center gap-2 text-sm font-semibold ${
+                    isLiked ? 'text-red-400' : 'text-white/80 hover:text-white'
+                  }`}
+                  aria-label="Like"
+                >
+                  <FaHeart className={isLiked ? 'animate-pulse' : ''} />
+                  <span>{currentMemory.likes?.length || 0}</span>
+                </button>
+                <div className="h-5 w-px bg-white/30" />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsDetailsOpen(true);
+                    setShowChrome(true);
+                  }}
+                  className="flex items-center gap-2 text-sm font-semibold text-white/90 hover:text-white"
+                  aria-label="View comments"
+                >
+                  <FaComment />
+                  <span>{comments.length}</span>
+                </button>
+                {isParentUser && (
+                  <>
+                    <div className="h-5 w-px bg-white/30" />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteMemory?.(currentMemory.id, currentMemory.storagePath);
+                      }}
+                      className="flex items-center text-sm font-semibold text-red-400 hover:text-red-500"
+                      aria-label="Delete memory"
+                    >
+                      <FaTrash />
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Arrows */}
             <div className="pointer-events-none">
@@ -186,23 +232,6 @@ export default function FolderView({
               </button>
             </div>
 
-            {/* Details drawer toggle */}
-            {!isDetailsOpen && (
-              <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsDetailsOpen(true);
-                    setShowChrome(true);
-                  }}
-                  className="bg-white/15 text-white px-5 py-3 rounded-full font-semibold shadow-lg hover:bg-white/25 transition-all flex items-center gap-2 backdrop-blur"
-                >
-                  <FaComment />
-                  View details & comments
-                </button>
-              </div>
-            )}
-
             {/* Details drawer */}
             <AnimatePresence>
               <motion.div
@@ -214,11 +243,11 @@ export default function FolderView({
                 }}
                 exit={{ y: 400, opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 180, damping: 20 }}
-                className="absolute bottom-0 left-0 right-0 bg-white text-gray-900 rounded-t-3xl shadow-2xl overflow-hidden z-30"
+                className="absolute bottom-0 left-0 right-0 bg-white text-gray-900 rounded-t-3xl shadow-2xl overflow-hidden z-30 max-w-3xl mx-auto"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="w-full h-2 bg-gray-100" />
-                <div className="p-5 md:p-6 max-h-[70vh] overflow-y-auto w-full max-w-4xl mx-auto">
+                <div className="p-5 md:p-6 max-h-[50vh] overflow-y-auto w-full">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                       {uploader && <UserAvatar user={uploader} size={40} />}
@@ -231,9 +260,10 @@ export default function FolderView({
                         </p>
                       </div>
                     </div>
+                    {/* Repositioned collapse button */}
                     <button
                       onClick={() => setIsDetailsOpen(false)}
-                      className="text-gray-400 hover:text-gray-600 p-2"
+                      className="absolute top-3 right-3 bg-gray-100/70 text-gray-700 p-2 rounded-full hover:bg-gray-200 transition-all backdrop-blur-sm"
                       title="Collapse"
                     >
                       <FaChevronDown />
@@ -297,68 +327,76 @@ export default function FolderView({
                               className="text-gray-400 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                               title="Delete comment"
                             >
-                              <FaTrash size={12} />
-                            </button>
-                          )}
+                                <FaTrash size={12} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+
+                      {comments.length === 0 && (
+                        <p className="text-center text-gray-400 py-8">
+                          No comments yet. Be the first to comment!
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Add Comment */}
+                    <form onSubmit={onSubmitComment} className="flex gap-3">
+                      <UserAvatar user={getMemberById(currentUserId)} size={40} />
+                      <input
+                        type="text"
+                        value={newComment}
+                        onChange={(e) => onChangeNewComment?.(e.target.value)}
+                        placeholder="Add a comment..."
+                        className="flex-1 px-4 py-3 rounded-full border-2 border-gray-200 focus:border-purple-500 focus:outline-none font-semibold"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!newComment?.trim()}
+                        className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-full font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg disabled:opacity-50"
+                      >
+                        Post
+                      </button>
+                    </form>
+
+                    {isParentUser && (
+                      <div className="border-t border-gray-200 pt-5 mt-6">
+                        <h4 className="text-lg font-bold mb-3 flex items-center gap-2">
+                          <FaFolder />
+                          Admin actions
+                        </h4>
+                        <div className="space-y-3">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Move to folder
+                          </label>
+                          <select
+                            value={currentMemory.folderId || ''}
+                            onChange={(e) => onMoveMemory?.(currentMemory.id, e.target.value || null)}
+                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none font-semibold bg-white"
+                          >
+                            <option value="">All Memories (Root)</option>
+                            {folders.map((folder) => (
+                              <option key={folder.id} value={folder.id}>
+                                {folder.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => onDeleteMemory?.(currentMemory.id, currentMemory.storagePath)}
+                            className="w-full bg-red-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-600 transition-all shadow-lg flex items-center justify-center gap-2"
+                          >
+                            <FaTrash /> Delete Memory
+                          </button>
                         </div>
                       </div>
-                    ))}
-
-                    {comments.length === 0 && (
-                      <p className="text-center text-gray-400 py-8">
-                        No comments yet. Be the first to comment!
-                      </p>
                     )}
                   </div>
-
-                  {/* Add Comment */}
-                  <form onSubmit={onSubmitComment} className="flex gap-3">
-                    <UserAvatar user={getMemberById(currentUserId)} size={40} />
-                    <input
-                      type="text"
-                      value={newComment}
-                      onChange={(e) => onChangeNewComment?.(e.target.value)}
-                      placeholder="Add a comment..."
-                      className="flex-1 px-4 py-3 rounded-full border-2 border-gray-200 focus:border-purple-500 focus:outline-none font-semibold"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!newComment?.trim()}
-                      className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-full font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg disabled:opacity-50"
-                    >
-                      Post
-                    </button>
-                  </form>
-
-                  {isParentUser && (
-                    <div className="border-t border-gray-200 pt-5 mt-6">
-                      <h4 className="text-lg font-bold mb-3 flex items-center gap-2">
-                        <FaFolder />
-                        Admin actions
-                      </h4>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Move to folder
-                      </label>
-                      <select
-                        value={currentMemory.folderId || ''}
-                        onChange={(e) => onMoveMemory?.(currentMemory.id, e.target.value || null)}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none font-semibold bg-white"
-                      >
-                        <option value="">All Memories (Root)</option>
-                        {folders.map((folder) => (
-                          <option key={folder.id} value={folder.id}>
-                            {folder.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </motion.div>
-      )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
     </AnimatePresence>
   );
 }

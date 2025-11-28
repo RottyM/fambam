@@ -11,7 +11,9 @@ import {
   doc,
   serverTimestamp,
   arrayUnion,  // <-- Added for voting
-  arrayRemove  // <-- Added for voting
+  arrayRemove, // <-- Added for voting
+  getDocs,
+  writeBatch
 } from 'firebase/firestore';
 // Relative import for better stability
 import { db } from '../lib/firebase';
@@ -352,10 +354,30 @@ export function useMemoriesFolders() {
 
   const deleteFolder = async (folderId) => {
     try {
-      await deleteDoc(
-        doc(db, 'families', userData.familyId, 'folders', folderId)
+      const folderRef = doc(db, 'families', userData.familyId, 'folders', folderId);
+
+      // 1. Find all memories associated with this folder
+      const memoriesQuery = query(
+        collection(db, 'families', userData.familyId, 'memories'),
+        where('folderId', '==', folderId)
       );
-      toast.success('Folder deleted!');
+      const memoriesSnapshot = await getDocs(memoriesQuery);
+
+      // 2. Create a batch to update memories and delete the folder atomically
+      const batch = writeBatch(db);
+
+      memoriesSnapshot.forEach((memoryDoc) => {
+        const memoryRef = doc(db, 'families', userData.familyId, 'memories', memoryDoc.id);
+        batch.update(memoryRef, { folderId: null });
+      });
+
+      // 3. Add the folder deletion to the batch
+      batch.delete(folderRef);
+
+      // 4. Commit the batch
+      await batch.commit();
+      
+      toast.success('Folder deleted and memories unsorted!');
     } catch (error) {
       toast.error('Failed to delete folder');
       console.error(error);
