@@ -19,80 +19,41 @@ import toast from 'react-hot-toast';
 import { useDropzone } from 'react-dropzone';
 import Image from 'next/image';
 import FolderView from '@/components/FolderView'; // Make sure this path is correct
-import { DndProvider, useDrop } from 'react-dnd';
-import { MultiBackend } from 'react-dnd-multi-backend';
-import { HTML5toTouch } from 'rdndmb-html5-to-touch';
-import DraggableMemory, { ItemTypes as MemoryItemTypes } from '@/components/DraggableMemory';
+import MemoriesGrid from '@/components/MemoriesGrid';
 import { format } from 'date-fns';
-
-// --- UPDATED: Custom Drag & Drop Configuration ---
-// Tuned for better sensitivity (100ms vs 200ms)
-const customDnDOptions = {
-  backends: [
-    {
-      ...HTML5toTouch.backends[0], // Keep HTML5 (Mouse) settings as-is
-    },
-    {
-      ...HTML5toTouch.backends[1], // Modify Touch settings
-      options: {
-        ...HTML5toTouch.backends[1].options,
-        enableTouchEvents: true,
-        enableMouseEvents: true,
-        delayTouchStart: 100, // Make touch drag start quickly to avoid scroll stealing
-        ignoreContextMenu: true, // <--- ADDED: Prevents system menus from interfering
-      },
-    },
-  ],
-};
-
+import { DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 function MemoryFilterPill({
   label,
   count,
   icon: Icon,
   isActive,
   onClick,
-  onDropMemory,
-  targetFolderId = null,
-  allowDrop = false,
   showDelete = false,
   onDelete,
+  isOver = false, // New prop for visual feedback
 }) {
   const { theme, currentTheme } = useTheme();
 
-  const [{ isOver, canDrop }, drop] = useDrop(
-    () => ({
-      accept: MemoryItemTypes.MEMORY,
-      canDrop: () => allowDrop,
-      drop: (item) => onDropMemory?.(item.id, targetFolderId ?? null),
-      collect: (monitor) => ({
-        isOver: allowDrop && monitor.isOver(),
-        canDrop: allowDrop && monitor.canDrop(),
-      }),
-    }),
-    [allowDrop, onDropMemory, targetFolderId]
-  );
-
-  const isDropping = isOver && canDrop;
   let bgColor = isActive ? 'bg-purple-500 text-white' : theme.colors.bgCard;
   let borderColor = isActive ? 'border-purple-500' : theme.colors.border;
-  if (isDropping) {
-    bgColor = 'bg-purple-100 dark:bg-purple-900/30 text-purple-600';
-    borderColor = 'border-purple-300';
+  
+  if (isOver) {
+    bgColor = 'bg-green-400 dark:bg-green-600';
+    borderColor = 'border-green-500';
   }
 
-  const hoverClasses = !isActive && !isDropping ? 'hover:border-gray-300 dark:hover:border-gray-600' : '';
-  const iconColor = isActive
-    ? 'text-white'
-    : (isDropping ? 'text-purple-500' : theme.colors.textLight); // Use theme.colors.textLight for inactive icon
-  const countColor = isActive ? 'text-purple-200' : theme.colors.textMuted; // Use theme.colors.textMuted for inactive count
+  const hoverClasses = !isActive && !isOver ? 'hover:border-gray-300 dark:hover:border-gray-600' : '';
+  const iconColor = isActive || isOver ? 'text-white' : theme.colors.textLight;
+  const countColor = isActive || isOver ? 'text-purple-200' : theme.colors.textMuted;
 
   return (
-    <div ref={allowDrop ? drop : null} className="relative group shrink-0">
+    <div className="relative group shrink-0">
       <button
         onClick={onClick}
-        className={`relative flex items-center gap-2 px-4 py-2 pr-8 rounded-full border-2 transition-all whitespace-nowrap shadow-sm ${bgColor} ${borderColor} ${hoverClasses}`}      >
+        className={`relative flex items-center gap-2 px-4 py-2 pr-8 rounded-full border-2 transition-all whitespace-nowrap shadow-sm ${bgColor} ${borderColor} ${hoverClasses}`}
+      >
         {Icon && <Icon className={iconColor} />}
-        <span className={`font-bold ${isActive ? 'text-white' : theme.colors.text}`}>{label}</span> {/* Use theme.colors.text for inactive label */}
+        <span className={`font-bold ${isActive || isOver ? 'text-white' : theme.colors.text}`}>{label}</span>
         {count !== undefined && (
           <span className={`text-xs ${countColor}`}>({count})</span>
         )}
@@ -112,10 +73,26 @@ function MemoryFilterPill({
   );
 }
 
+function DroppableFolderPill(props) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: props.folderId,
+    data: {
+      type: 'FOLDER',
+      accepts: ['MEMORY'],
+    },
+  });
+
+  return (
+    <div ref={setNodeRef}>
+      <MemoryFilterPill {...props} isOver={isOver} />
+    </div>
+  );
+}
+
+
 function MemoriesContent() {
   const { user, userData, loading: authLoading } = useAuth();
   const router = useRouter();
-
   const { memories, loading: loadingMemories, updateMemory } = useMemories();
   const { folders, loading: loadingFolders, addFolder, deleteFolder } = useMemoriesFolders();
   const { getMemberById, isParent } = useFamily();
@@ -135,6 +112,7 @@ function MemoriesContent() {
   const [activeFilterId, setActiveFilterId] = useState('all'); // 'all' | 'root' | folderId
   const [folderView, setFolderView] = useState({ isOpen: false, memories: [], initialIndex: 0, detailsOpen: false });
   const [uploadAreaExpanded, setUploadAreaExpanded] = useState(false);
+  const [activeId, setActiveId] = useState(null);
 
   // Auth guard
   useEffect(() => {
@@ -167,6 +145,7 @@ function MemoriesContent() {
   const lockedMemories = filteredMemories.filter(m => m.isTimeCapsule);
   const unsortedCount = memories.filter(m => !m.folderId).length;
   const totalMemoriesCount = memories.length;
+  
   const folderCounts = folders.reduce((acc, folder) => {
     acc[folder.id] = memories.filter(m => m.folderId === folder.id).length;
     return acc;
@@ -326,6 +305,9 @@ function MemoriesContent() {
           const deleteMemory = httpsCallable(functions, 'deleteMemory');
           await deleteMemory({ familyId: userData.familyId, memoryId, storagePath });
           toast.success('Memory deleted');
+          // Close FolderView and reset selected memory after successful deletion
+          setFolderView({ isOpen: false, memories: [], initialIndex: 0, detailsOpen: false });
+          setSelectedMemory(null);
         } catch (error) {
           console.error('Delete error:', error);
           toast.error(`Failed to delete memory: ${error.message}`);
@@ -343,6 +325,20 @@ function MemoriesContent() {
     } catch (error) {
       console.error('Error moving memory:', error);
       toast.error('Failed to move memory');
+    }
+  };
+
+  const handleMoveMemories = async (memoryIds, newFolderId) => {
+    if (!memoryIds || memoryIds.length === 0) return;
+
+    const movePromises = memoryIds.map(id => updateMemory(id, { folderId: newFolderId }));
+
+    try {
+      await Promise.all(movePromises);
+      toast.success(`Moved ${memoryIds.length} memories!`);
+    } catch (error) {
+      console.error('Error moving memories:', error);
+      toast.error('Failed to move memories');
     }
   };
 
@@ -399,6 +395,52 @@ function MemoriesContent() {
     });
   };
 
+  // --- DND-Kit Setup ---
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require pointer to move 8px to start a drag
+      },
+    }),
+    useSensor(KeyboardSensor, {})
+  );
+
+  function handleDragStart(event) {
+    setActiveId(event.active.id);
+  }
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    setActiveId(null);
+    
+    console.log('Drag ended. Active ID:', active.id, 'Over ID:', over?.id);
+
+    const isMemory = active.data.current?.type === 'MEMORY';
+    const isFolder = over?.data.current?.type === 'FOLDER';
+
+    if (isMemory && isFolder) {
+      const memoryId = active.id;
+      const folderId = over.id === 'root' ? null : over.id; // Convert 'root' to null for un-foldering
+      
+      console.log(`Attempting to move memory ${memoryId} to folder ${folderId}`);
+
+      const memory = memories.find(m => m.id === memoryId);
+      
+      // Prevent moving to the same folder or to an invalid folder
+      const currentFolderId = memory.folderId || 'root'; // Treat null folderId as 'root' for comparison
+      if (memory && currentFolderId !== over.id) { // Compare against over.id directly
+        handleMoveMemory(memoryId, folderId);
+      } else {
+        console.log(`Memory ${memoryId} is already in folder ${folderId} or invalid drop.`);
+      }
+    }
+  };
+  
+  function handleDragCancel() {
+    setActiveId(null);
+    console.log('Drag cancelled.');
+  }
+
   if (loading || !user) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -413,7 +455,12 @@ function MemoriesContent() {
   const displayMemories = showTimeCapsules ? lockedMemories : visibleMemories;
 
   return (
-    <>
+    <DndContext 
+      sensors={sensors} 
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
@@ -507,87 +554,83 @@ function MemoriesContent() {
         )}
       </motion.div>
 
-{/* Folders List - Horizontal Scrollable */}
+      {/* Folders List - Horizontal Scrollable */}
       <div className="mb-6">
-      <h3 className={`text-lg font-bold flex items-center gap-2 mb-3 ${
-        currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-      }`}>
-        <FaFolder className={currentTheme === 'dark' ? 'text-gray-400' : 'text-black'} /> 
-        Folders ({folders.length})
-      </h3>
-        {folders.length === 0 ? (
-          <p className="text-gray-500 italic text-sm">No folders yet. Create one above!</p>
-        ) : (
-          <div className="mb-2 flex items-center gap-3 overflow-x-auto custom-scrollbar pb-4 pt-2 px-1 scroll-smooth">
-            <div className="flex gap-3 shrink-0">
+        <h3 className={`text-lg font-bold flex items-center gap-2 mb-3 ${
+          currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+        }`}>
+          <FaFolder className={currentTheme === 'dark' ? 'text-gray-400' : 'text-black'} /> 
+          Folders ({folders.length})
+        </h3>
+        <div className="mb-2 flex items-center gap-3 overflow-x-auto custom-scrollbar pb-4 pt-2 px-1 scroll-smooth">
+          <div className="flex gap-3 shrink-0">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              whileHover={{ scale: 1.02 }}
+            >
+              <MemoryFilterPill
+                label="All Memories"
+                count={totalMemoriesCount}
+                icon={FaFilter}
+                isActive={activeFilterId === 'all'}
+                onClick={() => setActiveFilterId('all')}
+              />
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              whileHover={{ scale: 1.02 }}
+            >
+              <DroppableFolderPill
+                folderId="root"
+                label="Unsorted"
+                count={unsortedCount}
+                icon={FaFolderOpen}
+                isActive={activeFilterId === 'root'}
+                onClick={() => setActiveFilterId('root')}
+              />
+            </motion.div>
+
+            {folders.map(folder => (
+              <motion.div
+                key={folder.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                whileHover={{ scale: 1.02 }}
+              >
+                <DroppableFolderPill
+                  folderId={folder.id}
+                  label={folder.name}
+                  count={folderCounts[folder.id] || 0}
+                  icon={FaFolder}
+                  isActive={activeFilterId === folder.id}
+                  onClick={() => setActiveFilterId(folder.id)}
+                  showDelete={isParent()}
+                  onDelete={() => handleDeleteFolder(folder.id, folder.name)}
+                />
+              </motion.div>
+            ))}
+
+            {isParent() && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 whileHover={{ scale: 1.02 }}
               >
-                <MemoryFilterPill
-                  label="All Memories"
-                  count={totalMemoriesCount}
-                  icon={FaFilter}
-                  isActive={activeFilterId === 'all'}
-                  onClick={() => setActiveFilterId('all')}
-                />
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                whileHover={{ scale: 1.02 }}
-              >
-                <MemoryFilterPill
-                  label="Unsorted"
-                  count={unsortedCount}
-                  icon={FaFolderOpen}
-                  isActive={activeFilterId === 'root'}
-                  onClick={() => setActiveFilterId('root')}
-                  allowDrop
-                  onDropMemory={handleMoveMemory}
-                />
-              </motion.div>
-
-              {folders.map(folder => (
-                <motion.div
-                  key={folder.id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  whileHover={{ scale: 1.02 }}
+                <button
+                  onClick={() => setShowAddFolderModal(true)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed text-black hover:text-purple-600 hover:border-purple-500 transition-colors font-bold whitespace-nowrap shrink-0 ${currentTheme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}
                 >
-                  <MemoryFilterPill
-                    label={folder.name}
-                    count={folderCounts[folder.id] || 0}
-                    icon={FaFolder}
-                    isActive={activeFilterId === folder.id}
-                    onClick={() => setActiveFilterId(folder.id)}
-                    targetFolderId={folder.id}
-                    allowDrop
-                    onDropMemory={handleMoveMemory}
-                    showDelete={isParent()}
-                    onDelete={() => handleDeleteFolder(folder.id, folder.name)}
-                  />
-                </motion.div>
-              ))}
-
-              {isParent() && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  whileHover={{ scale: 1.02 }}
-                >
-                  <button
-                    onClick={() => setShowAddFolderModal(true)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed text-black hover:text-purple-600 hover:border-purple-500 transition-colors font-bold whitespace-nowrap shrink-0 ${currentTheme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}
-                  >
-                    <FaFolderPlus /> Add Folder
-                  </button>
-                </motion.div>
-              )}
-            </div>
+                  <FaFolderPlus /> Add Folder
+                </button>
+              </motion.div>
+            )}
           </div>
+        </div>
+        {folders.length === 0 && ( // Display message only if no folders AND not adding one
+          <p className="text-gray-500 italic text-sm mt-2 ml-1">No folders yet. Create one above!</p>
         )}
       </div>
       
@@ -605,115 +648,14 @@ function MemoriesContent() {
           </p>
         </div>
       ) : (
-        <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayMemories.map(memory => {
-            const uploader = getMemberById(memory.uploadedBy);
-            const isLiked = memory.likes?.includes(user.uid);
-            const isVideo = memory.mimeType?.startsWith('video/');
-
-            return (
-              <DraggableMemory key={memory.id} memory={memory}>
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className={`${theme.colors.bgCard} rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer`}
-                  onClick={() => openFolderView(memory)}
-                >
-                  <div className="relative h-64">
-                    {isVideo ? (
-                      <video
-                        src={memory.downloadURL}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <Image
-                        src={memory.downloadURL}
-                        alt={memory.caption || 'Memory'}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    )}
-
-                    {/* Time Capsule Badge */}
-                    {memory.isTimeCapsule && (
-                      <div className="absolute top-3 right-3 bg-purple-500 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 shadow-lg">
-                        <FaLock />
-                        {format(new Date(memory.revealDate.seconds * 1000), 'MMM d, yyyy')}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      {uploader && <UserAvatar user={uploader} size={32} />}
-                      <div className="flex-1">
-                        <p className="font-bold text-sm text-gray-800">
-                          {uploader?.displayName}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {memory.uploadedAt?.toDate?.()
-                            ? format(memory.uploadedAt.toDate(), 'MMM d, yyyy')
-                            : 'Recently'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {memory.caption && (
-                      <p className="text-gray-700 mb-3">{memory.caption}</p>
-                    )}
-
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleLike(memory.id, memory.likes || []);
-                        }}
-                        className={`flex items-center gap-2 transition-all ${
-                          isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
-                        }`}
-                      >
-                        <FaHeart className={isLiked ? 'animate-pulse' : ''} />
-                        <span className="text-sm font-bold">
-                          {memory.likes?.length || 0}
-                        </span>
-                      </button>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openFolderView(memory, { openDetails: true });
-                        }}
-                        className="flex items-center gap-2 text-gray-400 hover:text-purple-500 transition-all"
-                      >
-                        <FaComment />
-                        <span className="text-sm font-bold">Comments</span>
-                      </button>
-
-                      {/* Add Delete Button */}
-                      {memory.uploadedBy === user.uid && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(memory.id, memory.storagePath);
-                          }}
-                          disabled={deleting === memory.id}
-                          className="ml-auto text-gray-400 hover:text-red-500 transition-all disabled:opacity-50"
-                        >
-                          {deleting === memory.id ? (
-                            <span className="animate-spin text-sm">Deleting...</span>
-                          ) : (
-                            <FaTrash />
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              </DraggableMemory>
-            );
-          })}
-        </div>
+        <MemoriesGrid 
+          memories={displayMemories}
+          onOpen={openFolderView}
+          onMove={handleMoveMemories}
+          folders={folders}
+          isParent={isParent()}
+          activeId={activeId}
+        />
       )}
       {/* Add Folder Modal */}
       <AnimatePresence>
@@ -801,18 +743,16 @@ function MemoriesContent() {
         isParent={isParent}
         folders={folders}
         onMoveMemory={handleMoveMemory}
+        onDeleteMemory={handleDelete}
       />
-    </>
+    </DndContext>
   );
 }
 
 export default function MemoriesPage() {
   return (
     <DashboardLayout>
-      {/* Use the Custom DnD Options here */}
-      <DndProvider backend={MultiBackend} options={customDnDOptions}>
-        <MemoriesContent />
-      </DndProvider>
+      <MemoriesContent />
     </DashboardLayout>
   );
 }
