@@ -82,6 +82,7 @@ export default function FolderView({
     ? new Date(currentMemory.revealDate.seconds * 1000)
     : null;
   const isParentUser = isParent?.();
+  const canDelete = isParentUser || currentMemory.uploadedBy === currentUserId;
 
   return (
     <AnimatePresence>
@@ -192,7 +193,7 @@ export default function FolderView({
                   <FaComment />
                   <span>{comments.length}</span>
                 </button>
-                {isParentUser && (
+                {canDelete && (
                   <>
                     <div className="h-5 w-px bg-white/30" />
                     <button
@@ -360,7 +361,7 @@ export default function FolderView({
                       </button>
                     </form>
 
-                    {isParentUser && (
+                    {canDelete && (
                       <div className="border-t border-gray-200 pt-5 mt-6">
                         <h4 className="text-lg font-bold mb-3 flex items-center gap-2">
                           <FaFolder />
@@ -373,7 +374,7 @@ export default function FolderView({
                           <select
                             value={currentMemory.folderId || ''}
                             onChange={(e) => onMoveMemory?.(currentMemory.id, e.target.value || null)}
-                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none font-semibold bg-white"
+                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold bg-white text-gray-900"
                           >
                             <option value="">All Memories (Root)</option>
                             {folders.map((folder) => (

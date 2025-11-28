@@ -26,7 +26,13 @@ function DraggableMemoryItem({ memory, children, selectMode }) {
   } : undefined;
 
   return (
-    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="touch-none">
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className="touch-manipulation select-none"
+      style={{ ...style, touchAction: isDragging ? 'none' : 'pan-y' }}
+    >
       {children}
     </div>
   );
