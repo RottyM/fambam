@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useMemories, useMemoriesFolders } from '@/hooks/useFirestore';
@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaUpload, FaHeart, FaTimes, FaComment, FaLock, FaUnlock, FaTrash, FaFolder, FaFolderOpen, FaFolderPlus, FaFilter, FaChevronUp, FaChevronDown } from 'react-icons/fa';
 import { storage, db, functions } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { addDoc, collection, serverTimestamp, updateDoc, doc, arrayUnion, arrayRemove, onSnapshot, query, orderBy, deleteDoc } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, updateDoc, doc, arrayUnion, arrayRemove, onSnapshot, query, orderBy, deleteDoc, setDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import toast from 'react-hot-toast';
 import { useDropzone } from 'react-dropzone';
@@ -128,28 +128,76 @@ function MemoriesContent() {
     ? null
     : folders.find(f => f.id === activeFilterId) || null;
 
+  // Normalize memories to treat references to deleted folders as unsorted/root
+  const folderIdSet = useMemo(() => new Set(folders.map(f => f.id)), [folders]);
+
+  const normalizedMemories = useMemo(() => {
+    return memories.map(m => {
+      if (m.folderId && !folderIdSet.has(m.folderId)) {
+        return { ...m, folderId: null };
+      }
+      return m;
+    });
+  }, [memories, folderIdSet]);
+
   // Filter memories based on reveal date and current folder
   const today = new Date();
-  const filteredMemories = memories.filter(m => {
-    const isVisible = !m.revealDate || new Date(m.revealDate.seconds * 1000) <= today;
-    const matchesFolder =
-      activeFilterId === 'all'
-        ? true
-        : activeFilterId === 'root'
-          ? !m.folderId
-          : m.folderId === activeFilterId;
-    return isVisible && matchesFolder;
-  });
+  const filteredMemories = useMemo(() => {
+    return normalizedMemories.filter(m => {
+      const isVisible = !m.revealDate || new Date(m.revealDate.seconds * 1000) <= today;
+      const matchesFolder =
+        activeFilterId === 'all'
+          ? true
+          : activeFilterId === 'root'
+            ? !m.folderId
+            : m.folderId === activeFilterId;
+      return isVisible && matchesFolder;
+    });
+  }, [normalizedMemories, activeFilterId, today]);
 
-  const visibleMemories = filteredMemories.filter(m => !m.isTimeCapsule);
-  const lockedMemories = filteredMemories.filter(m => m.isTimeCapsule);
-  const unsortedCount = memories.filter(m => !m.folderId).length;
-  const totalMemoriesCount = memories.length;
+  const visibleMemories = useMemo(
+    () => filteredMemories.filter(m => !m.isTimeCapsule),
+    [filteredMemories]
+  );
+  const lockedMemories = useMemo(
+    () => filteredMemories.filter(m => m.isTimeCapsule),
+    [filteredMemories]
+  );
+  const unsortedCount = useMemo(
+    () => normalizedMemories.filter(m => !m.folderId).length,
+    [normalizedMemories]
+  );
+  const totalMemoriesCount = normalizedMemories.length;
   
-  const folderCounts = folders.reduce((acc, folder) => {
-    acc[folder.id] = memories.filter(m => m.folderId === folder.id).length;
-    return acc;
-  }, {});
+  const folderCounts = useMemo(() => {
+    return folders.reduce((acc, folder) => {
+      acc[folder.id] = normalizedMemories.filter(m => m.folderId === folder.id).length;
+      return acc;
+    }, {});
+  }, [folders, normalizedMemories]);
+
+  // Keep the open FolderView in sync when memory data changes (likes, moves, deletes)
+  useEffect(() => {
+    if (!folderView.isOpen) return;
+
+    const memoriesToShow = filteredMemories;
+
+    // Keep the modal's memory list in sync without resetting its index
+    if (memoriesToShow !== folderView.memories) {
+      setFolderView(prev => ({
+        ...prev,
+        memories: memoriesToShow,
+      }));
+    }
+
+    // Refresh selected memory data so likes/counts update immediately
+    if (selectedMemory) {
+      const updatedSelected = memoriesToShow.find(m => m.id === selectedMemory.id);
+      if (updatedSelected) {
+        setSelectedMemory(updatedSelected);
+      }
+    }
+  }, [filteredMemories, folderView.isOpen, folderView.memories, selectedMemory]); // keep modal in sync with latest data
 
   // Load comments for selected memory
   useEffect(() => {
@@ -231,22 +279,33 @@ function MemoriesContent() {
     },
   });
 
-  const toggleLike = async (memoryId, currentLikes) => {
+  const toggleLike = async (memoryId, isCurrentlyLiked = false) => {
     if (!user?.uid || !userData?.familyId) {
       toast.error('Please sign in to like memories');
       return;
     }
-    const userId = user.uid;
-    const isLiked = currentLikes?.includes(userId);
 
+    const userId = user.uid;
+    const memoryRef = doc(db, 'families', userData.familyId, 'memories', memoryId);
     try {
-      await updateDoc(
-        doc(db, 'families', userData.familyId, 'memories', memoryId),
-        {
-          likes: isLiked ? arrayRemove(userId) : arrayUnion(userId),
-        }
-      );
+      await updateDoc(memoryRef, {
+        likes: isCurrentlyLiked ? arrayRemove(userId) : arrayUnion(userId),
+      });
+      toast.success(isCurrentlyLiked ? 'Like removed' : 'Liked');
     } catch (error) {
+      // Fallback for older docs where likes is not an array
+      if (error?.code === 'failed-precondition' || error?.message?.includes('not an array')) {
+        try {
+          await setDoc(memoryRef, { likes: [] }, { merge: true });
+          await updateDoc(memoryRef, {
+            likes: isCurrentlyLiked ? arrayRemove(userId) : arrayUnion(userId),
+          });
+          toast.success(isCurrentlyLiked ? 'Like removed' : 'Liked');
+          return;
+        } catch (nestedError) {
+          console.error('Error normalizing likes:', nestedError);
+        }
+      }
       console.error('Error updating like:', error);
       toast.error('Failed to update like');
     }
@@ -391,7 +450,8 @@ function MemoriesContent() {
   const openFolderView = (clickedMemory, { openDetails = false } = {}) => {
     const memoriesToShow = filteredMemories;
     const initialIndex = memoriesToShow.findIndex(m => m.id === clickedMemory.id);
-    setSelectedMemory(clickedMemory);
+    const normalizedSelected = normalizedMemories.find(m => m.id === clickedMemory.id) || clickedMemory;
+    setSelectedMemory(normalizedSelected);
     setFolderView({
       isOpen: true,
       memories: memoriesToShow,
@@ -728,29 +788,32 @@ function MemoriesContent() {
       </AnimatePresence>
 
 
-      <FolderView
-        isOpen={folderView.isOpen}
-        onClose={() => {
-          setFolderView({ isOpen: false, memories: [], initialIndex: 0, detailsOpen: false });
-          setSelectedMemory(null);
-        }}
-        memories={folderView.memories}
-        initialIndex={folderView.initialIndex}
-        detailsOpen={folderView.detailsOpen}
-        getMemberById={getMemberById}
-        onMemoryChange={(memory) => setSelectedMemory(memory)}
-        onToggleLike={toggleLike}
-        currentUserId={user?.uid}
-        comments={comments}
-        newComment={newComment}
-        onChangeNewComment={setNewComment}
-        onSubmitComment={addComment}
-        onDeleteComment={handleDeleteComment}
-        isParent={isParent}
-        folders={folders}
-        onMoveMemory={handleMoveMemory}
-        onDeleteMemory={handleDelete}
-      />
+      {folderView.isOpen && (
+        <FolderView
+          key={`${folderView.initialIndex}-${folderView.memories[folderView.initialIndex]?.id || 'closed'}`}
+          isOpen={folderView.isOpen}
+          onClose={() => {
+            setFolderView({ isOpen: false, memories: [], initialIndex: 0, detailsOpen: false });
+            setSelectedMemory(null);
+          }}
+          memories={folderView.memories}
+          initialIndex={folderView.initialIndex}
+          detailsOpen={folderView.detailsOpen}
+          getMemberById={getMemberById}
+          onMemoryChange={(memory) => setSelectedMemory(memory)}
+          onToggleLike={toggleLike}
+          currentUserId={user?.uid}
+          comments={comments}
+          newComment={newComment}
+          onChangeNewComment={setNewComment}
+          onSubmitComment={addComment}
+          onDeleteComment={handleDeleteComment}
+          isParent={isParent}
+          folders={folders}
+          onMoveMemory={handleMoveMemory}
+          onDeleteMemory={handleDelete}
+        />
+      )}
     </DndContext>
   );
 }
