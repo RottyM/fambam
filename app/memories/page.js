@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useMemories, useMemoriesFolders } from '@/hooks/useFirestore';
@@ -129,36 +129,75 @@ function MemoriesContent() {
     : folders.find(f => f.id === activeFilterId) || null;
 
   // Normalize memories to treat references to deleted folders as unsorted/root
-  const folderIdSet = new Set(folders.map(f => f.id));
-  const normalizedMemories = memories.map(m => {
-    if (m.folderId && !folderIdSet.has(m.folderId)) {
-      return { ...m, folderId: null };
-    }
-    return m;
-  });
+  const folderIdSet = useMemo(() => new Set(folders.map(f => f.id)), [folders]);
+
+  const normalizedMemories = useMemo(() => {
+    return memories.map(m => {
+      if (m.folderId && !folderIdSet.has(m.folderId)) {
+        return { ...m, folderId: null };
+      }
+      return m;
+    });
+  }, [memories, folderIdSet]);
 
   // Filter memories based on reveal date and current folder
   const today = new Date();
-  const filteredMemories = normalizedMemories.filter(m => {
-    const isVisible = !m.revealDate || new Date(m.revealDate.seconds * 1000) <= today;
-    const matchesFolder =
-      activeFilterId === 'all'
-        ? true
-        : activeFilterId === 'root'
-          ? !m.folderId
-          : m.folderId === activeFilterId;
-    return isVisible && matchesFolder;
-  });
+  const filteredMemories = useMemo(() => {
+    return normalizedMemories.filter(m => {
+      const isVisible = !m.revealDate || new Date(m.revealDate.seconds * 1000) <= today;
+      const matchesFolder =
+        activeFilterId === 'all'
+          ? true
+          : activeFilterId === 'root'
+            ? !m.folderId
+            : m.folderId === activeFilterId;
+      return isVisible && matchesFolder;
+    });
+  }, [normalizedMemories, activeFilterId, today]);
 
-  const visibleMemories = filteredMemories.filter(m => !m.isTimeCapsule);
-  const lockedMemories = filteredMemories.filter(m => m.isTimeCapsule);
-  const unsortedCount = normalizedMemories.filter(m => !m.folderId).length;
+  const visibleMemories = useMemo(
+    () => filteredMemories.filter(m => !m.isTimeCapsule),
+    [filteredMemories]
+  );
+  const lockedMemories = useMemo(
+    () => filteredMemories.filter(m => m.isTimeCapsule),
+    [filteredMemories]
+  );
+  const unsortedCount = useMemo(
+    () => normalizedMemories.filter(m => !m.folderId).length,
+    [normalizedMemories]
+  );
   const totalMemoriesCount = normalizedMemories.length;
   
-  const folderCounts = folders.reduce((acc, folder) => {
-    acc[folder.id] = normalizedMemories.filter(m => m.folderId === folder.id).length;
-    return acc;
-  }, {});
+  const folderCounts = useMemo(() => {
+    return folders.reduce((acc, folder) => {
+      acc[folder.id] = normalizedMemories.filter(m => m.folderId === folder.id).length;
+      return acc;
+    }, {});
+  }, [folders, normalizedMemories]);
+
+  // Keep the open FolderView in sync when memory data changes (likes, moves, deletes)
+  useEffect(() => {
+    if (!folderView.isOpen) return;
+
+    const memoriesToShow = filteredMemories;
+
+    // Keep the modal's memory list in sync without resetting its index
+    if (memoriesToShow !== folderView.memories) {
+      setFolderView(prev => ({
+        ...prev,
+        memories: memoriesToShow,
+      }));
+    }
+
+    // Refresh selected memory data so likes/counts update immediately
+    if (selectedMemory) {
+      const updatedSelected = memoriesToShow.find(m => m.id === selectedMemory.id);
+      if (updatedSelected) {
+        setSelectedMemory(updatedSelected);
+      }
+    }
+  }, [filteredMemories, folderView.isOpen, folderView.memories, selectedMemory]); // keep modal in sync with latest data
 
   // Load comments for selected memory
   useEffect(() => {
@@ -252,6 +291,7 @@ function MemoriesContent() {
       await updateDoc(memoryRef, {
         likes: isCurrentlyLiked ? arrayRemove(userId) : arrayUnion(userId),
       });
+      toast.success(isCurrentlyLiked ? 'Like removed' : 'Liked');
     } catch (error) {
       // Fallback for older docs where likes is not an array
       if (error?.code === 'failed-precondition' || error?.message?.includes('not an array')) {
@@ -260,6 +300,7 @@ function MemoriesContent() {
           await updateDoc(memoryRef, {
             likes: isCurrentlyLiked ? arrayRemove(userId) : arrayUnion(userId),
           });
+          toast.success(isCurrentlyLiked ? 'Like removed' : 'Liked');
           return;
         } catch (nestedError) {
           console.error('Error normalizing likes:', nestedError);
