@@ -45,7 +45,7 @@ const navItems = [
 export default function Sidebar({ children }) { // Added children prop destructuring to wrap content
   const pathname = usePathname();
   const { user, userData, signOut } = useAuth();
-  const { family } = useFamily();
+  const { family, members = [] } = useFamily();
   const { theme, toggleTheme, currentTheme } = useTheme();
   const { notificationsEnabled, requestPermission, disableNotifications, notificationsSupported } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
@@ -134,26 +134,28 @@ export default function Sidebar({ children }) { // Added children prop destructu
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-2">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={closeSidebar}
-                className={`flex items-center gap-3 px-4 py-2 transition-all ${
-                  isActive
-                    ? `bg-gradient-to-r ${theme.colors.sidebarActive} border-r-4 ${theme.colors.sidebarActiveBorder} ${theme.colors.sidebarActiveText} font-bold`
-                    : `${theme.colors.sidebarText} hover:bg-opacity-10 hover:${theme.colors.sidebarActiveText}`
-                }`}
-              >
-                <span className="text-xl">{item.emoji}</span>
-                <span className="font-semibold text-sm">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="flex-1 overflow-y-auto">
+          <nav className="py-2">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={closeSidebar}
+                  className={`flex items-center gap-3 px-4 py-2 transition-all ${
+                    isActive
+                      ? `bg-gradient-to-r ${theme.colors.sidebarActive} border-r-4 ${theme.colors.sidebarActiveBorder} ${theme.colors.sidebarActiveText} font-bold`
+                      : `${theme.colors.sidebarText} hover:bg-opacity-10 hover:${theme.colors.sidebarActiveText}`
+                  }`}
+                >
+                  <span className="text-xl">{item.emoji}</span>
+                  <span className="font-semibold text-sm">{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
 
         {/* Bottom tools - compact */}
         <div className={`border-t ${theme.colors.borderLight}`}>
