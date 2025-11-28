@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import MoveMemoriesModal from './MoveMemoriesModal';
 import { useDraggable, DragOverlay } from '@dnd-kit/core';
+import { FixedSizeGrid } from 'react-window';
 
 const CheckIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-6 h-6 text-white">
@@ -39,15 +40,26 @@ function DraggableMemoryItem({ memory, children, selectMode }) {
 }
 
 
-export default function MemoriesGrid({ memories, onMove, onOpen, folders, isParent }) {
+export default function MemoriesGrid({ memories, onMove, onOpen, folders, isParent, hasMore, loadMore, loadingMore, activeId }) {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedMemories, setSelectedMemories] = useState(new Set());
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
-  const [activeId, setActiveId] = useState(null); // For DragOverlay
-
   // Refs for robust touch handling
   const pressTimer = useRef();
   const touchStartPos = useRef({ x: 0, y: 0 });
+  const containerRef = useRef(null);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const updateSize = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      setContainerSize({ width: rect.width, height: rect.height });
+    };
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
 
   const handleLongPress = (memoryId) => {
     if (activeId) return; // Don't enter select mode if a drag is active
@@ -113,67 +125,119 @@ export default function MemoriesGrid({ memories, onMove, onOpen, folders, isPare
   
   const activeMemory = memories.find(m => m.id === activeId);
 
+  const GUTTER = 8;
+
+  const renderCell = (memory, index, style) => {
+    const isSelected = selectedMemories.has(memory.id);
+    const isVideo = memory.mimeType?.startsWith('video/');
+
+    return (
+      <DraggableMemoryItem key={memory.id} memory={memory} selectMode={selectMode}>
+        <motion.div
+          initial={{ opacity: 1, scale: 1 }}
+          animate={{
+            opacity: activeId === memory.id ? 0 : 1, // Hide original when dragging
+            scale: isSelected ? 0.9 : 1,
+          }}
+          transition={{ delay: 0 }}
+          className="relative w-full h-full cursor-pointer group"
+          onClick={() => handleClick(memory)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            handleLongPress(memory.id);
+          }}
+          onTouchStart={(e) => handleTouchStart(e, memory.id)}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          style={style}
+        >
+          {isVideo ? (
+            <video
+              src={memory.downloadURL}
+              className="w-full h-full object-cover bg-gray-200 dark:bg-gray-800 rounded-md"
+              playsInline
+              muted
+              draggable="false"
+            />
+          ) : (
+            <Image
+              src={memory.downloadURL}
+              alt="Memory"
+              fill
+              sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 16vw"
+              className="object-cover bg-gray-200 dark:bg-gray-800 rounded-md"
+              unoptimized
+              draggable="false"
+            />
+          )}
+
+          {selectMode && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none rounded-md">
+              <div className={`w-8 h-8 rounded-full border-2 border-white flex items-center justify-center ${isSelected ? 'bg-blue-500' : 'bg-black/30'}`}>
+                {isSelected && <CheckIcon />}
+              </div>
+            </div>
+          )}
+          
+          <div className={`absolute inset-0 transition-colors pointer-events-none rounded-md ${selectMode && !isSelected ? 'bg-black/60' : 'bg-transparent'}`} />
+        
+        </motion.div>
+      </DraggableMemoryItem>
+    );
+  };
+
+  const VirtualGrid = () => {
+    const width = containerSize.width || 800;
+    const height = containerSize.height || 500;
+    const columns = width >= 1280 ? 6 : width >= 1024 ? 5 : width >= 768 ? 4 : 3;
+    const itemSize = Math.floor((width - GUTTER * (columns - 1)) / columns);
+    const rowCount = Math.ceil(memories.length / columns);
+
+    return (
+      <FixedSizeGrid
+        height={height}
+        width={width}
+        columnCount={columns}
+        columnWidth={itemSize + GUTTER}
+        rowCount={rowCount}
+        rowHeight={itemSize + GUTTER}
+        itemKey={({ columnIndex, rowIndex }) => {
+          const index = rowIndex * columns + columnIndex;
+          return memories[index]?.id ?? `empty-${rowIndex}-${columnIndex}`;
+        }}
+        onItemsRendered={({ visibleRowStopIndex }) => {
+          if (rowCount === 0) return;
+          const nearEnd = visibleRowStopIndex >= rowCount - 2;
+          if (nearEnd && hasMore && !loadingMore) {
+            loadMore?.();
+          }
+        }}
+        className="will-change-transform scrollbar-hide"
+        style={{ overflowX: 'hidden', overflowY: 'auto' }}
+      >
+        {({ columnIndex, rowIndex, style }) => {
+          const index = rowIndex * columns + columnIndex;
+          if (index >= memories.length) return null;
+          const memory = memories[index];
+
+          const adjustedStyle = {
+            ...style,
+            left: style.left,
+            top: style.top,
+            width: itemSize,
+            height: itemSize,
+            paddingRight: GUTTER / 2,
+            paddingBottom: GUTTER / 2,
+          };
+
+          return renderCell(memory, index, adjustedStyle);
+        }}
+      </FixedSizeGrid>
+    );
+  };
   return (
-    <div className="relative">
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1">
-        {memories.map((memory, index) => {
-          const isSelected = selectedMemories.has(memory.id);
-          const isVideo = memory.mimeType?.startsWith('video/');
-
-          return (
-            <DraggableMemoryItem key={memory.id} memory={memory} selectMode={selectMode}>
-              <motion.div
-                initial={{ opacity: 1, scale: 1 }}
-                animate={{
-                  opacity: activeId === memory.id ? 0 : 1, // Hide original when dragging
-                  scale: isSelected ? 0.9 : 1,
-                }}
-                transition={{ delay: index * 0.02 }}
-                className="relative aspect-square cursor-pointer group"
-                onClick={() => handleClick(memory)}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  handleLongPress(memory.id);
-                }}
-                onTouchStart={(e) => handleTouchStart(e, memory.id)}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-              >
-                {isVideo ? (
-                  <video
-                    src={memory.downloadURL}
-                    className="w-full h-full object-cover bg-gray-200 dark:bg-gray-800 rounded-md"
-                    playsInline
-                    muted
-                    draggable="false"
-                  />
-                ) : (
-                  <Image
-                    src={memory.downloadURL}
-                    alt="Memory"
-                    fill
-                    sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 16vw"
-                    className="object-cover bg-gray-200 dark:bg-gray-800 rounded-md"
-                    unoptimized
-                    draggable="false"
-                  />
-                )}
-
-                {selectMode && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none rounded-md">
-                    <div className={`w-8 h-8 rounded-full border-2 border-white flex items-center justify-center ${isSelected ? 'bg-blue-500' : 'bg-black/30'}`}>
-                      {isSelected && <CheckIcon />}
-                    </div>
-                  </div>
-                )}
-                
-                <div className={`absolute inset-0 transition-colors pointer-events-none rounded-md ${selectMode && !isSelected ? 'bg-black/60' : 'bg-transparent'}`} />
-              
-              </motion.div>
-            </DraggableMemoryItem>
-          );
-        })}
-      </div>
+    <div className="relative h-[70vh] min-h-[420px]" ref={containerRef}>
+      <VirtualGrid />
 
       <DragOverlay>
         {activeId && activeMemory ? (
@@ -197,6 +261,18 @@ export default function MemoriesGrid({ memories, onMove, onOpen, folders, isPare
            </div>
         ) : null}
       </DragOverlay>
+
+      {hasMore && (
+        <div className="flex justify-center mt-4">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
+          >
+            {loadingMore ? 'Loading…' : 'Load more'}
+          </button>
+        </div>
+      )}
 
       <AnimatePresence>
         {selectMode && (

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
-import { useMemories, useMemoriesFolders } from '@/hooks/useFirestore';
+import { usePaginatedMemories, useMemoriesFolders } from '@/hooks/useFirestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -93,7 +93,15 @@ function DroppableFolderPill(props) {
 function MemoriesContent() {
   const { user, userData, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { memories, loading: loadingMemories, updateMemory } = useMemories();
+  const {
+    memories,
+    loading: loadingMemories,
+    loadingMore: loadingMoreMemories,
+    hasMore: hasMoreMemories,
+    loadMore: loadMoreMemories,
+    updateMemoryLocal,
+    removeMemoryLocal,
+  } = usePaginatedMemories(30);
   const { folders, loading: loadingFolders, addFolder, deleteFolder } = useMemoriesFolders();
   const { getMemberById, isParent } = useFamily();
   const { theme, currentTheme } = useTheme();
@@ -287,10 +295,22 @@ function MemoriesContent() {
 
     const userId = user.uid;
     const memoryRef = doc(db, 'families', userData.familyId, 'memories', memoryId);
+    const currentLikes =
+      memories.find(m => m.id === memoryId)?.likes ||
+      selectedMemory?.likes ||
+      [];
+    const updatedLikes = isCurrentlyLiked
+      ? currentLikes.filter(id => id !== userId)
+      : [...new Set([...currentLikes, userId])];
+
     try {
       await updateDoc(memoryRef, {
         likes: isCurrentlyLiked ? arrayRemove(userId) : arrayUnion(userId),
       });
+      updateMemoryLocal(memoryId, { likes: updatedLikes });
+      if (selectedMemory?.id === memoryId) {
+        setSelectedMemory({ ...selectedMemory, likes: updatedLikes });
+      }
       toast.success(isCurrentlyLiked ? 'Like removed' : 'Liked');
     } catch (error) {
       // Fallback for older docs where likes is not an array
@@ -300,6 +320,10 @@ function MemoriesContent() {
           await updateDoc(memoryRef, {
             likes: isCurrentlyLiked ? arrayRemove(userId) : arrayUnion(userId),
           });
+          updateMemoryLocal(memoryId, { likes: updatedLikes });
+          if (selectedMemory?.id === memoryId) {
+            setSelectedMemory({ ...selectedMemory, likes: updatedLikes });
+          }
           toast.success(isCurrentlyLiked ? 'Like removed' : 'Liked');
           return;
         } catch (nestedError) {
@@ -369,6 +393,7 @@ function MemoriesContent() {
           const deleteMemory = httpsCallable(functions, 'deleteMemory');
           await deleteMemory({ familyId: userData.familyId, memoryId, storagePath });
           toast.success('Memory deleted');
+          removeMemoryLocal(memoryId);
           // Close FolderView and reset selected memory after successful deletion
           setFolderView({ isOpen: false, memories: [], initialIndex: 0, detailsOpen: false });
           setSelectedMemory(null);
@@ -384,7 +409,11 @@ function MemoriesContent() {
 
   const handleMoveMemory = async (memoryId, newFolderId) => {
     try {
-      await updateMemory(memoryId, { folderId: newFolderId });
+      await updateDoc(
+        doc(db, 'families', userData.familyId, 'memories', memoryId),
+        { folderId: newFolderId }
+      );
+      updateMemoryLocal(memoryId, { folderId: newFolderId });
       toast.success('Memory moved!');
     } catch (error) {
       console.error('Error moving memory:', error);
@@ -395,10 +424,16 @@ function MemoriesContent() {
   const handleMoveMemories = async (memoryIds, newFolderId) => {
     if (!memoryIds || memoryIds.length === 0) return;
 
-    const movePromises = memoryIds.map(id => updateMemory(id, { folderId: newFolderId }));
+    const movePromises = memoryIds.map(id =>
+      updateDoc(
+        doc(db, 'families', userData.familyId, 'memories', id),
+        { folderId: newFolderId }
+      )
+    );
 
     try {
       await Promise.all(movePromises);
+      memoryIds.forEach(id => updateMemoryLocal(id, { folderId: newFolderId }));
       toast.success(`Moved ${memoryIds.length} memories!`);
     } catch (error) {
       console.error('Error moving memories:', error);
@@ -721,6 +756,9 @@ function MemoriesContent() {
           folders={folders}
           isParent={isParent()}
           activeId={activeId}
+          hasMore={hasMoreMemories}
+          loadMore={loadMoreMemories}
+          loadingMore={loadingMoreMemories}
         />
       )}
       {/* Add Folder Modal */}

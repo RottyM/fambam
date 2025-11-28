@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   collection,
   query,
@@ -13,7 +13,9 @@ import {
   arrayUnion,  // <-- Added for voting
   arrayRemove, // <-- Added for voting
   getDocs,
-  writeBatch
+  writeBatch,
+  limit,
+  startAfter,
 } from 'firebase/firestore';
 // Relative import for better stability
 import { db } from '../lib/firebase';
@@ -307,6 +309,96 @@ export function useMemories() {
   };
 
   return { memories, loading, updateMemory };
+}
+
+// --- 5b. PAGINATED MEMORIES ---
+export function usePaginatedMemories(pageSize = 30) {
+  const { userData } = useAuth();
+  const [memories, setMemories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const lastDocRef = useRef(null);
+
+  const loadPage = async (cursor = null, append = false) => {
+    if (!userData?.familyId) return;
+
+    const baseQuery = query(
+      collection(db, 'families', userData.familyId, 'memories'),
+      orderBy('uploadedAt', 'desc'),
+      limit(pageSize)
+    );
+
+    const pageQuery = cursor ? query(baseQuery, startAfter(cursor)) : baseQuery;
+
+    const snapshot = await getDocs(pageQuery);
+    const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    lastDocRef.current = snapshot.docs[snapshot.docs.length - 1] || null;
+    setHasMore(snapshot.docs.length === pageSize);
+
+    setMemories(prev => {
+      if (!append) return docs;
+      const seen = new Set(prev.map(m => m.id));
+      const merged = [...prev];
+      docs.forEach(d => {
+        if (!seen.has(d.id)) merged.push(d);
+      });
+      return merged;
+    });
+  };
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      await loadPage(lastDocRef.current, true);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const refresh = async () => {
+    setLoading(true);
+    lastDocRef.current = null;
+    setHasMore(true);
+    await loadPage(null, false);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    setMemories([]);
+    lastDocRef.current = null;
+    setHasMore(true);
+    if (!userData?.familyId) {
+      setLoading(false);
+      return;
+    }
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData?.familyId]);
+
+  // Expose a simple local updater for optimistic UI (likes, moves)
+  const updateMemoryLocal = (memoryId, updates) => {
+    setMemories(prev =>
+      prev.map(m => (m.id === memoryId ? { ...m, ...updates } : m))
+    );
+  };
+
+  const removeMemoryLocal = (memoryId) => {
+    setMemories(prev => prev.filter(m => m.id !== memoryId));
+  };
+
+  return {
+    memories,
+    loading,
+    loadingMore,
+    hasMore,
+    loadMore,
+    refresh,
+    updateMemoryLocal,
+    removeMemoryLocal,
+  };
 }
 
 // --- 6. FOLDERS ---

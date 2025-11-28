@@ -15,24 +15,55 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-poppins);
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
+/* Custom scrollbar (visible) */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #c4b5fd #f1f1f5; /* light lavender thumb, soft track */
+}
+
+.custom-scrollbar::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f5;
   border-radius: 10px;
 }
 
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #f668ad, #0ea5e9);
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #e0d7ff, #c4b5fd, #a78bfa);
   border-radius: 10px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #dd1f6d, #0284c7);
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #d8ccff, #bda2ff, #9f7aea);
+}
+
+/* Dark mode scrollbar */
+.dark .custom-scrollbar {
+  scrollbar-color: #a78bfa #1f2937; /* lavender thumb, deep track */
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #c4b5fd, #a78bfa, #8b5cf6);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #bca8ff, #9f7aea, #7c3aed);
+}
+
+/* Utility to hide scrollbars while keeping scroll functionality */
+.scrollbar-hide {
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 /* Smooth transitions */
