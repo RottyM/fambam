@@ -399,7 +399,8 @@ function MemoriesContent() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Require pointer to move 8px to start a drag
+        delay: 150, // slightly shorter hold
+        tolerance: 20, // less sideways drift needed before committing to drag
       },
     }),
     useSensor(KeyboardSensor, {})
