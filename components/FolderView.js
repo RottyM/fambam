@@ -244,7 +244,7 @@ export default function FolderView({
                 }}
                 exit={{ y: 400, opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 180, damping: 20 }}
-                className="absolute bottom-0 left-0 right-0 bg-white text-gray-900 rounded-t-3xl shadow-2xl overflow-hidden z-30 max-w-3xl mx-auto"
+                className="absolute bottom-0 left-0 right-0 bg-white text-gray-900 rounded-t-3xl shadow-2xl overflow-hidden z-30 max-w-3xl w-[calc(100%-1.5rem)] sm:w-[calc(100%-2.5rem)] mx-auto"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="w-full h-2 bg-gray-100" />
@@ -350,7 +350,7 @@ export default function FolderView({
                         value={newComment}
                         onChange={(e) => onChangeNewComment?.(e.target.value)}
                         placeholder="Add a comment..."
-                        className="flex-1 px-4 py-3 rounded-full border-2 border-gray-200 focus:border-purple-500 focus:outline-none font-semibold"
+                        className="flex-1 px-4 py-3 rounded-full border-2 border-gray-200 dark:border-gray-700 focus:border-purple-500 focus:outline-none font-semibold bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                       />
                       <button
                         type="submit"

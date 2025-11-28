@@ -232,6 +232,10 @@ function MemoriesContent() {
   });
 
   const toggleLike = async (memoryId, currentLikes) => {
+    if (!user?.uid || !userData?.familyId) {
+      toast.error('Please sign in to like memories');
+      return;
+    }
     const userId = user.uid;
     const isLiked = currentLikes?.includes(userId);
 
@@ -245,7 +249,8 @@ function MemoriesContent() {
     } catch (error) {
       console.error('Error updating like:', error);
       toast.error('Failed to update like');
-    }  };
+    }
+  };
 
   const addComment = async (e) => {
     e.preventDefault();
