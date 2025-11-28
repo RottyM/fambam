@@ -17,44 +17,46 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Custom scrollbar (visible) */
 .custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #c4b5fd #f1f1f5; /* light lavender thumb, soft track */
+  scrollbar-width: auto; /* Or 'thin' */
+  scrollbar-color: #a78bfa #e5e7eb; /* thumb color, track color */
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #f1f1f5;
+  background: #e5e7eb;
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #e0d7ff, #c4b5fd, #a78bfa);
+  background: linear-gradient(180deg, #f668ad, #0ea5e9);
   border-radius: 10px;
+  border: 2px solid #e5e7eb;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #d8ccff, #bda2ff, #9f7aea);
+  background: linear-gradient(to bottom, #bca8ff, #9f7aea, #7c3aed);
 }
 
 /* Dark mode scrollbar */
 .dark .custom-scrollbar {
-  scrollbar-color: #a78bfa #1f2937; /* lavender thumb, deep track */
+  scrollbar-color: #8b5cf6 #2d3748; /* thumb color, track color */
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-track {
-  background: #1f2937;
+  background: #2d3748;
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #c4b5fd, #a78bfa, #8b5cf6);
+  background: linear-gradient(180deg, #f668ad, #0ea5e9);
+  border: 2px solid #2d3748;
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #bca8ff, #9f7aea, #7c3aed);
+  background: linear-gradient(to bottom, #9f7aea, #7c3aed, #6d28d9);
 }
 
 /* Utility to hide scrollbars while keeping scroll functionality */
