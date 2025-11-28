@@ -170,7 +170,7 @@ export default function FolderView({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    onToggleLike?.(currentMemory.id, currentMemory.likes || []);
+                    onToggleLike?.(currentMemory.id, isLiked);
                   }}
                   className={`flex items-center gap-2 text-sm font-semibold ${
                     isLiked ? 'text-red-400' : 'text-white/80 hover:text-white'
@@ -294,7 +294,7 @@ export default function FolderView({
                   {/* Actions */}
                   <div className="flex items-center gap-4 mb-6">
                     <button
-                      onClick={() => onToggleLike?.(currentMemory.id, currentMemory.likes || [])}
+                      onClick={() => onToggleLike?.(currentMemory.id, isLiked)}
                       className={`flex items-center gap-2 text-lg font-bold transition-all ${
                         isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
                       }`}
