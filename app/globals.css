@@ -59,6 +59,7 @@ h1, h2, h3, h4, h5, h6 {
   background: linear-gradient(to bottom, #9f7aea, #7c3aed, #6d28d9);
 }
 
+
 /* Utility to hide scrollbars while keeping scroll functionality */
 .scrollbar-hide {
   scrollbar-width: none;

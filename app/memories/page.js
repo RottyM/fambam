@@ -21,7 +21,8 @@ import Image from 'next/image';
 import FolderView from '@/components/FolderView'; // Make sure this path is correct
 import MemoriesGrid from '@/components/MemoriesGrid';
 import { format } from 'date-fns';
-import { DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
+import { DndContext, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
+
 function MemoryFilterPill({
   label,
   count,
@@ -497,10 +498,17 @@ function MemoriesContent() {
 
   // --- DND-Kit Setup ---
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
+      // Require the mouse to move by 10 pixels before activating
       activationConstraint: {
-        delay: 150, // slightly shorter hold
-        tolerance: 20, // less sideways drift needed before committing to drag
+        distance: 10,
+      },
+    }),
+    useSensor(TouchSensor, {
+      // Press delay of 250ms, with a tolerance of 5px of movement
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {})
