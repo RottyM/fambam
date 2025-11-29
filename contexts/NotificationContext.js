@@ -35,21 +35,16 @@ export function NotificationProvider({ children }) {
     try {
       if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
         try {
-          // Unregister conflicting workers
+          // Unregister any worker that isn't the main PWA worker
           const registrations = await navigator.serviceWorker.getRegistrations();
           for (const registration of registrations) {
-            // Clean up old logic if we switched files
-            if (process.env.NODE_ENV === 'production' && registration.active?.scriptURL.includes('firebase-messaging-sw.js')) {
-               await registration.unregister();
-            }
+            const scriptUrl = registration.active?.scriptURL || registration.scriptURL;
+            const isMainWorker = scriptUrl?.includes('/sw.js');
+            if (!isMainWorker) await registration.unregister();
           }
 
-          // --- SMART WORKER SELECTION ---
-          // Dev: Use basic notification worker (PWA disabled)
-          // Prod: Use main PWA worker (which imports notifications)
-          const workerFile = process.env.NODE_ENV === 'development' 
-            ? '/firebase-messaging-sw.js' 
-            : '/sw.js';
+          // Use a single worker everywhere; sw.js already imports firebase-messaging-sw.js
+          const workerFile = '/sw.js';
 
           const registration = await navigator.serviceWorker.register(workerFile, {
             scope: '/',
@@ -179,7 +174,7 @@ export function NotificationProvider({ children }) {
   // Auto-register worker on mount
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator && !notificationsEnabled) {
-       const workerFile = process.env.NODE_ENV === 'development' ? '/firebase-messaging-sw.js' : '/sw.js';
+       const workerFile = '/sw.js';
        navigator.serviceWorker.register(workerFile, { scope: '/' });
     }
   }, [notificationsEnabled]);
