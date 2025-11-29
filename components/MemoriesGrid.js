@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import MoveMemoriesModal from './MoveMemoriesModal';
@@ -6,6 +6,7 @@ import { useDraggable, DragOverlay } from '@dnd-kit/core';
 import { FixedSizeGrid } from 'react-window';
 import { useLongPress } from 'use-long-press';
 import { createPortal } from 'react-dom';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const CheckIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-6 h-6 text-white">
@@ -61,10 +62,10 @@ export default function MemoriesGrid({ memories, onMove, onOpen, folders, isPare
   const [selectedMemories, setSelectedMemories] = useState(new Set());
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
-  const [layout, setLayout] = useState({ columns: 3, itemSize: 120, rowCount: 0 });
   // Refs for robust touch handling
   const containerRef = useRef(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const { currentTheme } = useTheme();
 
   useEffect(() => {
     const updateSize = () => {
@@ -207,38 +208,44 @@ export default function MemoriesGrid({ memories, onMove, onOpen, folders, isPare
     );
   };
 
-  const VirtualGrid = () => {
+  const layout = useMemo(() => {
     const width = containerSize.width || 800;
     const height = containerSize.height || 500;
     const columns = width >= 1280 ? 6 : width >= 1024 ? 5 : width >= 768 ? 4 : 3;
     const itemSize = Math.floor((width - GUTTER * (columns - 1)) / columns);
     const rowCount = Math.ceil(memories.length / columns);
+    return { width, height, columns, itemSize, rowCount };
+  }, [containerSize.width, containerSize.height, memories.length]);
 
-    // Keep layout in state for overlay sizing
-    useEffect(() => {
-      setLayout((prev) => {
-        if (prev.columns === columns && prev.itemSize === itemSize && prev.rowCount === rowCount) {
-          return prev;
-        }
-        return { columns, itemSize, rowCount };
-      });
-    }, [columns, itemSize, rowCount]);
-
-    return (
+  return (
+    <>
+      <div className="flex justify-end mt-4 mb-2 px-1">
+        <button
+          onClick={toggleSelectMode}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-all shadow-sm ${
+            currentTheme === 'dark'
+              ? 'bg-gray-800 text-gray-200 border border-gray-700 hover:bg-gray-700'
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          {selectMode ? 'Done selecting' : 'Select'}
+        </button>
+      </div>
+    <div className="relative h-[70vh] min-h-[420px] pt-4" ref={containerRef}>
       <FixedSizeGrid
-        height={height}
-        width={width}
-        columnCount={columns}
-        columnWidth={itemSize + GUTTER}
-        rowCount={rowCount}
-        rowHeight={itemSize + GUTTER}
+        height={layout.height}
+        width={layout.width}
+        columnCount={layout.columns}
+        columnWidth={layout.itemSize + GUTTER}
+        rowCount={layout.rowCount}
+        rowHeight={layout.itemSize + GUTTER}
         itemKey={({ columnIndex, rowIndex }) => {
-          const index = rowIndex * columns + columnIndex;
+          const index = rowIndex * layout.columns + columnIndex;
           return memories[index]?.id ?? `empty-${rowIndex}-${columnIndex}`;
         }}
         onItemsRendered={({ visibleRowStopIndex }) => {
-          if (rowCount === 0) return;
-          const nearEnd = visibleRowStopIndex >= rowCount - 2;
+          if (layout.rowCount === 0) return;
+          const nearEnd = visibleRowStopIndex >= layout.rowCount - 2;
           if (nearEnd && hasMore && !loadingMore) {
             loadMore?.();
           }
@@ -247,26 +254,13 @@ export default function MemoriesGrid({ memories, onMove, onOpen, folders, isPare
         style={{ overflowX: 'hidden', overflowY: 'auto' }}
       >
         {({ columnIndex, rowIndex, style }) => {
-          const index = rowIndex * columns + columnIndex;
+          const index = rowIndex * layout.columns + columnIndex;
           if (index >= memories.length) return null;
           const memory = memories[index];
 
-          return renderCell(memory, index, style, itemSize, GUTTER);
+          return renderCell(memory, index, style, layout.itemSize, GUTTER);
         }}
       </FixedSizeGrid>
-    );
-  };
-  return (
-    <div className="relative h-[70vh] min-h-[420px] pt-8" ref={containerRef}>
-      <div className="absolute top-2 left-0 right-0 z-20 flex justify-end px-3 py-1 pointer-events-none">
-        <button
-          onClick={toggleSelectMode}
-          className="pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed font-bold transition-colors whitespace-nowrap shrink-0 mb-2 text-black hover:text-purple-600 hover:border-purple-500 bg-white border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:text-purple-300"
-        >
-          {selectMode ? 'Done selecting' : 'Select'}
-        </button>
-      </div>
-      <VirtualGrid />
 
       {createPortal(
         <DragOverlay>
@@ -338,5 +332,6 @@ export default function MemoriesGrid({ memories, onMove, onOpen, folders, isPare
         onSelectFolder={handleSelectFolder}
       />
     </div>
+    </>
   );
 }
