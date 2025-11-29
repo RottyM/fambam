@@ -45,8 +45,8 @@ const navItems = [
 
 export default function DashboardLayout({ children }) { 
   const pathname = usePathname();
-  const { user, userData, signOut } = useAuth();
-  const { family } = useFamily();
+  const { user, userData, loading, signOut } = useAuth();
+  const { family, loading: familyLoading } = useFamily();
   const { theme, toggleTheme, currentTheme } = useTheme();
   const { notificationsEnabled, requestPermission, disableNotifications, notificationsSupported } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
@@ -103,6 +103,19 @@ export default function DashboardLayout({ children }) {
 
     return () => observer.disconnect();
   }, [pathname]);
+
+  const isHydrating = loading || (user && !userData) || familyLoading;
+
+  if (isHydrating) {
+    return (
+      <div className={`min-h-screen ${theme.colors.bg} flex items-center justify-center`}>
+        <div className="flex items-center gap-3 text-lg font-semibold">
+          <FaSpinner className="animate-spin" />
+          <span>Loading your profile...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen ${theme.colors.bg} transition-colors duration-300`}> 
