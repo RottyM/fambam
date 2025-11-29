@@ -21,7 +21,7 @@ import Image from 'next/image';
 import FolderView from '@/components/FolderView'; // Make sure this path is correct
 import MemoriesGrid from '@/components/MemoriesGrid';
 import { format } from 'date-fns';
-import { DndContext, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
+import { DndContext, MouseSensor, TouchSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 
 function MemoryFilterPill({
   label,
@@ -507,11 +507,10 @@ function MemoriesContent() {
     useSensor(TouchSensor, {
       // Press delay of 250ms, with a tolerance of 5px of movement
       activationConstraint: {
-        delay: 250,
+        delay: 180,
         tolerance: 5,
       },
-    }),
-    useSensor(KeyboardSensor, {})
+    })
   );
 
   function handleDragStart(event) {
@@ -521,9 +520,12 @@ function MemoriesContent() {
   const handleDragEnd = (event) => {
     const { active, over } = event;
     setActiveId(null);
-    
+    if (!over) {
+      return;
+    }
     console.log('Drag ended. Active ID:', active.id, 'Over ID:', over?.id);
 
+    const selectedIds = active.data?.current?.selectedIds || [active.id];
     const isMemory = active.data.current?.type === 'MEMORY';
     const isFolder = over?.data.current?.type === 'FOLDER';
 
@@ -533,14 +535,17 @@ function MemoriesContent() {
       
       console.log(`Attempting to move memory ${memoryId} to folder ${folderId}`);
 
-      const memory = memories.find(m => m.id === memoryId);
-      
-      // Prevent moving to the same folder or to an invalid folder
-      const currentFolderId = memory.folderId || 'root'; // Treat null folderId as 'root' for comparison
-      if (memory && currentFolderId !== over.id) { // Compare against over.id directly
-        handleMoveMemory(memoryId, folderId);
+      const idsToMove = Array.from(new Set(selectedIds.length ? selectedIds : [memoryId]));
+      if (idsToMove.length === 1) {
+        const memory = memories.find(m => m.id === idsToMove[0]);
+        const currentFolderId = memory?.folderId || 'root'; // Treat null folderId as 'root' for comparison
+        if (memory && currentFolderId !== over.id) {
+          handleMoveMemory(idsToMove[0], folderId);
+        } else {
+          console.log(`Memory ${memoryId} is already in folder ${folderId} or invalid drop.`);
+        }
       } else {
-        console.log(`Memory ${memoryId} is already in folder ${folderId} or invalid drop.`);
+        handleMoveMemories(idsToMove, folderId);
       }
     }
   };
@@ -562,6 +567,7 @@ function MemoriesContent() {
   }
 
   const displayMemories = showTimeCapsules ? lockedMemories : visibleMemories;
+  const isDragging = Boolean(activeId);
 
   return (
     <DndContext 
@@ -664,7 +670,7 @@ function MemoriesContent() {
       </motion.div>
 
       {/* Folders List - Horizontal Scrollable */}
-      <div className="mb-6">
+      <div className={`mb-6 ${isDragging ? 'sticky top-16 z-30' : ''}`}>
         <h3 className={`text-lg font-bold flex items-center gap-2 mb-3 ${
           currentTheme === 'dark' ? 'text-gray-200' : 'text-gray-800'
         }`}>

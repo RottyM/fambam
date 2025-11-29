@@ -13,21 +13,25 @@ const CheckIcon = () => (
   </svg>
 );
 
-function DraggableMemoryItem({ memory, children, selectMode, style, isTouchDevice }) {
+function DraggableMemoryItem({ memory, children, selectMode, style, isTouchDevice, selectedIds }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef } = useDraggable({
     id: memory.id,
     data: {
       type: 'MEMORY',
       memory: memory,
+      selectedIds,
     },
-    disabled: selectMode || isTouchDevice, // Disable dragging in select mode or on touch devices
+    disabled: false,
   });
+  // On touch, make the whole tile the activator; on desktop keep the small drag handle.
+  const touchActivatorProps = isTouchDevice && !selectMode ? { ...listeners, ...attributes } : {};
 
   return (
     <div
       ref={setNodeRef}
       className="touch-manipulation select-none relative group"
-      style={{ ...style, touchAction: 'none' }} // Apply react-window style here, and prevent default touch action
+      style={{ ...style, touchAction: isTouchDevice ? 'pan-y' : 'none' }} // Allow touch scrolling while keeping desktop drag handles sticky
+      {...touchActivatorProps}
     >
       {!isTouchDevice && !selectMode && (
         <button
@@ -135,12 +139,14 @@ export default function MemoriesGrid({ memories, onMove, onOpen, folders, isPare
   const renderCell = (memory, index, style, itemSize, gutter) => {
     const isSelected = selectedMemories.has(memory.id);
     const isVideo = memory.mimeType?.startsWith('video/');
-    const bindLongPress = useLongPress(() => handleLongPress(memory.id), {
-      threshold: 500, // 500ms for long press
-      // The detect value ensures that once a long press is detected, it doesn't trigger a click
-      detect: 'mouseAndTouch', 
-      cancelOnMovement: true, // Cancel long press if there's significant movement
-    });
+    // Only enable long-press-to-select on non-touch devices; touch uses drag directly.
+    const bindLongPress = !isTouchDevice
+      ? useLongPress(() => handleLongPress(memory.id), {
+          threshold: 500, // 500ms for long press
+          detect: 'mouseAndTouch',
+          cancelOnMovement: true, // Cancel long press if there's significant movement
+        })
+      : () => ({});
 
     return (
       <div style={{ ...style, width: itemSize + gutter, height: itemSize + gutter }} className="box-border">
@@ -150,6 +156,7 @@ export default function MemoriesGrid({ memories, onMove, onOpen, folders, isPare
           selectMode={selectMode}
           style={{ width: '100%', height: '100%' }}
           isTouchDevice={isTouchDevice}
+          selectedIds={selectMode && selectedMemories.size > 0 ? Array.from(selectedMemories) : [memory.id]}
         >
           <div className="w-full h-full p-1">
             <motion.div
@@ -236,7 +243,7 @@ export default function MemoriesGrid({ memories, onMove, onOpen, folders, isPare
             loadMore?.();
           }
         }}
-        className="will-change-transform"
+        className="will-change-transform scrollbar-hide"
         style={{ overflowX: 'hidden', overflowY: 'auto' }}
       >
         {({ columnIndex, rowIndex, style }) => {
@@ -250,23 +257,14 @@ export default function MemoriesGrid({ memories, onMove, onOpen, folders, isPare
     );
   };
   return (
-    <div className="relative h-[70vh] min-h-[420px]" ref={containerRef}>
-      <div className="absolute top-3 right-3 z-20 flex gap-2">
+    <div className="relative h-[70vh] min-h-[420px] pt-8" ref={containerRef}>
+      <div className="absolute top-2 left-0 right-0 z-20 flex justify-end px-3 py-1 pointer-events-none">
         <button
           onClick={toggleSelectMode}
-          className={`px-3 py-2 rounded-lg text-sm font-semibold shadow-sm border transition-colors ${
-            selectMode
-              ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
-              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700 dark:hover:bg-gray-800'
-          }`}
+          className="pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed font-bold transition-colors whitespace-nowrap shrink-0 mb-2 text-black hover:text-purple-600 hover:border-purple-500 bg-white border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:text-purple-300"
         >
           {selectMode ? 'Done selecting' : 'Select'}
         </button>
-        {!isTouchDevice && (
-          <span className="hidden md:inline text-xs text-gray-500 dark:text-gray-300 bg-white/80 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 px-2 py-1 rounded-md">
-            Drag handle = move
-          </span>
-        )}
       </div>
       <VirtualGrid />
 
