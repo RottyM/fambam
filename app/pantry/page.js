@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import BarcodeScanner from "../../components/BarcodeScanner"; // Ensure this matches where you saved the scanner
+import BarcodeScanner from "@/components/BarcodeScanner"; // Uses @ alias for safety
 import { 
   collection, 
   addDoc, 
@@ -12,9 +12,8 @@ import {
   deleteDoc,
   doc 
 } from "firebase/firestore";
-// Adjust this import to match your actual firebase export. 
-// Based on your file tree, it's likely one of these:
-import { db } from "../../lib/firebase"; 
+// Adjust this import if your firebase file is elsewhere
+import { db } from "@/lib/firebase"; 
 
 export default function PantryPage() {
   const [items, setItems] = useState([]);
@@ -22,7 +21,7 @@ export default function PantryPage() {
   const [loading, setLoading] = useState(true);
 
   // State for the "Confirm Item" Modal
-  const [scannedProduct, setScannedProduct] = useState(null); // Stores data from API
+  const [scannedProduct, setScannedProduct] = useState(null); // Stores data from API or Manual Entry
   const [newItemQty, setNewItemQty] = useState(1);
 
   // 1. Listen to Pantry Data (Real-time)
@@ -40,17 +39,17 @@ export default function PantryPage() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Handle Scan Logic
+  // 2. Handle Barcode Scan
   const handleScan = async (barcode) => {
     setShowScanner(false); // Close camera
     
-    // Show a temporary loading state or toast could go here
     try {
+      // Fetch data from OpenFoodFacts
       const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
       const data = await res.json();
 
       if (data.status === 1) {
-        // Product found! Open confirmation modal
+        // Product found! Open confirmation modal with data pre-filled
         setScannedProduct({
           name: data.product.product_name || "Unknown Item",
           image: data.product.image_front_small_url || null,
@@ -59,29 +58,32 @@ export default function PantryPage() {
         });
         setNewItemQty(1);
       } else {
-        alert("Item not found in database. You can add it manually (Manual entry not built yet).");
+        // Product not found, prompt manual entry
+        alert("Item not found. Opening manual entry.");
+        setScannedProduct({ name: "", brand: "", barcode: barcode, image: null });
+        setNewItemQty(1);
       }
     } catch (error) {
       console.error("API Error:", error);
-      alert("Could not fetch product details.");
+      alert("Could not fetch product details. Try manual entry.");
     }
   };
 
-  // 3. Add to Firebase
+  // 3. Save to Firebase (Add Item)
   const confirmAddItem = async () => {
-    if (!scannedProduct) return;
+    if (!scannedProduct || !scannedProduct.name) return;
 
     try {
       await addDoc(collection(db, "pantry"), {
         name: scannedProduct.name,
-        barcode: scannedProduct.barcode,
+        barcode: scannedProduct.barcode || "MANUAL",
         image: scannedProduct.image,
         brand: scannedProduct.brand,
         quantity: parseInt(newItemQty),
         addedAt: serverTimestamp(),
       });
       
-      // Reset state
+      // Close modal and reset
       setScannedProduct(null);
     } catch (error) {
       console.error("Error adding doc:", error);
@@ -89,17 +91,17 @@ export default function PantryPage() {
     }
   };
 
-  // 4. Delete Item (Optional Helper)
+  // 4. Delete Item
   const handleDelete = async (id) => {
-    if (confirm("Eat this item? (Remove from pantry)")) {
+    if (confirm("Remove this item from pantry?")) {
       await deleteDoc(doc(db, "pantry", id));
     }
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-8 space-y-6">
+    <div className="min-h-screen p-4 md:p-8 space-y-6 bg-gray-50 dark:bg-gray-900">
       
-      {/* Header */}
+      {/* Header Section */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
@@ -110,19 +112,30 @@ export default function PantryPage() {
           </p>
         </div>
         
-        {/* FAB (Floating Action Button) for Mobile or Desktop */}
-        <button
-          onClick={() => setShowScanner(true)}
-          className="flex items-center gap-2 bg-primary hover:bg-blue-600 text-white px-5 py-3 rounded-2xl shadow-lg transition-all transform hover:scale-105"
-          // Note: If you have a custom 'primary' color in tailwind config, use that class. 
-          // Otherwise, replace 'bg-primary' with 'bg-blue-500'
-        >
-          <span className="text-xl">📷</span>
-          <span className="font-bold">Scan</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Manual Add Button */}
+          <button
+            onClick={() => {
+              setScannedProduct({ name: "", brand: "", image: null });
+              setNewItemQty(1);
+            }}
+            className="text-sm font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white transition-colors"
+          >
+            + Add Manually
+          </button>
+
+          {/* Scan Button */}
+          <button
+            onClick={() => setShowScanner(true)}
+            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-5 py-3 rounded-2xl shadow-lg transition-all transform hover:scale-105"
+          >
+            <span className="text-xl">📷</span>
+            <span className="font-bold hidden md:inline">Scan</span>
+          </button>
+        </div>
       </div>
 
-      {/* Content Grid */}
+      {/* Main Grid: Pantry Items */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
           <p className="text-gray-400 animate-pulse">Loading pantry...</p>
@@ -138,7 +151,7 @@ export default function PantryPage() {
               className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4 transition-colors"
             >
               {/* Product Image */}
-              <div className="h-16 w-16 flex-shrink-0 bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden flex items-center justify-center">
+              <div className="h-16 w-16 flex-shrink-0 bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden flex items-center justify-center border border-gray-200 dark:border-gray-600">
                 {item.image ? (
                   <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
                 ) : (
@@ -148,7 +161,7 @@ export default function PantryPage() {
 
               {/* Details */}
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-gray-800 dark:text-white truncate">
+                <h3 className="font-bold text-gray-800 dark:text-white truncate text-lg">
                   {item.name}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
@@ -162,7 +175,8 @@ export default function PantryPage() {
               {/* Delete Button */}
               <button 
                 onClick={() => handleDelete(item.id)}
-                className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                title="Remove item"
               >
                 ✕
               </button>
@@ -171,9 +185,9 @@ export default function PantryPage() {
         )}
       </div>
 
-      {/* --- SCANNERS & MODALS --- */}
+      {/* --- OVERLAYS --- */}
 
-      {/* 1. Barcode Scanner Overlay */}
+      {/* 1. Barcode Scanner Component */}
       {showScanner && (
         <BarcodeScanner 
           onScan={handleScan} 
@@ -181,30 +195,46 @@ export default function PantryPage() {
         />
       )}
 
-      {/* 2. Confirm Item Modal */}
+      {/* 2. Add/Edit Item Modal */}
       {scannedProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-gray-800 w-full max-w-sm rounded-3xl p-6 shadow-2xl scale-100">
             
-            <div className="text-center">
-              {scannedProduct.image && (
-                <img 
-                  src={scannedProduct.image} 
-                  alt="Scanned" 
-                  className="mx-auto h-32 object-contain mb-4 rounded-lg"
-                />
-              )}
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-                {scannedProduct.name}
-              </h2>
-              <p className="text-sm text-gray-500 mb-6">{scannedProduct.brand}</p>
+            <div className="text-center mb-6">
+              {/* Image Preview or Emoji Placeholder */}
+              <div className="mx-auto h-24 w-24 mb-4 rounded-2xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden border-4 border-white dark:border-gray-600 shadow-md">
+                {scannedProduct.image ? (
+                  <img src={scannedProduct.image} alt="Scanned" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-4xl">✏️</span>
+                )}
+              </div>
+
+              {/* Editable Name Input */}
+              <input 
+                type="text"
+                placeholder="Item Name (e.g. Milk)"
+                value={scannedProduct.name}
+                onChange={(e) => setScannedProduct({ ...scannedProduct, name: e.target.value })}
+                className="w-full text-center text-xl font-bold text-gray-900 dark:text-white bg-transparent border-b-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:outline-none mb-2 pb-1 placeholder-gray-300"
+                autoFocus={!scannedProduct.name} 
+              />
+
+              {/* Editable Brand Input */}
+              <input 
+                type="text"
+                placeholder="Brand (Optional)"
+                value={scannedProduct.brand || ""}
+                onChange={(e) => setScannedProduct({ ...scannedProduct, brand: e.target.value })}
+                className="w-full text-center text-sm text-gray-500 dark:text-gray-400 bg-transparent border-none focus:ring-0 placeholder-gray-300"
+              />
             </div>
 
             {/* Quantity Selector */}
             <div className="flex items-center justify-center gap-4 mb-8">
               <button 
                 onClick={() => setNewItemQty(Math.max(1, newItemQty - 1))}
-                className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-600 dark:text-gray-300"
+                className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               >
                 -
               </button>
@@ -213,7 +243,7 @@ export default function PantryPage() {
               </span>
               <button 
                 onClick={() => setNewItemQty(newItemQty + 1)}
-                className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-600 dark:text-gray-300"
+                className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               >
                 +
               </button>
@@ -223,15 +253,16 @@ export default function PantryPage() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setScannedProduct(null)}
-                className="py-3 rounded-xl font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
+                className="py-3 rounded-xl font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
               >
                 Cancel
               </button>
               <button
+                disabled={!scannedProduct.name} 
                 onClick={confirmAddItem}
-                className="py-3 rounded-xl font-semibold text-white bg-green-500 hover:bg-green-600 shadow-lg shadow-green-500/30"
+                className="py-3 rounded-xl font-semibold text-white bg-green-500 hover:bg-green-600 shadow-lg shadow-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                Add to Pantry
+                Save Item
               </button>
             </div>
           </div>
