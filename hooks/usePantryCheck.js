@@ -73,15 +73,24 @@ export function usePantryCheck(ingredients = []) {
         newMatches[nameRaw] = false;
         return;
       }
+      
+      // FIND A MATCH
+      const found = analyzedPantry.find((p) => {
+        // Strategy A: Exact Keyword Match
+        const exactMatch = ingKeywords.join(" ") === p.keywords.join(" ");
+        if (exactMatch) return true;
 
-      const found = normalizedPantry.find((p) => {
-        const nameMatch =
-          p.name === ingName ||
-          p.name.includes(ingName) ||
-          ingName.includes(p.name);
-        const categoryMatch =
-          !ingCategory || !p.category || ingCategory === p.category;
-        return nameMatch && categoryMatch;
+        // Strategy B: Containment (How 'Pepper' matched)
+        const pString = p.keywords.join(" ");
+        const iString = ingKeywords.join(" ");
+        if (pString.includes(iString) || iString.includes(pString)) return true;
+
+        // Strategy C: Word Overlap
+        const intersection = ingKeywords.filter(k => p.keywords.includes(k));
+        
+        // --- CRITICAL: NO CATEGORY CHECK HERE --- 
+        // We only care if the NAMES match now.
+        return intersection.length > 0;
       });
 
       const markMatch = (key) => {
@@ -111,7 +120,31 @@ export function usePantryCheck(ingredients = []) {
   // -----------------------------------------------------------------------
   }, [pantryItems, JSON.stringify(ingredients), loading]);
 
+  // Add this list of common "noise" words to ignore
+const STOP_WORDS = [
+  "cup", "cups", "tbsp", "tsp", "tablespoon", "teaspoon", 
+  "oz", "ounce", "lb", "pound", "g", "gram", "kg", "ml", "l", 
+  "pinch", "dash", "can", "cans", "jar", "container", "box", "bag",
+  "of", "and", "&", "or", "large", "medium", "small", "clove", "cloves"
+];
+
+const normalize = (value = "") => {
+  if (!value) return "";
   
+  let cleaned = value.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ") // Remove special chars (keep spaces)
+    .trim();
+
+  // Split into words, remove numbers and units
+  const words = cleaned.split(/\s+/).filter(w => {
+    const isNumber = !isNaN(w);
+    const isUnit = STOP_WORDS.includes(w);
+    return !isNumber && !isUnit;
+  });
+
+  return words.join(" ");
+};
+
   const summary = useMemo(() => {
     const total = ingredients.length;
     const have = Object.values(matches).filter(Boolean).length;
