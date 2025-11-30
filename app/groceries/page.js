@@ -25,19 +25,14 @@ const CATEGORIES = {
   other: { name: 'Other', icon: "🛒", color: 'from-gray-400 to-gray-500' },
 };
 
-// --- NEW SUB-COMPONENT: HANDLES EDITING LOGIC ---
 function EditableGroceryItem({ item, theme, currentTheme, toggle, remove, update, haveIt, detail, catInfo, pantryLoading }) {
   const [isEditing, setIsEditing] = useState(false);
   const [tempData, setTempData] = useState({ name: item.name, quantity: item.quantity || '' });
 
   const handleSave = () => {
-    // Only update database if something actually changed
     if (tempData.name !== item.name || tempData.quantity !== item.quantity) {
-      // Ensure your useGroceries hook exports 'updateGroceryItem'
       if (update) {
         update(item.id, tempData);
-      } else {
-        console.error("updateGroceryItem function is missing from useGroceries hook!");
       }
     }
     setIsEditing(false);
@@ -45,61 +40,55 @@ function EditableGroceryItem({ item, theme, currentTheme, toggle, remove, update
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') handleSave();
+    if (e.key === 'Escape') setIsEditing(false);
   };
 
-  // --- EDIT MODE UI ---
   if (isEditing) {
     return (
-      <div className={`flex items-center gap-3 p-3 md:p-4 rounded-2xl border-2 transition-all ${
-        currentTheme === 'dark' ? 'bg-gray-800 border-purple-500' : 'bg-white border-purple-500'
+      <div className={`flex items-center gap-3 p-3 md:p-4 rounded-2xl border-2 shadow-lg relative ${
+        currentTheme === 'dark' ? 'bg-gray-800 border-purple-500/50' : 'bg-white border-purple-400'
       }`}>
-        {/* Placeholder for Checkbox spacing */}
-        <div className="w-7 h-7" />
-
-        <div className="flex-1 flex gap-2">
+        <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-purple-500 text-white text-[10px] font-bold">EDITING</div>
+        <div className={`flex-shrink-0 w-7 h-7 rounded-lg border-2 flex items-center justify-center ${
+            currentTheme === 'dark' ? 'border-gray-600' : 'border-gray-300'
+        }`}>
+           <span className="text-xs">✏️</span>
+        </div>
+        <div className="flex-1 flex gap-3 min-w-0">
           <input
             autoFocus
-            className={`flex-1 bg-transparent border-b-2 border-dashed border-purple-300 focus:border-purple-500 focus:outline-none font-bold ${theme.colors.text}`}
+            className={`flex-1 bg-transparent border-b-2 border-transparent focus:border-purple-500 focus:outline-none font-bold ${theme.colors.text}`}
             value={tempData.name}
             onChange={(e) => setTempData({ ...tempData, name: e.target.value })}
             onKeyDown={handleKeyDown}
             placeholder="Item name"
           />
           <input
-            className={`w-24 bg-transparent border-b-2 border-dashed border-purple-300 focus:border-purple-500 focus:outline-none text-right ${theme.colors.textMuted}`}
+            className={`w-20 bg-transparent border-b-2 border-transparent focus:border-purple-500 focus:outline-none text-right ${theme.colors.textMuted}`}
             value={tempData.quantity}
             onChange={(e) => setTempData({ ...tempData, quantity: e.target.value })}
             onKeyDown={handleKeyDown}
             placeholder="Qty"
           />
         </div>
-
-        <button 
-          onClick={handleSave}
-          className="p-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors shadow-md"
-        >
+        <button onClick={handleSave} className="flex-shrink-0 p-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-md hover:scale-105 transition-all">
           <FaSave size={14} />
         </button>
       </div>
     );
   }
 
-  // --- VIEW MODE UI (Standard) ---
   return (
     <motion.div
       layout
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      whileHover={{ scale: 1.02 }}
+      whileHover={{ scale: 1.01 }}
       className={`flex items-center gap-3 p-3 md:p-4 rounded-2xl border-2 transition-all ${
         item.checked
-          ? currentTheme === 'dark'
-            ? 'bg-green-900/20 border-green-700/50'
-            : 'bg-green-50 border-green-200'
-          : currentTheme === 'dark'
-            ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
-            : 'bg-white border-gray-200 hover:border-gray-300'
+          ? currentTheme === 'dark' ? 'bg-green-900/20 border-green-700/50' : 'bg-green-50 border-green-200'
+          : currentTheme === 'dark' ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600' : 'bg-white border-gray-200 hover:border-gray-300'
       }`}
     >
       <motion.button
@@ -108,48 +97,34 @@ function EditableGroceryItem({ item, theme, currentTheme, toggle, remove, update
         className={`flex-shrink-0 w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all ${
           item.checked
             ? 'bg-green-500 border-green-500 text-white'
-            : currentTheme === 'dark'
-              ? 'border-gray-600 hover:border-green-400'
-              : 'border-gray-300 hover:border-green-500'
+            : currentTheme === 'dark' ? 'border-gray-600 hover:border-green-400' : 'border-gray-300 hover:border-green-500'
         }`}
       >
         {item.checked && <FaCheckCircle size={14} />}
       </motion.button>
-
-      {/* CLICK HERE TO EDIT */}
       <div 
-        className="flex-1 min-w-0 cursor-pointer group" 
-        onClick={() => !item.checked && setIsEditing(true)}
-        title="Click to edit details"
+        className="flex-1 min-w-0 cursor-text group select-none" 
+        onClick={(e) => { if(!item.checked) setIsEditing(true); }}
+        title="Click text to edit"
       >
-        <div className={`font-bold flex items-center gap-2 ${
-          item.checked ? 'line-through opacity-60' : theme.colors.text
-        }`}>
+        <div className={`font-bold flex items-center gap-2 ${item.checked ? 'line-through opacity-60' : theme.colors.text}`}>
           {item.name}
-          {!item.checked && (
-             <span className="opacity-0 group-hover:opacity-50 text-[10px] text-purple-500">✎</span>
-          )}
         </div>
-        
         <div className="flex items-center flex-wrap gap-2">
           <span className="text-[11px] font-bold px-2 py-1 rounded-lg bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
             {catInfo.name}
           </span>
           {item.quantity && (
-            <div className={`text-sm ${
-              item.checked ? 'line-through opacity-50' : theme.colors.textMuted
-            }`}>
+            <div className={`text-sm ${item.checked ? 'line-through opacity-50' : theme.colors.textMuted}`}>
               {item.quantity}
             </div>
           )}
           {!pantryLoading && (
-            <span
-              className={`text-[11px] font-bold px-2 py-1 rounded-lg border ${
+            <span className={`text-[11px] font-bold px-2 py-1 rounded-lg border ${
                 haveIt
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-100 dark:border-emerald-800'
                   : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-100 dark:border-amber-800'
-              }`}
-            >
+              }`}>
               {haveIt ? 'Have it' : 'Need it'}
             </span>
           )}
@@ -161,15 +136,12 @@ function EditableGroceryItem({ item, theme, currentTheme, toggle, remove, update
           </p>
         )}
       </div>
-
       <motion.button
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => remove(item.id)}
         className={`flex-shrink-0 p-2 rounded-lg transition-colors ${
-          currentTheme === 'dark'
-            ? 'text-red-400 hover:bg-red-900/30'
-            : 'text-red-500 hover:bg-red-50'
+          currentTheme === 'dark' ? 'text-red-400 hover:bg-red-900/30' : 'text-red-500 hover:bg-red-50'
         }`}
       >
         <FaTrash size={14} />
@@ -180,36 +152,19 @@ function EditableGroceryItem({ item, theme, currentTheme, toggle, remove, update
 
 function GroceriesContent() {
   const {
-    groceries,
-    loading,
-    addGroceryItem,
-    toggleGroceryItem,
-    deleteGroceryItem,
-    updateGroceryItem, // <--- IMPORTANT: Ensure this is exported from your hook
-    clearCheckedItems,
-    clearAllItems,
+    groceries, loading, addGroceryItem, toggleGroceryItem, deleteGroceryItem, updateGroceryItem, clearCheckedItems, clearAllItems,
   } = useGroceries();
   const { theme, currentTheme } = useTheme();
   const { showConfirmation } = useConfirmation();
 
-  // Fix: Memoize the ingredients list to prevent infinite render loops
   const ingredientsToCheck = useMemo(() => {
-    return groceries.map((g) => ({ 
-      name: g.name || '', 
-      category: g.category || '' 
-    }));
+    return groceries.map((g) => ({ name: g.name || '', category: g.category || '' }));
   }, [groceries]);
 
-  const { matches, matchedDetails, loading: pantryLoading, summary: pantrySummary } = usePantryCheck(
-    ingredientsToCheck
-  );
+  const { matches, matchedDetails, loading: pantryLoading, summary: pantrySummary } = usePantryCheck(ingredientsToCheck);
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newItem, setNewItem] = useState({
-    name: '',
-    category: 'other',
-    quantity: '',
-  });
+  const [newItem, setNewItem] = useState({ name: '', category: 'other', quantity: '' });
 
   const handleAddItem = async (e) => {
     e.preventDefault();
@@ -232,16 +187,8 @@ function GroceriesContent() {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <motion.div
-            animate={{ y: [0, -20, 0] }}
-            transition={{ repeat: Infinity, duration: 1.5 }}
-            className="text-6xl mb-4"
-          >
-            🛒
-          </motion.div>
-          <p className={`text-xl font-bold ${currentTheme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
-            Loading groceries...
-          </p>
+          <motion.div animate={{ y: [0, -20, 0] }} transition={{ repeat: Infinity, duration: 1.5 }} className="text-6xl mb-4">🛒</motion.div>
+          <p className={`text-xl font-bold ${currentTheme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>Loading groceries...</p>
         </div>
       </div>
     );
@@ -253,51 +200,26 @@ function GroceriesContent() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
-              <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
-                {currentTheme === 'dark' ? 'Dark Provisions' : 'Grocery List'}
-              </span>
+              <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>{currentTheme === 'dark' ? 'Dark Provisions' : 'Grocery List'}</span>
             </h1>
             <p className={`text-sm sm:text-base font-semibold ${theme.colors.textMuted}`}>
-              {uncheckedCount} items to buy
-              {checkedCount > 0 && ` • ${checkedCount} in cart`}
+              {uncheckedCount} items to buy {checkedCount > 0 && ` • ${checkedCount} in cart`}
             </p>
           </div>
-
           <div className="flex gap-2 justify-end">
             {groceries.length > 0 && (
               <>
                 {checkedCount > 0 && (
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={clearCheckedItems}
-                    className="bg-gradient-to-r from-red-500 to-rose-500 text-white px-4 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-                  >
+                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={clearCheckedItems} className="bg-gradient-to-r from-red-500 to-rose-500 text-white px-4 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2">
                     <FaTrash size={14} /> <span className="hidden md:inline">Clear Checked ({checkedCount})</span>
                   </motion.button>
                 )}
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => {
-                    showConfirmation({
-                      title: 'Clear All Groceries',
-                      message: `Are you sure you want to clear all ${groceries.length} items? This cannot be undone.`,
-                      onConfirm: clearAllItems,
-                    });
-                  }}
-                  className="bg-gradient-to-r from-slate-600 to-gray-700 text-white px-4 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-                >
+                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => { showConfirmation({ title: 'Clear All Groceries', message: `Are you sure?`, onConfirm: clearAllItems }); }} className="bg-gradient-to-r from-slate-600 to-gray-700 text-white px-4 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2">
                   <FaTrash size={14} /> <span className="hidden md:inline">Clear All ({groceries.length})</span>
                 </motion.button>
               </>
             )}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-            >
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setShowAddModal(true)} className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2">
               <FaPlus size={14} /> <span className="hidden md:inline">Add Item</span>
             </motion.button>
           </div>
@@ -305,97 +227,36 @@ function GroceriesContent() {
 
         {!pantryLoading && groceries.length > 0 && (
           <div className={`${theme.colors.bgCard} border ${theme.colors.border} rounded-3xl p-4 md:p-5 shadow-lg mb-4 flex flex-wrap gap-3 items-center`}>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-emerald-500" />
-              <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-200">
-                Have it: {pantrySummary.have}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-amber-400" />
-              <span className="text-sm font-semibold text-amber-700 dark:text-amber-200">
-                Need it: {pantrySummary.need}
-              </span>
-            </div>
-            <div className="ml-auto text-sm font-semibold text-gray-500 dark:text-gray-400">
-              Total tracked: {pantrySummary.total}
-            </div>
+            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-emerald-500" /><span className="text-sm font-semibold text-emerald-700 dark:text-emerald-200">Have it: {pantrySummary.have}</span></div>
+            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-amber-400" /><span className="text-sm font-semibold text-amber-700 dark:text-amber-200">Need it: {pantrySummary.need}</span></div>
+            <div className="ml-auto text-sm font-semibold text-gray-500 dark:text-gray-400">Total tracked: {pantrySummary.total}</div>
           </div>
         )}
 
         {groceries.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`text-center py-16 rounded-3xl border-2 border-dashed ${
-              currentTheme === 'dark' ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'
-            }`}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`text-center py-16 rounded-3xl border-2 border-dashed ${currentTheme === 'dark' ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
             <div className="text-7xl mb-4">🛒</div>
-            <p className={`text-xl font-bold mb-2 ${theme.colors.text}`}>
-              Your list is empty!
-            </p>
-            <p className={`${theme.colors.textMuted} mb-6`}>
-              Start adding items to your grocery list
-            </p>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all"
-            >
-              Add First Item
-            </button>
+            <p className={`text-xl font-bold mb-2 ${theme.colors.text}`}>Your list is empty!</p>
+            <p className={`${theme.colors.textMuted} mb-6`}>Start adding items to your grocery list</p>
+            <button onClick={() => setShowAddModal(true)} className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all">Add First Item</button>
           </motion.div>
         ) : (
           <div className="space-y-6">
             {Object.entries(CATEGORIES).map(([catKey, catData]) => {
               const items = groupedGroceries[catKey] || [];
               if (items.length === 0) return null;
-
               return (
-                <motion.div
-                  key={catKey}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`${theme.colors.bgCard} rounded-3xl p-4 md:p-6 shadow-lg border ${theme.colors.border}`}
-                >
+                <motion.div key={catKey} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`${theme.colors.bgCard} rounded-3xl p-4 md:p-6 shadow-lg border ${theme.colors.border}`}>
                   <div className="flex items-center gap-3 mb-4">
-                    <div className={`text-3xl md:text-4xl bg-gradient-to-r ${catData.color} p-3 rounded-2xl shadow-md`}>
-                      {catData.icon}
-                    </div>
-                    <div>
-                      <h3 className={`text-xl md:text-2xl font-bold ${theme.colors.text}`}>
-                        {catData.name}
-                      </h3>
-                      <p className={`text-sm ${theme.colors.textMuted}`}>
-                        {items.filter(i => !i.checked).length} items
-                      </p>
-                    </div>
+                    <div className={`text-3xl md:text-4xl bg-gradient-to-r ${catData.color} p-3 rounded-2xl shadow-md`}>{catData.icon}</div>
+                    <div><h3 className={`text-xl md:text-2xl font-bold ${theme.colors.text}`}>{catData.name}</h3><p className={`text-sm ${theme.colors.textMuted}`}>{items.filter(i => !i.checked).length} items</p></div>
                   </div>
-
                   <div className="space-y-2">
-                    {items.map((item) => {
-                      const matchKeyRaw = item.name || '';
-                      const matchKeyNorm = matchKeyRaw.toLowerCase().trim();
-                      const haveIt = matches[matchKeyRaw] === true || matches[matchKeyNorm] === true;
-                      const detail = matchedDetails[matchKeyRaw] || matchedDetails[matchKeyNorm];
-                      const catInfo = CATEGORIES[item.category] || CATEGORIES.other;
-                      
-                      return (
-                        <EditableGroceryItem 
-                          key={item.id}
-                          item={item}
-                          theme={theme}
-                          currentTheme={currentTheme}
-                          toggle={toggleGroceryItem}
-                          remove={deleteGroceryItem}
-                          update={updateGroceryItem}
-                          haveIt={haveIt}
-                          detail={detail}
-                          catInfo={catInfo}
-                          pantryLoading={pantryLoading}
-                        />
-                      );
-                    })}
+                    {items.map((item) => (
+                      <EditableGroceryItem 
+                        key={item.id} item={item} theme={theme} currentTheme={currentTheme} toggle={toggleGroceryItem} remove={deleteGroceryItem} update={updateGroceryItem} haveIt={matches[item.name.toLowerCase().trim()]} detail={matchedDetails[item.name.toLowerCase().trim()]} catInfo={CATEGORIES[item.category] || CATEGORIES.other} pantryLoading={pantryLoading}
+                      />
+                    ))}
                   </div>
                 </motion.div>
               );
@@ -404,112 +265,19 @@ function GroceriesContent() {
         )}
       </div>
 
-      {/* Add Item Modal */}
       <AnimatePresence>
         {showAddModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setShowAddModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-md w-full shadow-2xl border ${theme.colors.border} overflow-y-auto max-h-[90vh]`}
-            >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowAddModal(false)}>
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} onClick={(e) => e.stopPropagation()} className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-md w-full shadow-2xl border ${theme.colors.border} overflow-y-auto max-h-[90vh]`}>
               <div className="flex items-center justify-between mb-6">
-                <h2 className={`text-2xl md:text-3xl font-bold ${currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}`}>
-                  Add Item
-                </h2>
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className={`p-2 rounded-xl transition-colors ${
-                    currentTheme === 'dark'
-                      ? 'text-gray-400 hover:bg-gray-700'
-                      : 'text-gray-400 hover:bg-gray-100'
-                  }`}
-                >
-                  <FaTimes size={20} />
-                </button>
+                <h2 className={`text-2xl md:text-3xl font-bold ${currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}`}>Add Item</h2>
+                <button onClick={() => setShowAddModal(false)} className={`p-2 rounded-xl transition-colors ${currentTheme === 'dark' ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-400 hover:bg-gray-100'}`}><FaTimes size={20} /></button>
               </div>
-
               <form onSubmit={handleAddItem} className="space-y-4">
-                <div>
-                  <label className={`block text-sm font-bold mb-2 ${theme.colors.textMuted}`}>
-                    Item Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={newItem.name}
-                    onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                    placeholder="e.g., Milk"
-                    required
-                    className={`w-full px-4 py-3 rounded-2xl border-2 focus:border-purple-500 focus:outline-none font-semibold transition-all ${
-                      currentTheme === 'dark'
-                        ? 'bg-gray-800 border-gray-700 text-white'
-                        : 'bg-white border-gray-200 text-gray-900'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-sm font-bold mb-2 ${theme.colors.textMuted}`}>
-                    Quantity (optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={newItem.quantity}
-                    onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })}
-                    placeholder="e.g., 1 gallon"
-                    className={`w-full px-4 py-3 rounded-2xl border-2 focus:border-purple-500 focus:outline-none font-semibold transition-all ${
-                      currentTheme === 'dark'
-                        ? 'bg-gray-800 border-gray-700 text-white'
-                        : 'bg-white border-gray-200 text-gray-900'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-sm font-bold mb-2 ${theme.colors.textMuted}`}>
-                    Category *
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {Object.entries(CATEGORIES).map(([key, cat]) => (
-                      <motion.button
-                        key={key}
-                        type="button"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setNewItem({ ...newItem, category: key })}
-                        className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
-                          newItem.category === key
-                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30'
-                            : currentTheme === 'dark'
-                              ? 'border-gray-700 hover:border-gray-600'
-                              : 'border-gray-200 hover:border-purple-300'
-                        }`}
-                      >
-                        <div className="text-2xl">{cat.icon}</div>
-                        <div className={`text-[10px] font-bold ${theme.colors.text}`}>
-                          {cat.name}
-                        </div>
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all"
-                >
-                  Add to List
-                </motion.button>
+                <div><label className={`block text-sm font-bold mb-2 ${theme.colors.textMuted}`}>Item Name *</label><input type="text" value={newItem.name} onChange={(e) => setNewItem({ ...newItem, name: e.target.value })} placeholder="e.g., Milk" required className={`w-full px-4 py-3 rounded-2xl border-2 focus:border-purple-500 focus:outline-none font-semibold transition-all ${currentTheme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'}`} /></div>
+                <div><label className={`block text-sm font-bold mb-2 ${theme.colors.textMuted}`}>Quantity</label><input type="text" value={newItem.quantity} onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })} placeholder="e.g., 1 gallon" className={`w-full px-4 py-3 rounded-2xl border-2 focus:border-purple-500 focus:outline-none font-semibold transition-all ${currentTheme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'}`} /></div>
+                <div><label className={`block text-sm font-bold mb-2 ${theme.colors.textMuted}`}>Category *</label><div className="grid grid-cols-3 gap-2">{Object.entries(CATEGORIES).map(([key, cat]) => (<motion.button key={key} type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setNewItem({ ...newItem, category: key })} className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${newItem.category === key ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30' : currentTheme === 'dark' ? 'border-gray-700 hover:border-gray-600' : 'border-gray-200 hover:border-purple-300'}`}><div className="text-2xl">{cat.icon}</div><div className={`text-[10px] font-bold ${theme.colors.text}`}>{cat.name}</div></motion.button>))}</div></div>
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all">Add to List</motion.button>
               </form>
             </motion.div>
           </motion.div>

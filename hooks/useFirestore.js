@@ -503,107 +503,121 @@ export function useDailyMeme() {
 
 // --- 8. GROCERIES ---
 export function useGroceries() {
-  const { userData } = useAuth();
   const [groceries, setGroceries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { user, userData } = useAuth();
+
+  // Helper to get the right path (Family vs Private)
+  const getCollectionRef = () => {
+    if (userData?.familyId) {
+      return collection(db, "families", userData.familyId, "groceries");
+    } else if (user) {
+      return collection(db, "users", user.uid, "groceries");
+    }
+    return null;
+  };
 
   useEffect(() => {
-    if (!userData?.familyId) {
+    const colRef = getCollectionRef();
+    if (!colRef) {
       setLoading(false);
       return;
     }
 
-    const q = query(
-      collection(db, 'families', userData.familyId, 'groceries'),
-      orderBy('createdAt', 'desc')
-    );
-
+    // Order by 'checked' (false first) then 'createdAt'
+    const q = query(colRef, orderBy("checked", "asc"), orderBy("addedAt", "desc"));
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setGroceries(items);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching groceries:", error);
       setLoading(false);
     });
 
-    return unsubscribe;
-  }, [userData?.familyId]);
+    return () => unsubscribe();
+  }, [user, userData]);
 
-  const addGroceryItem = async (itemData) => {
-    try {
-      await addDoc(collection(db, 'families', userData.familyId, 'groceries'), {
-        ...itemData,
-        checked: false,
-        addedBy: userData.uid,
-        createdAt: serverTimestamp(),
-      });
-      toast.success('Item added to grocery list!');
-    } catch (error) {
-      toast.error('Failed to add item');
-      console.error(error);
-    }
+  // 1. ADD ITEM
+  const addGroceryItem = async (item) => {
+    const colRef = getCollectionRef();
+    if (!colRef) return;
+    await addDoc(colRef, {
+      name: item.name,
+      quantity: item.quantity || "",
+      category: item.category || "other",
+      checked: false,
+      addedAt: serverTimestamp(),
+    });
   };
 
-  const toggleGroceryItem = async (itemId, currentChecked) => {
-    try {
-      await updateDoc(
-        doc(db, 'families', userData.familyId, 'groceries', itemId),
-        { checked: !currentChecked }
-      );
-    } catch (error) {
-      toast.error('Failed to update item');
-      console.error(error);
-    }
+  // 2. TOGGLE CHECKMARK (The function you asked about!)
+  const toggleGroceryItem = async (id, currentStatus) => {
+    if (!userData?.familyId && !user) return;
+    const collectionPath = userData?.familyId 
+      ? `families/${userData.familyId}/groceries` 
+      : `users/${user.uid}/groceries`;
+    
+    const docRef = doc(db, collectionPath, id);
+    await updateDoc(docRef, { checked: currentStatus });
   };
 
-  const deleteGroceryItem = async (itemId) => {
-    try {
-      await deleteDoc(
-        doc(db, 'families', userData.familyId, 'groceries', itemId)
-      );
-      toast.success('Item removed!');
-    } catch (error) {
-      toast.error('Failed to delete item');
-      console.error(error);
-    }
+  // 3. DELETE ITEM
+  const deleteGroceryItem = async (id) => {
+    if (!userData?.familyId && !user) return;
+    const collectionPath = userData?.familyId 
+      ? `families/${userData.familyId}/groceries` 
+      : `users/${user.uid}/groceries`;
+
+    const docRef = doc(db, collectionPath, id);
+    await deleteDoc(docRef);
   };
 
+  // 4. UPDATE ITEM (The missing piece for editing!)
+  const updateGroceryItem = async (id, updates) => {
+    if (!userData?.familyId && !user) return;
+    const collectionPath = userData?.familyId 
+      ? `families/${userData.familyId}/groceries` 
+      : `users/${user.uid}/groceries`;
+
+    const docRef = doc(db, collectionPath, id);
+    await updateDoc(docRef, updates);
+  };
+
+  // 5. CLEAR CHECKED
   const clearCheckedItems = async () => {
-    try {
-      const checkedItems = groceries.filter(item => item.checked);
-      await Promise.all(
-        checkedItems.map(item =>
-          deleteDoc(doc(db, 'families', userData.familyId, 'groceries', item.id))
-        )
-      );
-      toast.success('Cleared checked items!');
-    } catch (error) {
-      toast.error('Failed to clear items');
-      console.error(error);
-    }
+    const batch = writeBatch(db);
+    groceries.filter(i => i.checked).forEach((item) => {
+      const collectionPath = userData?.familyId 
+        ? `families/${userData.familyId}/groceries` 
+        : `users/${user.uid}/groceries`;
+      const docRef = doc(db, collectionPath, item.id);
+      batch.delete(docRef);
+    });
+    await batch.commit();
   };
 
+  // 6. CLEAR ALL
   const clearAllItems = async () => {
-    try {
-      await Promise.all(
-        groceries.map(item =>
-          deleteDoc(doc(db, 'families', userData.familyId, 'groceries', item.id))
-        )
-      );
-      toast.success('All items cleared!');
-    } catch (error) {
-      toast.error('Failed to clear all items');
-      console.error(error);
-    }
+    const batch = writeBatch(db);
+    groceries.forEach((item) => {
+      const collectionPath = userData?.familyId 
+        ? `families/${userData.familyId}/groceries` 
+        : `users/${user.uid}/groceries`;
+      const docRef = doc(db, collectionPath, item.id);
+      batch.delete(docRef);
+    });
+    await batch.commit();
   };
 
   return {
     groceries,
     loading,
     addGroceryItem,
-    toggleGroceryItem,
+    toggleGroceryItem, // <--- Ensures Checkmark works
     deleteGroceryItem,
+    updateGroceryItem, // <--- Ensures Edit Save works
     clearCheckedItems,
     clearAllItems,
   };
