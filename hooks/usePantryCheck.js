@@ -72,14 +72,21 @@ export function usePantryCheck(ingredients = []) {
         return nameMatch && categoryMatch;
       });
 
-      if (found) {
-        newMatches[nameRaw] = true;
-        newDetails[nameRaw] = {
+      const markMatch = (key) => {
+        if (!key) return;
+        newMatches[key] = true;
+        newDetails[key] = {
           name: found.rawName,
           category: found.rawCategory,
         };
+      };
+
+      if (found) {
+        markMatch(nameRaw);
+        markMatch(ingName);
       } else {
         newMatches[nameRaw] = false;
+        newMatches[ingName] = false;
       }
     });
 

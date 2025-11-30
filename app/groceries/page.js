@@ -212,7 +212,10 @@ function GroceriesContent() {
 
                   <div className="space-y-2">
                     {items.map((item) => {
-                      const haveIt = matches[item.name] === true;
+                      const matchKeyRaw = item.name || '';
+                      const matchKeyNorm = matchKeyRaw.toLowerCase().trim();
+                      const haveIt = matches[matchKeyRaw] === true || matches[matchKeyNorm] === true;
+                      const detail = matchedDetails[matchKeyRaw] || matchedDetails[matchKeyNorm];
                       const catInfo = CATEGORIES[item.category] || CATEGORIES.other;
                       return (
                       <motion.div
@@ -279,10 +282,10 @@ function GroceriesContent() {
                               </span>
                             )}
                           </div>
-                          {!pantryLoading && haveIt && matchedDetails[item.name] && (
+                          {!pantryLoading && haveIt && detail && (
                             <p className={`text-xs font-semibold ${theme.colors.textMuted}`}>
-                              Matched pantry: {matchedDetails[item.name].name}
-                              {matchedDetails[item.name].category ? ` (${matchedDetails[item.name].category})` : ''}
+                              Matched pantry: {detail.name}
+                              {detail.category ? ` (${detail.category})` : ''}
                             </p>
                           )}
                         </div>
