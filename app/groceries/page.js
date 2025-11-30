@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useGroceries } from '@/hooks/useFirestore';
 import { usePantryCheck } from '@/hooks/usePantryCheck';
@@ -37,9 +37,17 @@ function GroceriesContent() {
   } = useGroceries();
   const { theme, currentTheme } = useTheme();
   const { showConfirmation } = useConfirmation();
-  const { matches, matchedDetails, loading: pantryLoading, summary: pantrySummary } = usePantryCheck(
-    groceries.map((g) => ({ name: g.name || '', category: g.category || '' }))
-  );
+// Fix: Memoize the ingredients list to prevent infinite render loops
+  const ingredientsToCheck = useMemo(() => {
+    return groceries.map((g) => ({ 
+      name: g.name || '', 
+      category: g.category || '' 
+    }));
+  }, [groceries]);
+
+const { matches, matchedDetails, loading: pantryLoading, summary: pantrySummary } = usePantryCheck(
+    ingredientsToCheck
+  )
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newItem, setNewItem] = useState({

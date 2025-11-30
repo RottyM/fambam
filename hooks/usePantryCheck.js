@@ -46,7 +46,7 @@ export function usePantryCheck(ingredients = []) {
     return () => unsubscribe();
   }, [userData?.familyId]);
 
-  // 2. Compare Ingredients to Pantry (using name + category when present)
+// 2. Compare Ingredients to Pantry (using name + category when present)
   useEffect(() => {
     if (loading || !ingredients.length) return;
 
@@ -104,8 +104,14 @@ export function usePantryCheck(ingredients = []) {
 
     setMatches(newMatches);
     setMatchedDetails(newDetails);
-  }, [pantryItems, ingredients, loading]);
 
+  // -----------------------------------------------------------------------
+  // CRITICAL FIX: We add JSON.stringify(ingredients) here.
+  // This ensures the loop breaks unless the ACTUAL DATA changes.
+  // -----------------------------------------------------------------------
+  }, [pantryItems, JSON.stringify(ingredients), loading]);
+
+  
   const summary = useMemo(() => {
     const total = ingredients.length;
     const have = Object.values(matches).filter(Boolean).length;
