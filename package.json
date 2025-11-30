@@ -35,6 +35,7 @@
     "react-virtualized-auto-sizer": "^1.0.7",
     "react-window": "^1.8.10",
     "react-youtube": "^10.1.0",
+    "react-zxing": "^2.1.0",
     "use-long-press": "^3.3.0"
   },
   "devDependencies": {
