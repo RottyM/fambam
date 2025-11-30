@@ -104,8 +104,9 @@ export function usePantryCheck(ingredients = []) {
 
     setMatches(newMatches);
     setMatchedDetails(newDetails);
-  }, [pantryItems, ingredients, loading]);
+    }, [pantryItems, JSON.stringify(ingredients), loading]);
 
+  
   const summary = useMemo(() => {
     const total = ingredients.length;
     const have = Object.values(matches).filter(Boolean).length;
