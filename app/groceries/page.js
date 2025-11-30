@@ -37,7 +37,7 @@ function GroceriesContent() {
   } = useGroceries();
   const { theme, currentTheme } = useTheme();
   const { showConfirmation } = useConfirmation();
-  const { matches, loading: pantryLoading, summary: pantrySummary } = usePantryCheck(
+  const { matches, matchedDetails, loading: pantryLoading, summary: pantrySummary } = usePantryCheck(
     groceries.map((g) => ({ name: g.name || '', category: g.category || '' }))
   );
 
@@ -269,16 +269,22 @@ function GroceriesContent() {
                             )}
                             {!pantryLoading && (
                               <span
-                                className={`text-[11px] font-bold px-2 py-1 rounded-lg ${
+                                className={`text-[11px] font-bold px-2 py-1 rounded-lg border ${
                                   haveIt
-                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'
-                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-100 dark:border-emerald-800'
+                                    : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-100 dark:border-amber-800'
                                 }`}
                               >
                                 {haveIt ? 'Have it' : 'Need it'}
                               </span>
                             )}
                           </div>
+                          {!pantryLoading && haveIt && matchedDetails[item.name] && (
+                            <p className={`text-xs font-semibold ${theme.colors.textMuted}`}>
+                              Matched pantry: {matchedDetails[item.name].name}
+                              {matchedDetails[item.name].category ? ` (${matchedDetails[item.name].category})` : ''}
+                            </p>
+                          )}
                         </div>
 
                         <motion.button

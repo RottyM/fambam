@@ -17,6 +17,7 @@ export function usePantryCheck(ingredients = []) {
   const { userData } = useAuth();
   const [pantryItems, setPantryItems] = useState([]);
   const [matches, setMatches] = useState({}); // Stores which ingredients we found
+  const [matchedDetails, setMatchedDetails] = useState({});
   const [loading, setLoading] = useState(true);
 
   // 1. Fetch Pantry (family scoped when available, otherwise fallback)
@@ -38,10 +39,13 @@ export function usePantryCheck(ingredients = []) {
     if (loading || !ingredients.length) return;
 
     const newMatches = {};
+    const newDetails = {};
     const normalizedPantry = pantryItems.map((item) => ({
       name: normalize(item.name || ""),
       category: maybeCategory(item.category || ""),
       brand: normalize(item.brand || ""),
+      rawName: item.name || "",
+      rawCategory: item.category || "",
     }));
 
     ingredients.forEach((ingredient) => {
@@ -58,7 +62,7 @@ export function usePantryCheck(ingredients = []) {
         return;
       }
 
-      const isFound = normalizedPantry.some((p) => {
+      const found = normalizedPantry.find((p) => {
         const nameMatch =
           p.name === ingName ||
           p.name.includes(ingName) ||
@@ -68,10 +72,19 @@ export function usePantryCheck(ingredients = []) {
         return nameMatch && categoryMatch;
       });
 
-      newMatches[nameRaw] = isFound;
+      if (found) {
+        newMatches[nameRaw] = true;
+        newDetails[nameRaw] = {
+          name: found.rawName,
+          category: found.rawCategory,
+        };
+      } else {
+        newMatches[nameRaw] = false;
+      }
     });
 
     setMatches(newMatches);
+    setMatchedDetails(newDetails);
   }, [pantryItems, ingredients, loading]);
 
   const summary = useMemo(() => {
@@ -81,5 +94,5 @@ export function usePantryCheck(ingredients = []) {
     return { total, have, need };
   }, [ingredients.length, matches]);
 
-  return { matches, loading, summary };
+  return { matches, loading, summary, matchedDetails };
 }
