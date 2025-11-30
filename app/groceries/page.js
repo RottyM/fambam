@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useGroceries } from '@/hooks/useFirestore';
+import { usePantryCheck } from '@/hooks/usePantryCheck';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useConfirmation } from '@/contexts/ConfirmationContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -36,6 +37,20 @@ function GroceriesContent() {
   } = useGroceries();
   const { theme, currentTheme } = useTheme();
   const { showConfirmation } = useConfirmation();
+  const { matches, loading: pantryLoading } = usePantryCheck(
+    groceries.map((g) => g.name || '')
+  );
+  const pantrySummary = useMemo(() => {
+    const names = groceries.map((g) => g.name || '');
+    let have = 0;
+    let need = 0;
+    names.forEach((name) => {
+      if (!name) return;
+      if (matches[name]) have += 1;
+      else need += 1;
+    });
+    return { have, need, total: groceries.length };
+  }, [groceries, matches]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newItem, setNewItem] = useState({
@@ -137,6 +152,26 @@ function GroceriesContent() {
           </div>
         </div>
 
+        {!pantryLoading && groceries.length > 0 && (
+          <div className={`${theme.colors.bgCard} border ${theme.colors.border} rounded-3xl p-4 md:p-5 shadow-lg mb-4 flex flex-wrap gap-3 items-center`}>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-emerald-500" />
+              <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-200">
+                Have it: {pantrySummary.have}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-amber-400" />
+              <span className="text-sm font-semibold text-amber-700 dark:text-amber-200">
+                Need it: {pantrySummary.need}
+              </span>
+            </div>
+            <div className="ml-auto text-sm font-semibold text-gray-500 dark:text-gray-400">
+              Total tracked: {pantrySummary.total}
+            </div>
+          </div>
+        )}
+
         {groceries.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -187,7 +222,9 @@ function GroceriesContent() {
                   </div>
 
                   <div className="space-y-2">
-                    {items.map((item) => (
+                    {items.map((item) => {
+                      const haveIt = matches[item.name] === true;
+                      return (
                       <motion.div
                         key={item.id}
                         layout
@@ -227,15 +264,28 @@ function GroceriesContent() {
                           }`}>
                             {item.name}
                           </div>
-                          {item.quantity && (
-                            <div className={`text-sm ${
-                              item.checked
-                                ? 'line-through opacity-50'
-                                : theme.colors.textMuted
-                            }`}>
-                              {item.quantity}
-                            </div>
-                          )}
+                          <div className="flex items-center flex-wrap gap-2">
+                            {item.quantity && (
+                              <div className={`text-sm ${
+                                item.checked
+                                  ? 'line-through opacity-50'
+                                  : theme.colors.textMuted
+                              }`}>
+                                {item.quantity}
+                              </div>
+                            )}
+                            {!pantryLoading && (
+                              <span
+                                className={`text-[11px] font-bold px-2 py-1 rounded-lg ${
+                                  haveIt
+                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'
+                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
+                                }`}
+                              >
+                                {haveIt ? 'Have it' : 'Need it'}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         <motion.button
@@ -251,7 +301,7 @@ function GroceriesContent() {
                           <FaTrash size={14} />
                         </motion.button>
                       </motion.div>
-                    ))}
+                    );})}
                   </div>
                 </motion.div>
               );
