@@ -13,6 +13,14 @@ export default function AddToGroceryButton({ ingredients, matches, familyId = nu
 
   const handleAddMissing = async () => {
     if (missingItems.length === 0) return;
+
+    // --- ADD THIS NEW CHECK HERE ---
+    if (!familyId) {
+      console.error("Cannot add groceries: No Family ID found.");
+      alert("Please wait for your family profile to load."); 
+      return; 
+    }
+        
     setLoading(true);
 
     try {
