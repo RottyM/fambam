@@ -18,6 +18,7 @@ import {
   FaSignOutAlt,
   FaCog,
   FaShoppingCart,
+  FaBoxOpen,
   FaUtensils,
   FaBars,
   FaTimes,
@@ -37,6 +38,7 @@ const navItems = [
   { href: '/chores', icon: FaBroom, label: 'Chores', emoji: '🧹' },
   { href: '/calendar', icon: FaCalendarAlt, label: 'Calendar', emoji: '📅' },
   { href: '/groceries', icon: FaShoppingCart, label: 'Groceries', emoji: '🛒' },
+  { href: '/pantry', icon: FaBoxOpen, label: 'Pantry', emoji: '🥫' },
   { href: '/recipes', icon: FaUtensils, label: 'Recipes', emoji: '🍳' },
   { href: '/movies', icon: FaFilm, label: 'Movie Night', emoji: '🎬' },
   { href: '/music', icon: FaMusic, label: 'Music', emoji: '🎸' }, // <--- ADDED MUSIC ITEM
