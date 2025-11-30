@@ -87,23 +87,30 @@ export function usePantryCheck(ingredients = []) {
           score = 100;
         } 
         
-        // 2. Strict Containment (80 pts)
-        // ONLY applies if we are looking for a Phrase (2+ words), not a single word.
-        // This prevents "Garlic" (1 word) from auto-matching "Garlic Butter".
-        // But allows "Olive Oil" (2 words) to match "Virgin Olive Oil".
-        else if (ingKeywords.length > 1) {
+        // 2. "The Noun Rule" (Last Word Bonus) - NEW!
+        // If we are looking for "Pepper", and the pantry item ENDS in "Pepper",
+        // it's almost certainly a match, even if the start is different.
+        // "Restaurant Black [Pepper]" ends in "Pepper" -> MATCH
+        // "Lemon Garlic [Butter]" ends in "Butter" -> "Garlic" NO MATCH
+        else if (ingKeywords.length === 1 && p.keywords.length > 0) {
+            const lastPantryWord = p.keywords[p.keywords.length - 1];
+            if (ingKeywords[0] === lastPantryWord) {
+                score = 90; // High confidence match
+            }
+        }
+
+        // 3. Strict Phrase Containment (80 pts)
+        // Applies if we searched for a phrase (e.g., "Olive Oil" in "Virgin Olive Oil")
+        if (score === 0 && ingKeywords.length > 1) {
           const pString = p.keywords.join(" ");
           const iString = ingKeywords.join(" ");
           if (pString.includes(iString)) score = 80;
         }
         
-        // 3. Ratio Calculation (The Tie Breaker)
-        // If it wasn't an exact match or a phrase match, we do the math.
+        // 4. Ratio Calculation (Tie Breaker)
         if (score === 0) {
           const intersection = ingKeywords.filter(k => p.keywords.includes(k));
           if (intersection.length > 0) {
-            // "Garlic" (1) vs "Lemon Garlic Butter" (3) = 1/3 = 33% (FAIL)
-            // "Garlic" (1) vs "Garlic Powder" (2) = 1/2 = 50% (PASS)
             const matchRatio = intersection.length / p.keywords.length;
             score = Math.floor(matchRatio * 100); 
           }
