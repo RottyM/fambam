@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useGroceries } from '@/hooks/useFirestore';
 import { usePantryCheck } from '@/hooks/usePantryCheck';
