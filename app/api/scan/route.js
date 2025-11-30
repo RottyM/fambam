@@ -9,10 +9,28 @@ export async function POST(request) {
     const apiKey = process.env.GEMINI_API_KEY; 
     const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-    const payload = {
+const payload = {
       contents: [{
         parts: [
-          { text: "Analyze this recipe image and extract ALL information into a structured JSON format..." }, // Add your full prompt here
+          // --- UPDATED PROMPT ---
+          { text: `
+            Analyze this recipe image. Extract the recipe title and ingredients.
+            
+            Return ONLY raw JSON (no markdown, no backticks) using exactly this schema:
+            {
+              "title": "Recipe Name",
+              "ingredients": [
+                { 
+                  "name": "ingredient name (singular, lowercase)", 
+                  "quantity": "amount (e.g. 1 cup)", 
+                  "category": "produce|dairy|meat|pantry|baking|spices|frozen|other"
+                }
+              ]
+            }
+            
+            Map every ingredient to the most logical category from the list above.
+          `},
+          // ----------------------
           {
             inline_data: {
               mime_type: mimeType,
@@ -23,7 +41,7 @@ export async function POST(request) {
       }],
       generationConfig: {
         temperature: 0.2,
-        response_mime_type: "application/json" // Gemini 1.5 supports JSON mode natively
+        response_mime_type: "application/json"
       }
     };
 
