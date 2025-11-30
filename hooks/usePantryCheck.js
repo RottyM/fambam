@@ -5,14 +5,14 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 
-// 1. EXPANDED STOP WORDS (Added 'seasoning', 'mix', 'blend', etc.)
+// 1. EXPANDED STOP WORDS
 const STOP_WORDS = [
   "cup", "cups", "tbsp", "tsp", "tablespoon", "teaspoon", 
   "oz", "ounce", "lb", "pound", "g", "gram", "kg", "ml", "l", 
   "pinch", "dash", "can", "cans", "jar", "container", "box", "bag",
   "of", "and", "&", "or", "large", "medium", "small", "clove", "cloves",
   "bunch", "head", "stick", "sticks", "bottle", "package", "pkt",
-  "style", "mix", "blend", "seasoning", "extract", "flavor" // <--- NEW NOISE WORDS
+  "style", "mix", "blend", "seasoning", "extract", "flavor"
 ];
 
 const normalize = (value = "") => {
@@ -76,47 +76,46 @@ export function usePantryCheck(ingredients = []) {
         return;
       }
 
-      // --- FIND THE BEST MATCH (SCORING) ---
       let bestMatch = null;
       let highestScore = 0;
 
       analyzedPantry.forEach((p) => {
         let score = 0;
 
-        // 1. Exact Full String Match (100 pts)
+        // 1. Exact Match (100 pts)
         if (ingKeywords.join(" ") === p.keywords.join(" ")) {
           score = 100;
         } 
-        // 2. Containment (80 pts) - e.g. "Pepper" inside "Black Pepper"
-        else {
+        
+        // 2. Strict Containment (80 pts)
+        // ONLY applies if we are looking for a Phrase (2+ words), not a single word.
+        // This prevents "Garlic" (1 word) from auto-matching "Garlic Butter".
+        // But allows "Olive Oil" (2 words) to match "Virgin Olive Oil".
+        else if (ingKeywords.length > 1) {
           const pString = p.keywords.join(" ");
           const iString = ingKeywords.join(" ");
           if (pString.includes(iString)) score = 80;
-          
-          // 3. Partial Overlap (Calculated Score)
-          else {
-            const intersection = ingKeywords.filter(k => p.keywords.includes(k));
-            if (intersection.length > 0) {
-              // Calculate Ratio: How much of the Pantry Item is covered by the Ingredient?
-              // "Garlic" (1 word) vs "Lemon Garlic Butter" (3 words) = 1/3 = 33% match.
-              const matchRatio = intersection.length / p.keywords.length;
-              score = Math.floor(matchRatio * 100); 
-            }
+        }
+        
+        // 3. Ratio Calculation (The Tie Breaker)
+        // If it wasn't an exact match or a phrase match, we do the math.
+        if (score === 0) {
+          const intersection = ingKeywords.filter(k => p.keywords.includes(k));
+          if (intersection.length > 0) {
+            // "Garlic" (1) vs "Lemon Garlic Butter" (3) = 1/3 = 33% (FAIL)
+            // "Garlic" (1) vs "Garlic Powder" (2) = 1/2 = 50% (PASS)
+            const matchRatio = intersection.length / p.keywords.length;
+            score = Math.floor(matchRatio * 100); 
           }
         }
 
-        // Keep the winner
         if (score > highestScore) {
           highestScore = score;
           bestMatch = p;
         }
       });
 
-      // --- THRESHOLD CHECK ---
-      // We only accept the match if the score is high enough.
-      // 50% means at least half the words in the pantry item must match the grocery item.
-      // This allows "Olive Oil" -> "Basting Oil" (50%), 
-      // but REJECTS "Garlic" -> "Lemon Garlic Butter" (33%).
+      // Threshold: 50% match required
       if (bestMatch && highestScore >= 50) {
         newMatches[rawName] = true;
         newMatches[rawName.toLowerCase().trim()] = true;
