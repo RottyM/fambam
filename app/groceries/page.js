@@ -40,17 +40,17 @@ function GroceriesContent() {
   const { matches, loading: pantryLoading } = usePantryCheck(
     groceries.map((g) => g.name || '')
   );
-  const pantrySummary = useMemo(() => {
-    const names = groceries.map((g) => g.name || '');
+  const pantrySummary = (() => {
     let have = 0;
     let need = 0;
-    names.forEach((name) => {
+    groceries.forEach((item) => {
+      const name = item?.name || '';
       if (!name) return;
       if (matches[name]) have += 1;
       else need += 1;
     });
     return { have, need, total: groceries.length };
-  }, [groceries, matches]);
+  })();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newItem, setNewItem] = useState({
