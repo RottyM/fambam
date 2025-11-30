@@ -8,45 +8,54 @@ export default function AddToGroceryButton({ ingredients, matches, familyId = nu
   const [loading, setLoading] = useState(false);
   const [added, setAdded] = useState(false);
 
-  // 1. Calculate what is actually missing
-  const missingItems = ingredients.filter(ing => !matches[ing]);
+  // --- SMART FILTER: Handles Strings (Old) OR Objects (AI) ---
+  const missingItems = ingredients.filter((ing) => {
+    // Extract name safely regardless of format
+    const nameToCheck = typeof ing === 'object' && ing !== null ? ing.name : ing;
+    
+    // Check if we already have it (matches uses keys)
+    return !matches[nameToCheck];
+  });
 
   const handleAddMissing = async () => {
     if (missingItems.length === 0) return;
 
-    // --- ADD THIS NEW CHECK HERE ---
+    // Safety Check: Prevent "Root" writes
     if (!familyId) {
-      console.error("Cannot add groceries: No Family ID found.");
-      alert("Please wait for your family profile to load."); 
-      return; 
+      alert("Please wait for your profile to load.");
+      return;
     }
-        
+
     setLoading(true);
 
     try {
       const batch = writeBatch(db);
-      
-      // DETERMINE COLLECTION PATH
-      // If your groceries are inside a family: `families/${familyId}/groceries`
-      // If your groceries are at the root: `groceries`
-      // Based on your rules, it looks like they might be nested. 
-      // UPDATE THIS STRING if needed:
-      const collectionPath = familyId ? `families/${familyId}/groceries` : "groceries";
+      const collectionPath = `families/${familyId}/groceries`;
 
       missingItems.forEach((item) => {
-        // Create a new reference for each missing item
         const newDocRef = doc(collection(db, collectionPath));
+
+        // 1. Detect if 'item' is a String or an Object
+        const isObject = typeof item === 'object' && item !== null;
+        
+        // 2. Extract data safely
+        const itemName = isObject ? item.name : item;
+        const itemCategory = (isObject && item.category) ? item.category : "Auto-Import";
+        // AI might return quantity, otherwise default to empty
+        const itemQuantity = (isObject && item.quantity) ? item.quantity : "";
+
         batch.set(newDocRef, {
-          text: item, // Matches your Todo/Grocery naming convention
-          completed: false,
+          name: itemName,         // Correct field name for your Page
+          checked: false,         // Correct status field
           addedAt: serverTimestamp(),
-          category: "Auto-Import", // Optional: helps you know this came from a recipe
+          category: itemCategory, // Preserves AI category
+          quantity: itemQuantity, // Preserves AI quantity
         });
       });
 
-      await batch.commit(); // Sends all data in one shot
+      await batch.commit();
       setAdded(true);
-      
+
       // Reset "Added" message after 3 seconds
       setTimeout(() => setAdded(false), 3000);
 
