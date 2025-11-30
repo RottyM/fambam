@@ -73,15 +73,24 @@ export function usePantryCheck(ingredients = []) {
         newMatches[nameRaw] = false;
         return;
       }
+      
+      // FIND A MATCH
+      const found = analyzedPantry.find((p) => {
+        // Strategy A: Exact Keyword Match
+        const exactMatch = ingKeywords.join(" ") === p.keywords.join(" ");
+        if (exactMatch) return true;
 
-      const found = normalizedPantry.find((p) => {
-        const nameMatch =
-          p.name === ingName ||
-          p.name.includes(ingName) ||
-          ingName.includes(p.name);
-        const categoryMatch =
-          !ingCategory || !p.category || ingCategory === p.category;
-        return nameMatch && categoryMatch;
+        // Strategy B: Containment (How 'Pepper' matched)
+        const pString = p.keywords.join(" ");
+        const iString = ingKeywords.join(" ");
+        if (pString.includes(iString) || iString.includes(pString)) return true;
+
+        // Strategy C: Word Overlap
+        const intersection = ingKeywords.filter(k => p.keywords.includes(k));
+        
+        // --- CRITICAL: NO CATEGORY CHECK HERE --- 
+        // We only care if the NAMES match now.
+        return intersection.length > 0;
       });
 
       const markMatch = (key) => {
