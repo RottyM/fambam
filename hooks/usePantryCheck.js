@@ -5,22 +5,46 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 
-const normalize = (value = "") =>
-  value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
+// 1. LIST OF JUNK WORDS TO IGNORE
+const STOP_WORDS = [
+  "cup", "cups", "tbsp", "tsp", "tablespoon", "teaspoon", 
+  "oz", "ounce", "lb", "pound", "g", "gram", "kg", "ml", "l", 
+  "pinch", "dash", "can", "cans", "jar", "container", "box", "bag",
+  "of", "and", "&", "or", "large", "medium", "small", "clove", "cloves",
+  "bunch", "head", "stick", "sticks", "bottle", "package", "pkt"
+];
+
+// 2. CLEANER FUNCTION
+const normalize = (value = "") => {
+  if (!value) return [];
+  
+  // Lowercase and remove special characters (keep letters/numbers/spaces)
+  let cleaned = value.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ") 
     .trim();
 
-const maybeCategory = (value = "") => value.toLowerCase().trim();
+  // Split into words
+  const words = cleaned.split(/\s+/);
+
+  // Filter out numbers and stop words
+  const significantWords = words.filter(w => {
+    const isNumber = !isNaN(w); // Remove "1", "100"
+    const isUnit = STOP_WORDS.includes(w); // Remove "cup", "oz"
+    const isTooShort = w.length < 2; // Remove "a", "x"
+    return !isNumber && !isUnit && !isTooShort;
+  });
+
+  return significantWords; // Returns array: ["olive", "oil"]
+};
 
 export function usePantryCheck(ingredients = []) {
   const { userData } = useAuth();
   const [pantryItems, setPantryItems] = useState([]);
-  const [matches, setMatches] = useState({}); // Stores which ingredients we found
+  const [matches, setMatches] = useState({}); 
   const [matchedDetails, setMatchedDetails] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // 1. Fetch Pantry (family scoped when available, otherwise fallback)
+  // 1. Fetch Pantry
   useEffect(() => {
     if (!userData?.familyId) {
       setPantryItems([]);
@@ -29,10 +53,7 @@ export function usePantryCheck(ingredients = []) {
     }
 
     const colRef = collection(db, "families", userData.familyId, "pantry");
-
-    const unsubscribe = onSnapshot(
-      colRef,
-      (snapshot) => {
+    const unsubscribe = onSnapshot(colRef, (snapshot) => {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         setPantryItems(items);
         setLoading(false);
@@ -46,34 +67,34 @@ export function usePantryCheck(ingredients = []) {
     return () => unsubscribe();
   }, [userData?.familyId]);
 
-// 2. Compare Ingredients to Pantry (using name + category when present)
+  // 2. The Smart Matching Logic
   useEffect(() => {
     if (loading || !ingredients.length) return;
 
     const newMatches = {};
     const newDetails = {};
-    const normalizedPantry = pantryItems.map((item) => ({
-      name: normalize(item.name || ""),
-      category: maybeCategory(item.category || ""),
-      brand: normalize(item.brand || ""),
-      rawName: item.name || "",
-      rawCategory: item.category || "",
+
+    // A. Pre-process pantry items into word arrays
+    const analyzedPantry = pantryItems.map((item) => ({
+      original: item,
+      keywords: normalize(item.name || "")
     }));
 
+    // B. Check each ingredient against the analyzed pantry
     ingredients.forEach((ingredient) => {
-      const ingObj =
-        typeof ingredient === "string"
-          ? { name: ingredient, category: "" }
-          : ingredient || {};
-      const nameRaw = ingObj.name || "";
-      const ingName = normalize(nameRaw);
-      const ingCategory = maybeCategory(ingObj.category || "");
+      // Handle both string "Milk" and object {name: "Milk"}
+      const ingObj = typeof ingredient === "string" 
+        ? { name: ingredient } 
+        : ingredient || {};
+      
+      const rawName = ingObj.name || "";
+      const ingKeywords = normalize(rawName); // e.g. ["salt", "pepper"]
 
-      if (!ingName) {
-        newMatches[nameRaw] = false;
+      if (ingKeywords.length === 0) {
+        newMatches[rawName] = false;
         return;
       }
-      
+
       // FIND A MATCH
       const found = analyzedPantry.find((p) => {
         // Strategy A: Exact Keyword Match
@@ -85,65 +106,32 @@ export function usePantryCheck(ingredients = []) {
         const iString = ingKeywords.join(" ");
         if (pString.includes(iString) || iString.includes(pString)) return true;
 
-        // Strategy C: Word Overlap
+        // Strategy C: Word Overlap (How 'Salt & Pepper' matches 'Salt')
         const intersection = ingKeywords.filter(k => p.keywords.includes(k));
         
-        // --- CRITICAL: NO CATEGORY CHECK HERE --- 
-        // We only care if the NAMES match now.
+        // Match if share meaningful words (no category check here!)
         return intersection.length > 0;
       });
 
-      const markMatch = (key) => {
-        if (!key) return;
-        newMatches[key] = true;
-        newDetails[key] = {
-          name: found.rawName,
-          category: found.rawCategory,
-        };
-      };
-
       if (found) {
-        markMatch(nameRaw);
-        markMatch(ingName);
+        newMatches[rawName] = true;
+        // Also map the normalized version just in case
+        newMatches[rawName.toLowerCase().trim()] = true;
+        
+        newDetails[rawName] = {
+          name: found.original.name,
+          category: found.original.category,
+        };
       } else {
-        newMatches[nameRaw] = false;
-        newMatches[ingName] = false;
+        newMatches[rawName] = false;
       }
     });
 
     setMatches(newMatches);
     setMatchedDetails(newDetails);
 
-  // -----------------------------------------------------------------------
-  // CRITICAL FIX: We add JSON.stringify(ingredients) here.
-  // This ensures the loop breaks unless the ACTUAL DATA changes.
-  // -----------------------------------------------------------------------
+  // Keep JSON.stringify to prevent infinite loops
   }, [pantryItems, JSON.stringify(ingredients), loading]);
-
-  // Add this list of common "noise" words to ignore
-const STOP_WORDS = [
-  "cup", "cups", "tbsp", "tsp", "tablespoon", "teaspoon", 
-  "oz", "ounce", "lb", "pound", "g", "gram", "kg", "ml", "l", 
-  "pinch", "dash", "can", "cans", "jar", "container", "box", "bag",
-  "of", "and", "&", "or", "large", "medium", "small", "clove", "cloves"
-];
-
-const normalize = (value = "") => {
-  if (!value) return "";
-  
-  let cleaned = value.toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ") // Remove special chars (keep spaces)
-    .trim();
-
-  // Split into words, remove numbers and units
-  const words = cleaned.split(/\s+/).filter(w => {
-    const isNumber = !isNaN(w);
-    const isUnit = STOP_WORDS.includes(w);
-    return !isNumber && !isUnit;
-  });
-
-  return words.join(" ");
-};
 
   const summary = useMemo(() => {
     const total = ingredients.length;
