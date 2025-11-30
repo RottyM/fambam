@@ -37,20 +37,9 @@ function GroceriesContent() {
   } = useGroceries();
   const { theme, currentTheme } = useTheme();
   const { showConfirmation } = useConfirmation();
-  const { matches, loading: pantryLoading } = usePantryCheck(
-    groceries.map((g) => g.name || '')
+  const { matches, loading: pantryLoading, summary: pantrySummary } = usePantryCheck(
+    groceries.map((g) => ({ name: g.name || '', category: g.category || '' }))
   );
-  const pantrySummary = (() => {
-    let have = 0;
-    let need = 0;
-    groceries.forEach((item) => {
-      const name = item?.name || '';
-      if (!name) return;
-      if (matches[name]) have += 1;
-      else need += 1;
-    });
-    return { have, need, total: groceries.length };
-  })();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newItem, setNewItem] = useState({
@@ -224,6 +213,7 @@ function GroceriesContent() {
                   <div className="space-y-2">
                     {items.map((item) => {
                       const haveIt = matches[item.name] === true;
+                      const catInfo = CATEGORIES[item.category] || CATEGORIES.other;
                       return (
                       <motion.div
                         key={item.id}
@@ -265,6 +255,9 @@ function GroceriesContent() {
                             {item.name}
                           </div>
                           <div className="flex items-center flex-wrap gap-2">
+                            <span className="text-[11px] font-bold px-2 py-1 rounded-lg bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                              {catInfo.name}
+                            </span>
                             {item.quantity && (
                               <div className={`text-sm ${
                                 item.checked

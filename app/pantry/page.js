@@ -20,6 +20,33 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FaPlus, FaTrash, FaCamera, FaBoxOpen, FaCheck } from "react-icons/fa";
 
 const EMPTY_STATE_EMOJI = "🥫";
+const CATEGORY_OPTIONS = [
+  { value: "produce", label: "Produce" },
+  { value: "dairy", label: "Dairy" },
+  { value: "meat", label: "Meat & Seafood" },
+  { value: "frozen", label: "Frozen" },
+  { value: "pantry", label: "Pantry" },
+  { value: "bakery", label: "Bakery" },
+  { value: "snacks", label: "Snacks" },
+  { value: "beverages", label: "Beverages" },
+  { value: "condiments", label: "Condiments & Spices" },
+  { value: "other", label: "Other" },
+];
+
+const inferCategory = (name = "", brand = "") => {
+  const text = `${name} ${brand}`.toLowerCase();
+  const has = (keywords) => keywords.some((k) => text.includes(k));
+  if (has(["lettuce", "spinach", "apple", "banana", "berry", "carrot", "vegetable", "fruit"])) return "produce";
+  if (has(["milk", "cheese", "yogurt", "butter", "cream", "dairy"])) return "dairy";
+  if (has(["chicken", "beef", "pork", "fish", "shrimp", "meat"])) return "meat";
+  if (has(["frozen", "ice cream", "frost", "freezer"])) return "frozen";
+  if (has(["bread", "bun", "bagel", "tortilla", "bakery"])) return "bakery";
+  if (has(["snack", "chips", "cracker", "cookie", "candy", "chocolate"])) return "snacks";
+  if (has(["juice", "soda", "coffee", "tea", "water", "drink", "beverage"])) return "beverages";
+  if (has(["ketchup", "mustard", "sauce", "spice", "seasoning", "condiment", "salt", "pepper", "oil", "vinegar"])) return "condiments";
+  if (has(["rice", "pasta", "noodle", "grain", "flour", "sugar", "beans", "lentil", "pantry"])) return "pantry";
+  return "other";
+};
 
 function PantryContent() {
   const { theme, currentTheme } = useTheme();
@@ -35,6 +62,7 @@ function PantryContent() {
     quantity: 1,
     image: "",
     barcode: "",
+    category: "other",
   });
 
   const pantryCollection = useMemo(() => {
@@ -62,7 +90,7 @@ function PantryContent() {
   }, [pantryCollection]);
 
   const resetDraft = () => {
-    setDraft({ name: "", brand: "", quantity: 1, image: "", barcode: "" });
+    setDraft({ name: "", brand: "", quantity: 1, image: "", barcode: "", category: "other" });
   };
 
   const openManualModal = () => {
@@ -79,20 +107,23 @@ function PantryContent() {
       const data = await res.json();
 
       if (data.status === 1) {
+        const name = data.product.product_name || "";
+        const brand = data.product.brands || "";
         setDraft({
-          name: data.product.product_name || "",
-          brand: data.product.brands || "",
+          name,
+          brand,
           image: data.product.image_front_small_url || "",
           quantity: 1,
           barcode,
+          category: inferCategory(name, brand),
         });
       } else {
-        setDraft({ name: "", brand: "", image: "", quantity: 1, barcode });
+        setDraft({ name: "", brand: "", image: "", quantity: 1, barcode, category: "other" });
       }
       setShowModal(true);
     } catch (error) {
       console.error("Scan lookup failed:", error);
-      setDraft({ name: "", brand: "", image: "", quantity: 1, barcode });
+      setDraft({ name: "", brand: "", image: "", quantity: 1, barcode, category: "other" });
       setShowModal(true);
     }
   };
@@ -108,6 +139,7 @@ function PantryContent() {
         image: draft.image || "",
         barcode: draft.barcode || "MANUAL",
         quantity: Number(draft.quantity) || 1,
+        category: draft.category || inferCategory(draft.name, draft.brand),
         addedAt: serverTimestamp(),
       });
       setShowModal(false);
@@ -212,9 +244,14 @@ function PantryContent() {
                     <FaCheck size={10} /> x{item.quantity || 1}
                   </span>
                 </div>
-                {item.brand && (
-                  <p className={`text-sm truncate ${theme.colors.textMuted}`}>{item.brand}</p>
-                )}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] font-bold px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 border border-indigo-100 dark:border-indigo-800">
+                    {item.category || "Uncategorized"}
+                  </span>
+                  {item.brand && (
+                    <p className={`text-sm truncate ${theme.colors.textMuted}`}>{item.brand}</p>
+                  )}
+                </div>
                 {item.barcode && (
                   <p className="text-[11px] text-gray-400 mt-1 uppercase tracking-wide">
                     {item.barcode}
@@ -294,6 +331,22 @@ function PantryContent() {
                     className={`w-full px-4 py-3 rounded-2xl border-2 focus:outline-none ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500 font-semibold`}
                     placeholder="Brand"
                   />
+                </div>
+                <div>
+                  <label className={`block text-sm font-bold mb-1 ${theme.colors.textMuted}`}>
+                    Category
+                  </label>
+                  <select
+                    value={draft.category}
+                    onChange={(e) => setDraft({ ...draft, category: e.target.value })}
+                    className={`w-full px-4 py-3 rounded-2xl border-2 focus:outline-none ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500 font-semibold`}
+                  >
+                    {CATEGORY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>

@@ -1,46 +1,85 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase"; // Check your import path
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
+
+const normalize = (value = "") =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+const maybeCategory = (value = "") => value.toLowerCase().trim();
 
 export function usePantryCheck(ingredients = []) {
+  const { userData } = useAuth();
   const [pantryItems, setPantryItems] = useState([]);
   const [matches, setMatches] = useState({}); // Stores which ingredients we found
   const [loading, setLoading] = useState(true);
 
-  // 1. Fetch Pantry
+  // 1. Fetch Pantry (family scoped when available, otherwise fallback)
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "pantry"), (snapshot) => {
-      const items = snapshot.docs.map(doc => doc.data());
+    const colRef = userData?.familyId
+      ? collection(db, "families", userData.familyId, "pantry")
+      : collection(db, "pantry");
+
+    const unsubscribe = onSnapshot(colRef, (snapshot) => {
+      const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setPantryItems(items);
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [userData?.familyId]);
 
-  // 2. Compare Ingredients to Pantry
+  // 2. Compare Ingredients to Pantry (using name + category when present)
   useEffect(() => {
     if (loading || !ingredients.length) return;
 
     const newMatches = {};
+    const normalizedPantry = pantryItems.map((item) => ({
+      name: normalize(item.name || ""),
+      category: maybeCategory(item.category || ""),
+      brand: normalize(item.brand || ""),
+    }));
 
-    ingredients.forEach(ingredient => {
-      // Normalize to lowercase for better matching
-      const cleanIng = ingredient.toLowerCase().trim();
+    ingredients.forEach((ingredient) => {
+      const ingObj =
+        typeof ingredient === "string"
+          ? { name: ingredient, category: "" }
+          : ingredient || {};
+      const nameRaw = ingObj.name || "";
+      const ingName = normalize(nameRaw);
+      const ingCategory = maybeCategory(ingObj.category || "");
 
-      // Check if ANY pantry item contains this word (or vice versa)
-      const isFound = pantryItems.some(pantryItem => {
-        const cleanPantry = pantryItem.name.toLowerCase();
-        // Match: "Tomato" matches "Tomato Sauce" OR "Tomato Sauce" matches "Tomato"
-        return cleanPantry.includes(cleanIng) || cleanIng.includes(cleanPantry);
+      if (!ingName) {
+        newMatches[nameRaw] = false;
+        return;
+      }
+
+      const isFound = normalizedPantry.some((p) => {
+        const nameMatch =
+          p.name === ingName ||
+          p.name.includes(ingName) ||
+          ingName.includes(p.name);
+        const categoryMatch =
+          !ingCategory || !p.category || ingCategory === p.category;
+        return nameMatch && categoryMatch;
       });
 
-      newMatches[ingredient] = isFound;
+      newMatches[nameRaw] = isFound;
     });
 
     setMatches(newMatches);
   }, [pantryItems, ingredients, loading]);
 
-  return { matches, loading };
+  const summary = useMemo(() => {
+    const total = ingredients.length;
+    const have = Object.values(matches).filter(Boolean).length;
+    const need = Math.max(0, total - have);
+    return { total, have, need };
+  }, [ingredients.length, matches]);
+
+  return { matches, loading, summary };
 }
