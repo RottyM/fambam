@@ -22,15 +22,27 @@ export function usePantryCheck(ingredients = []) {
 
   // 1. Fetch Pantry (family scoped when available, otherwise fallback)
   useEffect(() => {
-    const colRef = userData?.familyId
-      ? collection(db, "families", userData.familyId, "pantry")
-      : collection(db, "pantry");
-
-    const unsubscribe = onSnapshot(colRef, (snapshot) => {
-      const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setPantryItems(items);
+    if (!userData?.familyId) {
+      setPantryItems([]);
       setLoading(false);
-    });
+      return;
+    }
+
+    const colRef = collection(db, "families", userData.familyId, "pantry");
+
+    const unsubscribe = onSnapshot(
+      colRef,
+      (snapshot) => {
+        const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setPantryItems(items);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Pantry listener error:", error);
+        setPantryItems([]);
+        setLoading(false);
+      }
+    );
     return () => unsubscribe();
   }, [userData?.familyId]);
 
