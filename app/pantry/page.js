@@ -1,5 +1,4 @@
-"use client";
-
+import DashboardLayout from "@/components/DashboardLayout";
 import React, { useState, useEffect } from "react";
 import BarcodeScanner from "@/components/BarcodeScanner"; // Uses @ alias for safety
 import { 
@@ -15,7 +14,7 @@ import {
 // Adjust this import if your firebase file is elsewhere
 import { db } from "@/lib/firebase"; 
 
-export default function PantryPage() {
+function PantryContent() {
   const [items, setItems] = useState([]);
   const [showScanner, setShowScanner] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -99,7 +98,7 @@ export default function PantryPage() {
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-8 space-y-6 bg-gray-50 dark:bg-gray-900">
+    <div className="space-y-6">
       
       {/* Header Section */}
       <div className="flex items-center justify-between">
@@ -270,5 +269,13 @@ export default function PantryPage() {
       )}
 
     </div>
+  );
+}
+
+export default function PantryPage() {
+  return (
+    <DashboardLayout>
+      <PantryContent />
+    </DashboardLayout>
   );
 }
