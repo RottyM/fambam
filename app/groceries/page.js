@@ -25,19 +25,14 @@ const CATEGORIES = {
   other: { name: 'Other', icon: "🛒", color: 'from-gray-400 to-gray-500' },
 };
 
-// --- NEW SUB-COMPONENT: HANDLES EDITING LOGIC ---
 function EditableGroceryItem({ item, theme, currentTheme, toggle, remove, update, haveIt, detail, catInfo, pantryLoading }) {
   const [isEditing, setIsEditing] = useState(false);
   const [tempData, setTempData] = useState({ name: item.name, quantity: item.quantity || '' });
 
   const handleSave = () => {
-    // Only update database if something actually changed
     if (tempData.name !== item.name || tempData.quantity !== item.quantity) {
-      // Ensure your useGroceries hook exports 'updateGroceryItem'
       if (update) {
         update(item.id, tempData);
-      } else {
-        console.error("updateGroceryItem function is missing from useGroceries hook!");
       }
     }
     setIsEditing(false);
@@ -45,28 +40,40 @@ function EditableGroceryItem({ item, theme, currentTheme, toggle, remove, update
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') handleSave();
+    if (e.key === 'Escape') setIsEditing(false);
   };
 
-  // --- EDIT MODE UI ---
+  // --- EDIT MODE UI (Matches Card Style) ---
   if (isEditing) {
     return (
-      <div className={`flex items-center gap-3 p-3 md:p-4 rounded-2xl border-2 transition-all ${
-        currentTheme === 'dark' ? 'bg-gray-800 border-purple-500' : 'bg-white border-purple-500'
+      <div className={`flex items-center gap-3 p-3 md:p-4 rounded-2xl border-2 shadow-lg relative ${
+        currentTheme === 'dark' 
+          ? 'bg-gray-800 border-purple-500/50' 
+          : 'bg-white border-purple-400'
       }`}>
-        {/* Placeholder for Checkbox spacing */}
-        <div className="w-7 h-7" />
+        {/* Visual indicator that you are editing */}
+        <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-purple-500 text-white text-[10px] font-bold">
+          EDITING
+        </div>
 
-        <div className="flex-1 flex gap-2">
+        {/* Checkbox Placeholder (keeps layout stable) */}
+        <div className={`flex-shrink-0 w-7 h-7 rounded-lg border-2 flex items-center justify-center ${
+            currentTheme === 'dark' ? 'border-gray-600' : 'border-gray-300'
+        }`}>
+           <span className="text-xs">✏️</span>
+        </div>
+
+        <div className="flex-1 flex gap-3 min-w-0">
           <input
             autoFocus
-            className={`flex-1 bg-transparent border-b-2 border-dashed border-purple-300 focus:border-purple-500 focus:outline-none font-bold ${theme.colors.text}`}
+            className={`flex-1 bg-transparent border-b-2 border-transparent focus:border-purple-500 focus:outline-none font-bold ${theme.colors.text}`}
             value={tempData.name}
             onChange={(e) => setTempData({ ...tempData, name: e.target.value })}
             onKeyDown={handleKeyDown}
             placeholder="Item name"
           />
           <input
-            className={`w-24 bg-transparent border-b-2 border-dashed border-purple-300 focus:border-purple-500 focus:outline-none text-right ${theme.colors.textMuted}`}
+            className={`w-20 bg-transparent border-b-2 border-transparent focus:border-purple-500 focus:outline-none text-right ${theme.colors.textMuted}`}
             value={tempData.quantity}
             onChange={(e) => setTempData({ ...tempData, quantity: e.target.value })}
             onKeyDown={handleKeyDown}
@@ -76,13 +83,107 @@ function EditableGroceryItem({ item, theme, currentTheme, toggle, remove, update
 
         <button 
           onClick={handleSave}
-          className="p-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors shadow-md"
+          className="flex-shrink-0 p-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-md hover:scale-105 transition-all"
         >
           <FaSave size={14} />
         </button>
       </div>
     );
   }
+
+  // --- VIEW MODE UI (Unchanged) ---
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      whileHover={{ scale: 1.01 }}
+      className={`flex items-center gap-3 p-3 md:p-4 rounded-2xl border-2 transition-all ${
+        item.checked
+          ? currentTheme === 'dark'
+            ? 'bg-green-900/20 border-green-700/50'
+            : 'bg-green-50 border-green-200'
+          : currentTheme === 'dark'
+            ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
+            : 'bg-white border-gray-200 hover:border-gray-300'
+      }`}
+    >
+      <motion.button
+        whileTap={{ scale: 0.9 }}
+        onClick={() => toggle(item.id, !item.checked)}
+        className={`flex-shrink-0 w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all ${
+          item.checked
+            ? 'bg-green-500 border-green-500 text-white'
+            : currentTheme === 'dark'
+              ? 'border-gray-600 hover:border-green-400'
+              : 'border-gray-300 hover:border-green-500'
+        }`}
+      >
+        {item.checked && <FaCheckCircle size={14} />}
+      </motion.button>
+
+      {/* Double Click to Edit */}
+      <div 
+        className="flex-1 min-w-0 cursor-text group select-none" 
+        onClick={(e) => {
+            // Only trigger edit if clicking text, not tags
+            if(!item.checked) setIsEditing(true);
+        }}
+        title="Click text to edit"
+      >
+        <div className={`font-bold flex items-center gap-2 ${
+          item.checked ? 'line-through opacity-60' : theme.colors.text
+        }`}>
+          {item.name}
+        </div>
+        
+        <div className="flex items-center flex-wrap gap-2">
+          <span className="text-[11px] font-bold px-2 py-1 rounded-lg bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+            {catInfo.name}
+          </span>
+          {item.quantity && (
+            <div className={`text-sm ${
+              item.checked ? 'line-through opacity-50' : theme.colors.textMuted
+            }`}>
+              {item.quantity}
+            </div>
+          )}
+          {!pantryLoading && (
+            <span
+              className={`text-[11px] font-bold px-2 py-1 rounded-lg border ${
+                haveIt
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-100 dark:border-emerald-800'
+                  : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-100 dark:border-amber-800'
+              }`}
+            >
+              {haveIt ? 'Have it' : 'Need it'}
+            </span>
+          )}
+        </div>
+        {!pantryLoading && haveIt && detail && (
+          <p className={`text-xs font-semibold ${theme.colors.textMuted}`}>
+            Matched pantry: {detail.name}
+            {detail.category ? ` (${detail.category})` : ''}
+          </p>
+        )}
+      </div>
+
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={() => remove(item.id)}
+        className={`flex-shrink-0 p-2 rounded-lg transition-colors ${
+          currentTheme === 'dark'
+            ? 'text-red-400 hover:bg-red-900/30'
+            : 'text-red-500 hover:bg-red-50'
+        }`}
+      >
+        <FaTrash size={14} />
+      </motion.button>
+    </motion.div>
+  );
+}
 
   // --- VIEW MODE UI (Standard) ---
   return (

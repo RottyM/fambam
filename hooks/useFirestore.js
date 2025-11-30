@@ -569,6 +569,33 @@ export function useGroceries() {
     }
   };
 
+  const updateGroceryItem = async (id, updates) => {
+    if (!id || !user) return;
+    try {
+      // Determine path (Family or Personal)
+      const collectionPath = userData?.familyId 
+        ? `families/${userData.familyId}/groceries` 
+        : `users/${user.uid}/groceries`;
+
+      const docRef = doc(db, collectionPath, id);
+      await updateDoc(docRef, updates);
+    } catch (error) {
+      console.error("Error updating item:", error);
+      throw error;
+    }
+  };
+
+  return {
+    groceries,
+    loading,
+    addGroceryItem,
+    toggleGroceryItem,
+    deleteGroceryItem,
+    updateGroceryItem, // <--- CRITICAL: MAKE SURE THIS IS HERE!
+    clearCheckedItems,
+    clearAllItems,
+  };
+
   const clearCheckedItems = async () => {
     try {
       const checkedItems = groceries.filter(item => item.checked);
