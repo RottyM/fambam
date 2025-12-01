@@ -1,405 +1,311 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import DashboardLayout from "@/components/DashboardLayout";
-import BarcodeScanner from "@/components/BarcodeScanner";
-import { useTheme } from "@/contexts/ThemeContext";
-import { useAuth } from "@/contexts/AuthContext";
-import {
-  collection,
-  addDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  serverTimestamp,
-  deleteDoc,
-  doc,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { motion, AnimatePresence } from "framer-motion";
-import { FaPlus, FaTrash, FaCamera, FaBoxOpen, FaCheck } from "react-icons/fa";
+import { useState, useMemo } from 'react';
+import DashboardLayout from '@/components/DashboardLayout';
+import { usePantry } from '@/hooks/useFirestore';
+import { useTheme } from '@/contexts/ThemeContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaTrash, FaTimes, FaSave, FaPlus } from 'react-icons/fa';
 
-const EMPTY_STATE_EMOJI = "🥫";
-const CATEGORY_OPTIONS = [
-  { value: "produce", label: "Produce" },
-  { value: "dairy", label: "Dairy" },
-  { value: "meat", label: "Meat & Seafood" },
-  { value: "frozen", label: "Frozen" },
-  { value: "pantry", label: "Pantry" },
-  { value: "bakery", label: "Bakery" },
-  { value: "snacks", label: "Snacks" },
-  { value: "beverages", label: "Beverages" },
-  { value: "condiments", label: "Condiments & Spices" },
-  { value: "other", label: "Other" },
-];
-
-const inferCategory = (name = "", brand = "") => {
-  const text = `${name} ${brand}`.toLowerCase();
-  const has = (keywords) => keywords.some((k) => text.includes(k));
-  if (has(["lettuce", "spinach", "apple", "banana", "berry", "carrot", "vegetable", "fruit"])) return "produce";
-  if (has(["milk", "cheese", "yogurt", "butter", "cream", "dairy"])) return "dairy";
-  if (has(["chicken", "beef", "pork", "fish", "shrimp", "meat"])) return "meat";
-  if (has(["frozen", "ice cream", "frost", "freezer"])) return "frozen";
-  if (has(["bread", "bun", "bagel", "tortilla", "bakery"])) return "bakery";
-  if (has(["snack", "chips", "cracker", "cookie", "candy", "chocolate"])) return "snacks";
-  if (has(["juice", "soda", "coffee", "tea", "water", "drink", "beverage"])) return "beverages";
-  if (has(["ketchup", "mustard", "sauce", "spice", "seasoning", "condiment", "salt", "pepper", "oil", "vinegar"])) return "condiments";
-  if (has(["rice", "pasta", "noodle", "grain", "flour", "sugar", "beans", "lentil", "pantry"])) return "pantry";
-  return "other";
+// Reuse the same categories for consistency
+const CATEGORIES = {
+  produce: { name: 'Produce', icon: "🥬", color: 'from-green-400 to-green-500' },
+  dairy: { name: 'Dairy', icon: "🥛", color: 'from-blue-400 to-blue-500' },
+  meat: { name: 'Meat & Seafood', icon: "🍖", color: 'from-red-400 to-red-500' },
+  frozen: { name: 'Frozen', icon: "🧊", color: 'from-cyan-400 to-cyan-500' },
+  pantry: { name: 'Pantry', icon: "🥫", color: 'from-yellow-400 to-yellow-500' },
+  bakery: { name: 'Bakery', icon: "🍞", color: 'from-orange-400 to-orange-500' },
+  snacks: { name: 'Snacks', icon: "🍿", color: 'from-purple-400 to-purple-500' },
+  beverages: { name: 'Beverages', icon: "🥤", color: 'from-pink-400 to-pink-500' },
+  condiments: { name: 'Condiments & Spices', icon: "🧂", color: 'from-amber-400 to-red-500' },
+  canned: { name: 'Canned & Jarred', icon: "🥫", color: 'from-emerald-400 to-emerald-600' },
+  baking: { name: 'Baking & Staples', icon: "🧀", color: 'from-yellow-400 to-orange-500' },
+  household: { name: 'Household & Paper', icon: "🧻", color: 'from-slate-400 to-slate-600' },
+  other: { name: 'Other', icon: "📦", color: 'from-gray-400 to-gray-500' },
 };
 
-function PantryContent() {
-  const { theme, currentTheme } = useTheme();
-  const { userData } = useAuth();
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showScanner, setShowScanner] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [draft, setDraft] = useState({
-    name: "",
-    brand: "",
-    quantity: 1,
-    image: "",
-    barcode: "",
-    category: "other",
-  });
+function EditablePantryItem({ item, theme, currentTheme, remove, update, catInfo }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempData, setTempData] = useState({ name: item.name, quantity: item.quantity || '' });
 
-  const pantryCollection = useMemo(() => {
-    if (!userData?.familyId) return null;
-    return collection(db, "families", userData.familyId, "pantry");
-  }, [userData?.familyId]);
-
-  useEffect(() => {
-    if (!pantryCollection) {
-      setLoading(false);
-      return;
+  const handleSave = () => {
+    if (tempData.name !== item.name || tempData.quantity !== item.quantity) {
+      update(item.id, tempData);
     }
-
-    const q = query(pantryCollection, orderBy("addedAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const pantryList = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      }));
-      setItems(pantryList);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [pantryCollection]);
-
-  const resetDraft = () => {
-    setDraft({ name: "", brand: "", quantity: 1, image: "", barcode: "", category: "other" });
+    setIsEditing(false);
   };
 
-  const openManualModal = () => {
-    resetDraft();
-    setShowModal(true);
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') handleSave();
+    if (e.key === 'Escape') setIsEditing(false);
   };
 
-  const handleScan = async (barcode) => {
-    setShowScanner(false);
-    try {
-      const res = await fetch(
-        `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`
-      );
-      const data = await res.json();
-
-      if (data.status === 1) {
-        const name = data.product.product_name || "";
-        const brand = data.product.brands || "";
-        setDraft({
-          name,
-          brand,
-          image: data.product.image_front_small_url || "",
-          quantity: 1,
-          barcode,
-          category: inferCategory(name, brand),
-        });
-      } else {
-        setDraft({ name: "", brand: "", image: "", quantity: 1, barcode, category: "other" });
-      }
-      setShowModal(true);
-    } catch (error) {
-      console.error("Scan lookup failed:", error);
-      setDraft({ name: "", brand: "", image: "", quantity: 1, barcode, category: "other" });
-      setShowModal(true);
-    }
-  };
-
-  const handleSave = async (e) => {
-    e?.preventDefault();
-    if (!pantryCollection || !draft.name) return;
-    setSaving(true);
-    try {
-      await addDoc(pantryCollection, {
-        name: draft.name.trim(),
-        brand: draft.brand.trim(),
-        image: draft.image || "",
-        barcode: draft.barcode || "MANUAL",
-        quantity: Number(draft.quantity) || 1,
-        category: draft.category || inferCategory(draft.name, draft.brand),
-        addedAt: serverTimestamp(),
-      });
-      setShowModal(false);
-      resetDraft();
-    } catch (error) {
-      console.error("Error saving pantry item:", error);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (itemId) => {
-    if (!pantryCollection) return;
-    const confirmed = window.confirm("Remove this item from your pantry?");
-    if (!confirmed) return;
-    await deleteDoc(doc(pantryCollection, itemId));
-  };
-
-  const headerTitle =
-    currentTheme === "dark" ? "Pantry Vault" : "Pantry Shelves";
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-4xl font-display font-bold">
-            <span className={currentTheme === "dark" ? "text-purple-300" : "gradient-text"}>
-              {headerTitle}
-            </span>
-          </h1>
-          <p className={`text-sm sm:text-base font-semibold ${theme.colors.textMuted}`}>
-            {loading ? "Loading..." : `${items.length} items stocked`}
-          </p>
+  // --- EDIT MODE ---
+  if (isEditing) {
+    return (
+      <div className={`flex items-center gap-3 p-3 md:p-4 rounded-2xl border-2 shadow-lg relative ${
+        currentTheme === 'dark' ? 'bg-gray-800 border-purple-500/50' : 'bg-white border-purple-400'
+      }`}>
+        <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-purple-500 text-white text-[10px] font-bold">EDITING</div>
+        
+        {/* Icon Placeholder */}
+        <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-xl bg-purple-100 dark:bg-gray-700`}>
+           ✏️
         </div>
 
-        <div className="flex gap-2">
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={openManualModal}
-            className="bg-gradient-to-r from-slate-600 to-gray-700 text-white px-4 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-          >
-            <FaPlus size={14} /> Add Item
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => setShowScanner(true)}
-            className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-          >
-            <FaCamera size={14} /> Scan
-          </motion.button>
+        <div className="flex-1 flex gap-3 min-w-0">
+          <input
+            autoFocus
+            className={`flex-1 bg-transparent border-b-2 border-transparent focus:border-purple-500 focus:outline-none font-bold ${theme.colors.text}`}
+            value={tempData.name}
+            onChange={(e) => setTempData({ ...tempData, name: e.target.value })}
+            onKeyDown={handleKeyDown}
+            placeholder="Item name"
+          />
+          <input
+            className={`w-20 bg-transparent border-b-2 border-transparent focus:border-purple-500 focus:outline-none text-right ${theme.colors.textMuted}`}
+            value={tempData.quantity}
+            onChange={(e) => setTempData({ ...tempData, quantity: e.target.value })}
+            onKeyDown={handleKeyDown}
+            placeholder="Qty"
+          />
+        </div>
+
+        <button onClick={handleSave} className="flex-shrink-0 p-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-md hover:scale-105 transition-all">
+          <FaSave size={14} />
+        </button>
+      </div>
+    );
+  }
+
+  // --- VIEW MODE ---
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      whileHover={{ scale: 1.01 }}
+      className={`flex items-center gap-3 p-3 md:p-4 rounded-2xl border-2 transition-all ${
+        currentTheme === 'dark' 
+          ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600' 
+          : 'bg-white border-gray-200 hover:border-gray-300'
+      }`}
+    >
+      {/* Category Icon Box */}
+      <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-sm ${
+        currentTheme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'
+      }`}>
+        {catInfo.icon}
+      </div>
+
+      <div 
+        className="flex-1 min-w-0 cursor-pointer group select-none" 
+        onClick={() => setIsEditing(true)}
+        title="Double click to edit"
+      >
+        <div className={`font-bold flex items-center gap-2 ${theme.colors.text}`}>
+          {item.name}
+          <span className="opacity-0 group-hover:opacity-50 text-[10px] text-purple-500">✎</span>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">
+            {catInfo.name}
+          </span>
+          {item.quantity && (
+            <span className={`text-sm font-semibold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md dark:bg-purple-900/30 dark:text-purple-300`}>
+              {item.quantity}
+            </span>
+          )}
         </div>
       </div>
 
-      {loading ? (
-        <div
-          className={`flex items-center justify-center h-48 rounded-3xl border-2 border-dashed ${
-            currentTheme === "dark" ? "border-gray-700 bg-gray-800/50" : "border-gray-200 bg-gray-50"
-          }`}
-        >
-          <div className="text-center">
-            <div className="text-4xl mb-2 animate-pulse">{EMPTY_STATE_EMOJI}</div>
-            <p className={`font-semibold ${theme.colors.textMuted}`}>Loading pantry...</p>
-          </div>
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={() => remove(item.id)}
+        className={`flex-shrink-0 p-2 rounded-lg transition-colors ${
+          currentTheme === 'dark' ? 'text-red-400 hover:bg-red-900/30' : 'text-red-500 hover:bg-red-50'
+        }`}
+      >
+        <FaTrash size={14} />
+      </motion.button>
+    </motion.div>
+  );
+}
+
+function PantryContent() {
+  const { pantryItems, loading, addPantryItem, updatePantryItem, deletePantryItem } = usePantry();
+  const { theme, currentTheme } = useTheme();
+  
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newItem, setNewItem] = useState({ name: '', category: 'other', quantity: '' });
+
+  const handleAddItem = async (e) => {
+    e.preventDefault();
+    await addPantryItem(newItem);
+    setNewItem({ name: '', category: 'other', quantity: '' });
+    setShowAddModal(false);
+  };
+
+  // Group items by category
+  const groupedPantry = useMemo(() => {
+    return pantryItems.reduce((acc, item) => {
+      const category = item.category || 'other';
+      if (!acc[category]) acc[category] = [];
+      acc[category].push(item);
+      return acc;
+    }, {});
+  }, [pantryItems]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="text-6xl mb-4 animate-bounce">🥫</div>
+          <p className="text-xl font-bold text-purple-500">Loading Pantry...</p>
         </div>
-      ) : items.length === 0 ? (
-        <div
-          className={`flex items-center justify-center h-52 rounded-3xl border-2 border-dashed ${
-            currentTheme === "dark" ? "border-gray-700 bg-gray-800/50" : "border-gray-200 bg-gray-50"
-          }`}
-        >
-          <div className="text-center">
-            <div className="text-5xl mb-3">{EMPTY_STATE_EMOJI}</div>
-            <p className={`text-xl font-bold ${theme.colors.text}`}>Your pantry is empty</p>
-            <p className={`${theme.colors.textMuted} font-semibold`}>Scan a barcode or add an item manually.</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-display font-bold mb-2">
+              <span className={currentTheme === 'dark' ? 'text-purple-400' : 'gradient-text'}>
+                Pantry Vault
+              </span>
+            </h1>
+            <p className={`text-sm sm:text-base font-semibold ${theme.colors.textMuted}`}>
+              {pantryItems.length} items stocked
+            </p>
           </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map((item) => (
-            <motion.div
-              key={item.id}
-              layout
-              whileHover={{ y: -4 }}
-              className={`${theme.colors.bgCard} rounded-2xl p-4 shadow-lg border ${theme.colors.border} flex gap-4`}
+          
+          <div className="flex gap-2">
+             {/* Scan Button Placeholder (If you have the scanner component ready) */}
+             {/* <button className="bg-blue-500 text-white px-4 py-3 rounded-2xl font-bold">Scan</button> */}
+             
+             <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowAddModal(true)}
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-5 py-3 rounded-2xl font-bold shadow-lg flex items-center gap-2"
             >
-              <div className="h-16 w-16 rounded-xl overflow-hidden border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center bg-white dark:bg-gray-900">
-                {item.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
-                ) : (
-                  <span className="text-2xl">{EMPTY_STATE_EMOJI}</span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className={`font-bold text-lg truncate ${theme.colors.text}`}>
-                    {item.name}
-                  </h3>
-                  <span className="inline-flex items-center gap-1 text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300 px-2 py-1 rounded-lg">
-                    <FaCheck size={10} /> x{item.quantity || 1}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[11px] font-bold px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 border border-indigo-100 dark:border-indigo-800">
-                    {item.category || "Uncategorized"}
-                  </span>
-                  {item.brand && (
-                    <p className={`text-sm truncate ${theme.colors.textMuted}`}>{item.brand}</p>
-                  )}
-                </div>
-                {item.barcode && (
-                  <p className="text-[11px] text-gray-400 mt-1 uppercase tracking-wide">
-                    {item.barcode}
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={() => handleDelete(item.id)}
-                className="self-start p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                aria-label={`Delete ${item.name}`}
-              >
-                <FaTrash />
-              </button>
-            </motion.div>
-          ))}
+              <FaPlus /> Add Item
+            </motion.button>
+          </div>
         </div>
-      )}
 
-      <AnimatePresence>
-        {showScanner && (
-          <BarcodeScanner onScan={handleScan} onClose={() => setShowScanner(false)} />
+        {pantryItems.length === 0 ? (
+          <div className={`text-center py-16 rounded-3xl border-2 border-dashed ${
+            currentTheme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+          }`}>
+            <div className="text-6xl mb-4">👻</div>
+            <p className="font-bold text-xl opacity-50">Your pantry is empty!</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {Object.entries(CATEGORIES).map(([catKey, catData]) => {
+              const items = groupedPantry[catKey] || [];
+              if (items.length === 0) return null;
+
+              return (
+                <motion.div 
+                  key={catKey}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`${theme.colors.bgCard} rounded-3xl p-5 shadow-lg border ${theme.colors.border}`}
+                >
+                  <div className="flex items-center gap-3 mb-4 border-b pb-2 border-gray-100 dark:border-gray-700">
+                    <div className="text-3xl">{catData.icon}</div>
+                    <h3 className={`text-xl font-bold ${theme.colors.text}`}>{catData.name}</h3>
+                    <span className="ml-auto text-xs font-bold bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full opacity-60">
+                      {items.length}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {items.map(item => (
+                      <EditablePantryItem
+                        key={item.id}
+                        item={item}
+                        theme={theme}
+                        currentTheme={currentTheme}
+                        remove={deletePantryItem}
+                        update={updatePantryItem}
+                        catInfo={catData}
+                      />
+                    ))}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
         )}
-      </AnimatePresence>
+      </div>
 
+      {/* Add Modal */}
       <AnimatePresence>
-        {showModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => !saving && setShowModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.96, y: 10 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.96, y: 10 }}
+        {showAddModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowAddModal(false)}>
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
               className={`${theme.colors.bgCard} rounded-3xl p-6 w-full max-w-md shadow-2xl border ${theme.colors.border}`}
             >
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 text-white shadow-md">
-                  <FaBoxOpen />
-                </div>
-                <div>
-                  <p className={`text-sm font-semibold ${theme.colors.textMuted}`}>
-                    Add pantry item
-                  </p>
-                  <h2 className={`text-xl font-bold ${theme.colors.text}`}>
-                    {draft.barcode ? `Barcode ${draft.barcode}` : "Manual entry"}
-                  </h2>
-                </div>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold gradient-text">Stock Pantry</h2>
+                <button onClick={() => setShowAddModal(false)}><FaTimes size={20} /></button>
               </div>
 
-              <form className="space-y-4" onSubmit={handleSave}>
-                <div>
-                  <label className={`block text-sm font-bold mb-1 ${theme.colors.textMuted}`}>
-                    Item name *
-                  </label>
-                  <input
-                    type="text"
-                    value={draft.name}
-                    onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                    required
-                    className={`w-full px-4 py-3 rounded-2xl border-2 focus:outline-none ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500 font-semibold`}
-                    placeholder="e.g., Peanut Butter"
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm font-bold mb-1 ${theme.colors.textMuted}`}>
-                    Brand (optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={draft.brand}
-                    onChange={(e) => setDraft({ ...draft, brand: e.target.value })}
-                    className={`w-full px-4 py-3 rounded-2xl border-2 focus:outline-none ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500 font-semibold`}
-                    placeholder="Brand"
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm font-bold mb-1 ${theme.colors.textMuted}`}>
-                    Category
-                  </label>
-                  <select
-                    value={draft.category}
-                    onChange={(e) => setDraft({ ...draft, category: e.target.value })}
-                    className={`w-full px-4 py-3 rounded-2xl border-2 focus:outline-none ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500 font-semibold`}
-                  >
-                    {CATEGORY_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className={`block text-sm font-bold mb-1 ${theme.colors.textMuted}`}>
-                      Quantity
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={draft.quantity}
-                      onChange={(e) =>
-                        setDraft({ ...draft, quantity: Math.max(1, Number(e.target.value) || 1) })
-                      }
-                      className={`w-full px-4 py-3 rounded-2xl border-2 focus:outline-none ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500 font-semibold`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-sm font-bold mb-1 ${theme.colors.textMuted}`}>
-                      Image URL (optional)
-                    </label>
-                    <input
-                      type="url"
-                      value={draft.image}
-                      onChange={(e) => setDraft({ ...draft, image: e.target.value })}
-                      className={`w-full px-4 py-3 rounded-2xl border-2 focus:outline-none ${theme.colors.bgCard} ${theme.colors.border} focus:border-purple-500 font-semibold`}
-                      placeholder="https://..."
-                    />
-                  </div>
+              <form onSubmit={handleAddItem} className="space-y-4">
+                <input
+                  autoFocus
+                  placeholder="Item Name (e.g. Rice)"
+                  className="w-full p-4 rounded-xl border-2 bg-transparent text-lg font-bold focus:border-purple-500 outline-none"
+                  value={newItem.name}
+                  onChange={(e) => setNewItem({...newItem, name: e.target.value})}
+                />
+                <input
+                  placeholder="Quantity (e.g. 2 bags)"
+                  className="w-full p-4 rounded-xl border-2 bg-transparent focus:border-purple-500 outline-none"
+                  value={newItem.quantity}
+                  onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
+                />
+                
+                <div className="grid grid-cols-4 gap-2 mt-4">
+                  {Object.entries(CATEGORIES).map(([key, cat]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setNewItem({...newItem, category: key})}
+                      className={`p-2 rounded-lg border flex flex-col items-center gap-1 text-[10px] font-bold transition-all ${
+                        newItem.category === key 
+                          ? 'bg-purple-100 border-purple-500 text-purple-700' 
+                          : 'border-transparent hover:bg-gray-100 dark:hover:bg-gray-700 opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <span className="text-xl">{cat.icon}</span>
+                      {cat.name.split(' ')[0]}
+                    </button>
+                  ))}
                 </div>
 
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className={`flex-1 ${theme.colors.bgSecondary} ${theme.colors.text} py-3 rounded-2xl font-bold hover:opacity-80 transition-all border ${theme.colors.border}`}
-                    disabled={saving}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving || !draft.name}
-                    className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-60"
-                  >
-                    {saving ? "Saving..." : "Save Item"}
-                  </button>
-                </div>
+                <button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg mt-4">
+                  Add to Stock
+                </button>
               </form>
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
 
