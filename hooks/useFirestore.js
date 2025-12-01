@@ -10,14 +10,13 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
-  arrayUnion,  // <-- Added for voting
-  arrayRemove, // <-- Added for voting
+  arrayUnion,
+  arrayRemove,
   getDocs,
   writeBatch,
   limit,
   startAfter,
 } from 'firebase/firestore';
-// Relative import for better stability
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -54,13 +53,10 @@ export function useTodos() {
   const addTodo = async (todoData) => {
     try {
       const dataToAdd = { ...todoData };
-
-      // Convert dueDate string to a Date object for Firestore
       if (dataToAdd.dueDate) {
-        // Replace dashes with slashes to parse in local timezone
         dataToAdd.dueDate = new Date(dataToAdd.dueDate.replace(/-/g, '/'));
       } else {
-        delete dataToAdd.dueDate; // Ensure it's not stored if empty
+        delete dataToAdd.dueDate;
       }
 
       await addDoc(collection(db, 'families', userData.familyId, 'todos'), {
@@ -75,8 +71,6 @@ export function useTodos() {
       console.error(error);
     }
   };
-
-
 
   const updateTodo = async (todoId, updates) => {
     try {
@@ -375,10 +369,8 @@ export function usePaginatedMemories(pageSize = 30) {
       return;
     }
     refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userData?.familyId]);
 
-  // Expose a simple local updater for optimistic UI (likes, moves)
   const updateMemoryLocal = (memoryId, updates) => {
     setMemories(prev =>
       prev.map(m => (m.id === memoryId ? { ...m, ...updates } : m))
@@ -447,15 +439,11 @@ export function useMemoriesFolders() {
   const deleteFolder = async (folderId) => {
     try {
       const folderRef = doc(db, 'families', userData.familyId, 'folders', folderId);
-
-      // 1. Find all memories associated with this folder
       const memoriesQuery = query(
         collection(db, 'families', userData.familyId, 'memories'),
         where('folderId', '==', folderId)
       );
       const memoriesSnapshot = await getDocs(memoriesQuery);
-
-      // 2. Create a batch to update memories and delete the folder atomically
       const batch = writeBatch(db);
 
       memoriesSnapshot.forEach((memoryDoc) => {
@@ -463,10 +451,7 @@ export function useMemoriesFolders() {
         batch.update(memoryRef, { folderId: null });
       });
 
-      // 3. Add the folder deletion to the batch
       batch.delete(folderRef);
-
-      // 4. Commit the batch
       await batch.commit();
       
       toast.success('Folder deleted and memories unsorted!');
@@ -507,7 +492,6 @@ export function useGroceries() {
   const [loading, setLoading] = useState(true);
   const { user, userData } = useAuth();
 
-  // Helper to get the right path (Family vs Private)
   const getCollectionRef = () => {
     if (userData?.familyId) {
       return collection(db, "families", userData.familyId, "groceries");
@@ -524,7 +508,6 @@ export function useGroceries() {
       return;
     }
 
-    // Order by 'checked' (false first) then 'createdAt'
     const q = query(colRef, orderBy("checked", "asc"), orderBy("addedAt", "desc"));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -539,7 +522,6 @@ export function useGroceries() {
     return () => unsubscribe();
   }, [user, userData]);
 
-  // 1. ADD ITEM
   const addGroceryItem = async (item) => {
     const colRef = getCollectionRef();
     if (!colRef) return;
@@ -552,7 +534,6 @@ export function useGroceries() {
     });
   };
 
-  // 2. TOGGLE CHECKMARK (The function you asked about!)
   const toggleGroceryItem = async (id, currentStatus) => {
     if (!userData?.familyId && !user) return;
     const collectionPath = userData?.familyId 
@@ -563,7 +544,6 @@ export function useGroceries() {
     await updateDoc(docRef, { checked: currentStatus });
   };
 
-  // 3. DELETE ITEM
   const deleteGroceryItem = async (id) => {
     if (!userData?.familyId && !user) return;
     const collectionPath = userData?.familyId 
@@ -574,7 +554,6 @@ export function useGroceries() {
     await deleteDoc(docRef);
   };
 
-  // 4. UPDATE ITEM (The missing piece for editing!)
   const updateGroceryItem = async (id, updates) => {
     if (!userData?.familyId && !user) return;
     const collectionPath = userData?.familyId 
@@ -585,7 +564,6 @@ export function useGroceries() {
     await updateDoc(docRef, updates);
   };
 
-  // 5. CLEAR CHECKED
   const clearCheckedItems = async () => {
     const batch = writeBatch(db);
     groceries.filter(i => i.checked).forEach((item) => {
@@ -598,7 +576,6 @@ export function useGroceries() {
     await batch.commit();
   };
 
-  // 6. CLEAR ALL
   const clearAllItems = async () => {
     const batch = writeBatch(db);
     groceries.forEach((item) => {
@@ -615,9 +592,9 @@ export function useGroceries() {
     groceries,
     loading,
     addGroceryItem,
-    toggleGroceryItem, // <--- Ensures Checkmark works
+    toggleGroceryItem,
     deleteGroceryItem,
-    updateGroceryItem, // <--- Ensures Edit Save works
+    updateGroceryItem,
     clearCheckedItems,
     clearAllItems,
   };
@@ -658,7 +635,7 @@ export function useRecipes() {
         ...recipeData,
         createdBy: userData.uid,
         createdAt: serverTimestamp(),
-        tutorialVideoUrl: '', // e.g., 'https://www.youtube.com/watch?v=...' (Optional)
+        tutorialVideoUrl: '', 
       });
       toast.success('Recipe added!');
     } catch (error) {
@@ -831,7 +808,7 @@ export function useCredentials() {
   return { credentials, loading, addCredential, updateCredential, deleteCredential };
 }
 
-// --- 12. MOVIES (The Revival! 🎬) ---
+// --- 12. MOVIES ---
 export function useMovies() {
   const { userData } = useAuth();
   const [movies, setMovies] = useState([]);
@@ -888,7 +865,6 @@ export function useMovies() {
     }
   };
 
-  // --- NEW: Toggle Vote Logic ---
   const toggleVote = async (movieId, currentVotes) => {
     const userId = userData.uid;
     const hasVoted = currentVotes?.includes(userId);
@@ -918,4 +894,75 @@ export function useMovies() {
   };
 
   return { movies, loading, addMovie, toggleWatched, toggleVote, deleteMovie };
+}
+
+// --- 13. PANTRY (Added Correctly!) ---
+export function usePantry() {
+  const { userData } = useAuth();
+  const [pantryItems, setPantryItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userData?.familyId) {
+      setLoading(false);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'families', userData.familyId, 'pantry'),
+      orderBy('category', 'asc'),
+      orderBy('name', 'asc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setPantryItems(items);
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [userData?.familyId]);
+
+  const addPantryItem = async (item) => {
+    try {
+      await addDoc(collection(db, 'families', userData.familyId, 'pantry'), {
+        name: item.name,
+        quantity: item.quantity || "1",
+        category: item.category || "other",
+        addedAt: serverTimestamp(),
+      });
+      toast.success('Added to Pantry');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to add');
+    }
+  };
+
+  const updatePantryItem = async (id, updates) => {
+    try {
+      await updateDoc(
+        doc(db, 'families', userData.familyId, 'pantry', id),
+        updates
+      );
+      toast.success('Pantry item updated');
+    } catch (error) {
+      console.error(error);
+      toast.error('Update failed');
+    }
+  };
+
+  const deletePantryItem = async (id) => {
+    try {
+      await deleteDoc(doc(db, 'families', userData.familyId, 'pantry', id));
+      toast.success('Removed from pantry');
+    } catch (error) {
+      console.error(error);
+      toast.error('Delete failed');
+    }
+  };
+
+  return { pantryItems, loading, addPantryItem, updatePantryItem, deletePantryItem };
 }
