@@ -5,9 +5,8 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { usePantry } from '@/hooks/useFirestore';
 import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaTrash, FaTimes, FaSave, FaPlus } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaTimes, FaSave } from 'react-icons/fa';
 
-// Reuse the same categories for consistency
 const CATEGORIES = {
   produce: { name: 'Produce', icon: "🥬", color: 'from-green-400 to-green-500' },
   dairy: { name: 'Dairy', icon: "🥛", color: 'from-blue-400 to-blue-500' },
@@ -27,6 +26,9 @@ const CATEGORIES = {
 function EditablePantryItem({ item, theme, currentTheme, remove, update, catInfo }) {
   const [isEditing, setIsEditing] = useState(false);
   const [tempData, setTempData] = useState({ name: item.name, quantity: item.quantity || '' });
+
+  // Check for image URL (supports common field names)
+  const itemImage = item.image || item.imageUrl || item.photo || null;
 
   const handleSave = () => {
     if (tempData.name !== item.name || tempData.quantity !== item.quantity) {
@@ -48,22 +50,28 @@ function EditablePantryItem({ item, theme, currentTheme, remove, update, catInfo
       }`}>
         <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-purple-500 text-white text-[10px] font-bold">EDITING</div>
         
-        {/* Icon Placeholder */}
-        <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-xl bg-purple-100 dark:bg-gray-700`}>
+        {/* Placeholder Icon while editing */}
+        <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-xl ${
+           currentTheme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'
+        }`}>
            ✏️
         </div>
 
         <div className="flex-1 flex gap-3 min-w-0">
           <input
             autoFocus
-            className={`flex-1 bg-transparent border-b-2 border-transparent focus:border-purple-500 focus:outline-none font-bold ${theme.colors.text}`}
+            className={`flex-1 bg-transparent border-b-2 border-transparent focus:border-purple-500 focus:outline-none font-bold ${
+              currentTheme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}
             value={tempData.name}
             onChange={(e) => setTempData({ ...tempData, name: e.target.value })}
             onKeyDown={handleKeyDown}
             placeholder="Item name"
           />
           <input
-            className={`w-20 bg-transparent border-b-2 border-transparent focus:border-purple-500 focus:outline-none text-right ${theme.colors.textMuted}`}
+            className={`w-20 bg-transparent border-b-2 border-transparent focus:border-purple-500 focus:outline-none text-right ${
+              currentTheme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+            }`}
             value={tempData.quantity}
             onChange={(e) => setTempData({ ...tempData, quantity: e.target.value })}
             onKeyDown={handleKeyDown}
@@ -92,29 +100,49 @@ function EditablePantryItem({ item, theme, currentTheme, remove, update, catInfo
           : 'bg-white border-gray-200 hover:border-gray-300'
       }`}
     >
-      {/* Category Icon Box */}
-      <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-sm ${
-        currentTheme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'
-      }`}>
-        {catInfo.icon}
-      </div>
+      {/* 1. PRODUCT PHOTO OR CATEGORY ICON */}
+      {itemImage ? (
+        <img 
+          src={itemImage} 
+          alt={item.name}
+          className="flex-shrink-0 w-12 h-12 rounded-xl object-cover border border-gray-200 dark:border-gray-700 shadow-sm bg-white"
+        />
+      ) : (
+        <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-sm ${
+          currentTheme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'
+        }`}>
+          {catInfo.icon}
+        </div>
+      )}
 
+      {/* 2. TEXT CONTENT (Full Wrap) */}
       <div 
         className="flex-1 min-w-0 cursor-pointer group select-none" 
         onClick={() => setIsEditing(true)}
         title="Double click to edit"
       >
-        <div className={`font-bold flex items-center gap-2 ${theme.colors.text}`}>
+        <div className={`font-bold text-base leading-tight break-words pr-2 ${
+          currentTheme === 'dark' ? 'text-white' : 'text-gray-900'
+        }`}>
           {item.name}
-          <span className="opacity-0 group-hover:opacity-50 text-[10px] text-purple-500">✎</span>
+          {/* Edit Pencil Hint */}
+          <span className="opacity-0 group-hover:opacity-50 text-[10px] text-purple-500 ml-2 align-middle">
+            ✎
+          </span>
         </div>
         
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">
+        <div className="flex items-center gap-2 mt-1">
+          <span className={`text-[10px] uppercase font-bold tracking-wider ${
+             currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+          }`}>
             {catInfo.name}
           </span>
           {item.quantity && (
-            <span className={`text-sm font-semibold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md dark:bg-purple-900/30 dark:text-purple-300`}>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-md ${
+              currentTheme === 'dark' 
+                ? 'bg-purple-900/30 text-purple-300' 
+                : 'bg-purple-100 text-purple-700'
+            }`}>
               {item.quantity}
             </span>
           )}
@@ -125,11 +153,11 @@ function EditablePantryItem({ item, theme, currentTheme, remove, update, catInfo
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => remove(item.id)}
-        className={`flex-shrink-0 p-2 rounded-lg transition-colors ${
+        className={`flex-shrink-0 p-3 rounded-xl transition-colors ${
           currentTheme === 'dark' ? 'text-red-400 hover:bg-red-900/30' : 'text-red-500 hover:bg-red-50'
         }`}
       >
-        <FaTrash size={14} />
+        <FaTrash size={16} />
       </motion.button>
     </motion.div>
   );
@@ -149,7 +177,6 @@ function PantryContent() {
     setShowAddModal(false);
   };
 
-  // Group items by category
   const groupedPantry = useMemo(() => {
     return pantryItems.reduce((acc, item) => {
       const category = item.category || 'other';
@@ -186,9 +213,6 @@ function PantryContent() {
           </div>
           
           <div className="flex gap-2">
-             {/* Scan Button Placeholder (If you have the scanner component ready) */}
-             {/* <button className="bg-blue-500 text-white px-4 py-3 rounded-2xl font-bold">Scan</button> */}
-             
              <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -222,7 +246,11 @@ function PantryContent() {
                 >
                   <div className="flex items-center gap-3 mb-4 border-b pb-2 border-gray-100 dark:border-gray-700">
                     <div className="text-3xl">{catData.icon}</div>
-                    <h3 className={`text-xl font-bold ${theme.colors.text}`}>{catData.name}</h3>
+                    <h3 className={`text-xl font-bold ${
+                      currentTheme === 'dark' ? 'text-white' : 'text-gray-900'
+                    }`}>
+                      {catData.name}
+                    </h3>
                     <span className="ml-auto text-xs font-bold bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full opacity-60">
                       {items.length}
                     </span>
@@ -268,13 +296,17 @@ function PantryContent() {
                 <input
                   autoFocus
                   placeholder="Item Name (e.g. Rice)"
-                  className="w-full p-4 rounded-xl border-2 bg-transparent text-lg font-bold focus:border-purple-500 outline-none"
+                  className={`w-full p-4 rounded-xl border-2 bg-transparent text-lg font-bold outline-none ${
+                    currentTheme === 'dark' ? 'text-white border-gray-700 focus:border-purple-500' : 'text-gray-900 border-gray-200 focus:border-purple-500'
+                  }`}
                   value={newItem.name}
                   onChange={(e) => setNewItem({...newItem, name: e.target.value})}
                 />
                 <input
                   placeholder="Quantity (e.g. 2 bags)"
-                  className="w-full p-4 rounded-xl border-2 bg-transparent focus:border-purple-500 outline-none"
+                  className={`w-full p-4 rounded-xl border-2 bg-transparent outline-none ${
+                    currentTheme === 'dark' ? 'text-white border-gray-700 focus:border-purple-500' : 'text-gray-900 border-gray-200 focus:border-purple-500'
+                  }`}
                   value={newItem.quantity}
                   onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
                 />
