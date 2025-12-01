@@ -5,7 +5,8 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { usePantry } from '@/hooks/useFirestore';
 import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaPlus, FaTrash, FaTimes, FaSave } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaTimes, FaSave, FaCamera } from 'react-icons/fa';
+import BarcodeScanner from '@/components/BarcodeScanner'; // <--- IMPORT ADDED
 
 const CATEGORIES = {
   produce: { name: 'Produce', icon: "🥬", color: 'from-green-400 to-green-500' },
@@ -27,7 +28,6 @@ function EditablePantryItem({ item, theme, currentTheme, remove, update, catInfo
   const [isEditing, setIsEditing] = useState(false);
   const [tempData, setTempData] = useState({ name: item.name, quantity: item.quantity || '' });
 
-  // Check for image URL (supports common field names)
   const itemImage = item.image || item.imageUrl || item.photo || null;
 
   const handleSave = () => {
@@ -42,21 +42,17 @@ function EditablePantryItem({ item, theme, currentTheme, remove, update, catInfo
     if (e.key === 'Escape') setIsEditing(false);
   };
 
-  // --- EDIT MODE ---
   if (isEditing) {
     return (
       <div className={`flex items-center gap-3 p-3 md:p-4 rounded-2xl border-2 shadow-lg relative ${
         currentTheme === 'dark' ? 'bg-gray-800 border-purple-500/50' : 'bg-white border-purple-400'
       }`}>
         <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-purple-500 text-white text-[10px] font-bold">EDITING</div>
-        
-        {/* Placeholder Icon while editing */}
         <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-xl ${
            currentTheme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'
         }`}>
            ✏️
         </div>
-
         <div className="flex-1 flex gap-3 min-w-0">
           <input
             autoFocus
@@ -78,7 +74,6 @@ function EditablePantryItem({ item, theme, currentTheme, remove, update, catInfo
             placeholder="Qty"
           />
         </div>
-
         <button onClick={handleSave} className="flex-shrink-0 p-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-md hover:scale-105 transition-all">
           <FaSave size={14} />
         </button>
@@ -86,7 +81,6 @@ function EditablePantryItem({ item, theme, currentTheme, remove, update, catInfo
     );
   }
 
-  // --- VIEW MODE ---
   return (
     <motion.div
       layout
@@ -100,7 +94,6 @@ function EditablePantryItem({ item, theme, currentTheme, remove, update, catInfo
           : 'bg-white border-gray-200 hover:border-gray-300'
       }`}
     >
-      {/* 1. PRODUCT PHOTO OR CATEGORY ICON */}
       {itemImage ? (
         <img 
           src={itemImage} 
@@ -115,7 +108,6 @@ function EditablePantryItem({ item, theme, currentTheme, remove, update, catInfo
         </div>
       )}
 
-      {/* 2. TEXT CONTENT (Full Wrap) */}
       <div 
         className="flex-1 min-w-0 cursor-pointer group select-none" 
         onClick={() => setIsEditing(true)}
@@ -125,10 +117,7 @@ function EditablePantryItem({ item, theme, currentTheme, remove, update, catInfo
           currentTheme === 'dark' ? 'text-white' : 'text-gray-900'
         }`}>
           {item.name}
-          {/* Edit Pencil Hint */}
-          <span className="opacity-0 group-hover:opacity-50 text-[10px] text-purple-500 ml-2 align-middle">
-            ✎
-          </span>
+          <span className="opacity-0 group-hover:opacity-50 text-[10px] text-purple-500 ml-2 align-middle">✎</span>
         </div>
         
         <div className="flex items-center gap-2 mt-1">
@@ -168,6 +157,7 @@ function PantryContent() {
   const { theme, currentTheme } = useTheme();
   
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showScanner, setShowScanner] = useState(false); // <--- SCANNER STATE
   const [newItem, setNewItem] = useState({ name: '', category: 'other', quantity: '' });
 
   const handleAddItem = async (e) => {
@@ -175,6 +165,16 @@ function PantryContent() {
     await addPantryItem(newItem);
     setNewItem({ name: '', category: 'other', quantity: '' });
     setShowAddModal(false);
+  };
+
+  // --- HANDLE SCAN RESULT ---
+  const handleScan = (scannedText) => {
+    // 1. Close Scanner
+    setShowScanner(false);
+    // 2. Pre-fill the name with the barcode/text
+    setNewItem({ ...newItem, name: scannedText });
+    // 3. Open the Add Modal so user can confirm/edit
+    setShowAddModal(true);
   };
 
   const groupedPantry = useMemo(() => {
@@ -213,6 +213,16 @@ function PantryContent() {
           </div>
           
           <div className="flex gap-2">
+             {/* --- SCAN BUTTON --- */}
+             <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowScanner(true)}
+              className="bg-blue-500 text-white px-5 py-3 rounded-2xl font-bold shadow-lg flex items-center gap-2 hover:bg-blue-600 transition-colors"
+            >
+              <FaCamera /> Scan
+            </motion.button>
+
              <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -275,6 +285,14 @@ function PantryContent() {
           </div>
         )}
       </div>
+
+      {/* Scanner Component */}
+      {showScanner && (
+        <BarcodeScanner 
+          onScan={handleScan} 
+          onClose={() => setShowScanner(false)} 
+        />
+      )}
 
       {/* Add Modal */}
       <AnimatePresence>
