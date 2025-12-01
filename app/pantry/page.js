@@ -254,7 +254,7 @@ function PantryContent() {
                   animate={{ opacity: 1, y: 0 }}
                   className={`${theme.colors.bgCard} rounded-3xl p-5 shadow-lg border ${theme.colors.border}`}
                 >
-                  <div className="flex items-center gap-3 mb-4 border-b pb-2 border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center gap-3 mb-4">
                     <div className="text-3xl">{catData.icon}</div>
                     <h3 className={`text-xl font-bold ${
                       currentTheme === 'dark' ? 'text-white' : 'text-gray-900'
