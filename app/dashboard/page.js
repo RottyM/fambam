@@ -1,12 +1,19 @@
 'use client';
 
 import DashboardLayout from '@/components/DashboardLayout';
-import DailyMeme from '@/components/DailyMeme';
+import dynamic from 'next/dynamic';
+const DynamicDailyMeme = dynamic(() => import('@/components/DailyMeme'), { ssr: false });
+const DynamicMemberDetailModal = dynamic(() => import('@/components/MemberDetailModal'), { ssr: false });
+const DynamicUpcomingEvents = dynamic(() => import('@/components/UpcomingEvents'), { ssr: false });
+const DynamicQuickActions = dynamic(() => import('@/components/QuickActions'), { ssr: false });
+const DynamicRecentActivity = dynamic(() => import('@/components/RecentActivity'), { ssr: false });
+const DynamicMemorySpotlight = dynamic(() => import('@/components/MemorySpotlight'), { ssr: false });
+const DynamicFamilyMembers = dynamic(() => import('@/components/FamilyMembers'), { ssr: false });
 import UserAvatar from '@/components/UserAvatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useTodos, useChores, useMemories, useCalendarEvents } from '@/hooks/useFirestore';
+import { useTodos, useChores, useMemories, useCalendarEvents, useMemoriesCount } from '@/hooks/useFirestore';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -14,23 +21,13 @@ import { useState, useEffect, useCallback } from 'react';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { format, isFuture, isToday, isTomorrow, startOfDay } from 'date-fns';
 import { db } from '../../lib/firebase';
-import { collection, query, where, onSnapshot, addDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, doc, serverTimestamp, getDocs } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import {
-  FaCheckCircle, FaCalendarAlt, FaImages, FaPills, FaClock,
-  FaMapMarkerAlt, FaTimes, FaUtensils, FaShoppingCart, FaFileAlt, FaKey,
-  FaFilm, FaEdit
+  FaEdit
 } from 'react-icons/fa';
 
 // --- HELPER: Convert 24h time (14:25) to 12h (2:25 PM) ---
-const formatTime = (time24) => {
-  if (!time24) return '';
-  const [hours, minutes] = time24.split(':');
-  const h = parseInt(hours, 10);
-  const suffix = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 || 12;
-  return `${h12}:${minutes} ${suffix}`;
-};
 
 function StatsCard({ icon, title, value, color, href }) {
   return (
@@ -59,16 +56,15 @@ function DashboardContent() {
   const { family, members } = useFamily();
   const { theme, currentTheme } = useTheme();
   const router = useRouter();
-  const { todos } = useTodos();
-  const { chores } = useChores();
+  const { todos } = useTodos({ realtime: false, statusFilter: 'pending' });
+  const { chores } = useChores({ realtime: false, statusFilter: 'pending' });
+  const { count: memoriesCount } = useMemoriesCount();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { memories } = useMemories();
+  const { memories } = useMemories({ realtime: false, latestOnly: true });
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { events } = useCalendarEvents();
+  const { events } = useCalendarEvents({ realtime: false });
   const [selectedMember, setSelectedMember] = useState(null);
   const [allMedications, setAllMedications] = useState([]);
-  const [memberMedications, setMemberMedications] = useState([]);
-  const [loadingMedications, setLoadingMedications] = useState(false);
 
   // Redirect if not authenticated and not loading
   useEffect(() => {
@@ -92,171 +88,53 @@ function DashboardContent() {
     );
 
     if (isTaken) {
-      return { status: 'taken', color: 'bg-green-500 text-white cursor-not-allowed opacity-70', icon: <FaCheckCircle /> };
+      return { status: 'taken', color: 'bg-green-500 text-white cursor-not-allowed opacity-70', icon: '✅' };
     }
 
     if (now > scheduledDateTime) {
-      return { status: 'missed', color: 'bg-red-500 text-white hover:bg-red-600', icon: <FaClock /> };
+      return { status: 'missed', color: 'bg-red-500 text-white hover:bg-red-600', icon: '⏰' };
     }
 
-    return { status: 'pending', color: 'bg-blue-500 text-white hover:bg-blue-600', icon: <FaClock /> };
+    return { status: 'pending', color: 'bg-blue-500 text-white hover:bg-blue-600', icon: '⏰' };
   }, []);
 
   useEffect(() => {
     if (!family?.id) return;
-    setLoadingMedications(true);
-    const q = query(collection(db, 'families', family.id, 'medications'));
 
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const medsList = [];
-      for (const medDoc of snapshot.docs) {
-        const medData = { id: medDoc.id, ...medDoc.data() };
-        const startOfToday = startOfDay(new Date());
-        const takenLogQ = query(
-          collection(db, 'families', family.id, 'medications', medDoc.id, 'taken_log'),
-          where('takenAt', '>=', startOfToday)
-        );
-        const takenLogSnapshot = await new Promise(resolve => {
-            const unsub = onSnapshot(takenLogQ, resolve);
-            setTimeout(() => unsub(), 2000);
-        });
-        medData.takenLogs = takenLogSnapshot.docs.map(logDoc => logDoc.data());
-        medsList.push(medData);
+    const fetchAllMeds = async () => {
+      const q = query(collection(db, 'families', family.id, 'medications'));
+      try {
+        const snapshot = await getDocs(q);
+        const medsList = [];
+        for (const medDoc of snapshot.docs) {
+          const medData = { id: medDoc.id, ...medDoc.data() };
+          const startOfToday = startOfDay(new Date());
+          const takenLogQ = query(
+            collection(db, 'families', family.id, 'medications', medDoc.id, 'taken_log'),
+            where('takenAt', '>=', startOfToday)
+          );
+          const takenLogSnapshot = await getDocs(takenLogQ);
+          medData.takenLogs = takenLogSnapshot.docs.map(logDoc => logDoc.data());
+          medsList.push(medData);
+        }
+        setAllMedications(medsList);
+      } catch (error) {
+        console.error("Error fetching all medications: ", error);
+        toast.error("Failed to load medication data.");
       }
-      setAllMedications(medsList);
-      setLoadingMedications(false);
-    });
-
-    return () => unsubscribe();
+    };
+    fetchAllMeds();
   }, [family?.id]);
 
-  const handleMarkAsTaken = async (medicationId, scheduledTime) => {
-    if (!family?.id || !userData?.uid || !selectedMember?.id) {
-      toast.error('Missing family, user, or member ID.');
-      return;
-    }
-    try {
-      // Optimistic UI update - immediately update local state
-      setMemberMedications(prevMeds =>
-        prevMeds.map(med => {
-          if (med.id === medicationId) {
-            const newLog = {
-              takenAt: new Date(),
-              takenBy: userData.uid,
-              scheduledTime: scheduledTime,
-              assignedTo: selectedMember.id,
-            };
-            return {
-              ...med,
-              takenLogs: [...(med.takenLogs || []), newLog]
-            };
-          }
-          return med;
-        })
-      );
 
-      const medicationRef = doc(db, 'families', family.id, 'medications', medicationId);
-      await addDoc(collection(medicationRef, 'taken_log'), {
-        takenAt: serverTimestamp(),
-        takenBy: userData.uid,
-        scheduledTime: scheduledTime,
-        assignedTo: selectedMember.id,
-      });
-      toast.success('Medication marked as taken! ✅');
-    } catch (error) {
-      toast.error('Failed to mark medication as taken.');
-      console.error('Error marking medication as taken: ', error);
-      // Revert optimistic update on error by re-fetching
-      if (selectedMember?.id) {
-        fetchMedicationsForMember(selectedMember.id);
-      }
-    }
-  };
 
-  const fetchMedicationsForMember = useCallback(async (memberId) => {
-    if (!family?.id || !memberId) {
-      setMemberMedications([]);
-      return () => {};
-    }
-    setLoadingMedications(true);
-    const q = query(
-      collection(db, 'families', family.id, 'medications'),
-      where('assignedTo', '==', memberId)
-    );
+// This function has been moved to components/MemberDetailModal.js
+// so it is no longer needed here.
 
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const medsList = [];
-      for (const medDoc of snapshot.docs) {
-        const medData = { id: medDoc.id, ...medDoc.data() };
-        const startOfToday = startOfDay(new Date());
-        const takenLogQ = query(
-          collection(db, 'families', family.id, 'medications', medDoc.id, 'taken_log'),
-          where('takenAt', '>=', startOfToday),
-          where('assignedTo', '==', memberId)
-        );
-        const takenLogSnapshot = await new Promise(resolve => {
-          const unsub = onSnapshot(takenLogQ, resolve);
-          setTimeout(() => unsub(), 2000);
-        });
-        medData.takenLogs = takenLogSnapshot.docs.map(logDoc => logDoc.data());
-        medsList.push(medData);
-      }
+// This function has been moved to components/MemberDetailModal.js
+// so it is no longer needed here.
 
-      // Sorting logic - sort by earliest non-taken time
-      const sortedMeds = medsList.sort((a, b) => {
-        const getEarliestPendingTime = (med) => {
-          let earliestMinutes = Infinity;
-          let earliestStatus = 'taken'; // default if all taken
 
-          for (const time of med.times) {
-            const status = getScheduleStatus(time, med.takenLogs, med.assignedTo);
-            if (status.status !== 'taken') {
-              const [hours, minutes] = time.split(':');
-              const totalMinutes = parseInt(hours) * 60 + parseInt(minutes);
-              if (totalMinutes < earliestMinutes) {
-                earliestMinutes = totalMinutes;
-                earliestStatus = status.status;
-              }
-            }
-          }
-
-          // Return priority: missed (0), pending (1), taken (2)
-          // Also include time for secondary sorting
-          const statusPriority = earliestStatus === 'missed' ? 0 : earliestStatus === 'pending' ? 1 : 2;
-          return { priority: statusPriority, time: earliestMinutes };
-        };
-
-        const aTime = getEarliestPendingTime(a);
-        const bTime = getEarliestPendingTime(b);
-
-        // First sort by status priority (missed first, then pending, then taken)
-        if (aTime.priority !== bTime.priority) {
-          return aTime.priority - bTime.priority;
-        }
-        // Then sort by actual time
-        return aTime.time - bTime.time;
-      });
-
-      setMemberMedications(sortedMeds);
-      setLoadingMedications(false);
-    });
-
-    return unsubscribe;
-  }, [family?.id, getScheduleStatus]);
-
-  useEffect(() => {
-    let unsubscribe = () => {};
-    if (selectedMember) {
-      fetchMedicationsForMember(selectedMember.id).then(unsub => {
-        if (unsub) unsubscribe = unsub;
-      });
-    } else {
-      setMemberMedications([]);
-    }
-    return () => {
-      unsubscribe();
-    };
-  }, [selectedMember, fetchMedicationsForMember]);
 
   // Show loading indicator or redirect early
   if (loading || !user) {
@@ -268,44 +146,9 @@ function DashboardContent() {
     );
   }
 
-  const pendingTodos = todos.filter(t => !t.completed).length;
-  const pendingChores = chores.filter(c => c.status !== 'approved').length;
-  const recentMemories = memories.length;
-
-  // Get spotlight memory - prioritize revealed time capsules, otherwise latest memory
-  const getSpotlightMemory = () => {
-    const today = new Date();
-
-    // Check for revealed time capsules (past reveal date)
-    const revealedCapsules = memories.filter(m => {
-      if (!m.isTimeCapsule || !m.revealDate) return false;
-      const revealDate = m.revealDate.toDate ? m.revealDate.toDate() : new Date(m.revealDate.seconds * 1000);
-      return revealDate <= today;
-    });
-
-    // If we have revealed capsules, return the most recently revealed one
-    if (revealedCapsules.length > 0) {
-      return revealedCapsules.sort((a, b) => {
-        const dateA = a.revealDate.toDate ? a.revealDate.toDate() : new Date(a.revealDate.seconds * 1000);
-        const dateB = b.revealDate.toDate ? b.revealDate.toDate() : new Date(b.revealDate.seconds * 1000);
-        return dateB - dateA;
-      })[0];
-    }
-
-    // Otherwise return the most recent regular memory
-    const regularMemories = memories.filter(m => !m.isTimeCapsule || !m.revealDate);
-    if (regularMemories.length > 0) {
-      return regularMemories.sort((a, b) => {
-        const dateA = a.uploadedAt?.toDate ? a.uploadedAt.toDate() : new Date();
-        const dateB = b.uploadedAt?.toDate ? b.uploadedAt.toDate() : new Date();
-        return dateB - dateA;
-      })[0];
-    }
-
-    return null;
-  };
-
-  const spotlightMemory = getSpotlightMemory();
+  const pendingTodos = todos.length;
+  const pendingChores = chores.length;
+  const spotlightMemory = memories[0]; // Already fetched as latest only
 
   const upcomingEvents = events
     .filter(event => {
@@ -450,7 +293,7 @@ function DashboardContent() {
         <StatsCard
           icon={currentTheme === 'dark' ? '💀' : '📸'}
           title={currentTheme === 'dark' ? 'Archives' : 'Memories'}
-          value={recentMemories}
+          value={memoriesCount}
           color={`bg-gradient-to-br ${theme.colors.statGreen}`}
           href="/memories"
         />
@@ -460,488 +303,47 @@ function DashboardContent() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6">
         {/* Left column - Calendar Events */}
         <div className="lg:col-span-2 space-y-3 md:space-y-6">
-          {/* Upcoming Events */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl`}
-          >
-            <div className="flex items-center justify-between mb-4 md:mb-6">
-              <h2 className="text-lg md:text-2xl font-display font-bold flex items-center gap-2">
-                <span className="text-xl md:text-2xl">{currentTheme === 'dark' ? '🕯️' : '📅'}</span>
-                <span className="hidden sm:inline">{currentTheme === 'dark' ? 'Ominous Engagements' : 'Upcoming Events'}</span>
-                <span className="sm:hidden">{currentTheme === 'dark' ? 'Omens' : 'Events'}</span>
-              </h2>
-              <Link
-                href="/calendar"
-                className="text-sm font-bold text-purple-600 hover:text-purple-800 transition-colors"
-              >
-                View All →
-              </Link>
-            </div>
+          <DynamicUpcomingEvents
+            events={upcomingEvents}
+            members={members}
+            getEventDateLabel={getEventDateLabel}
+            EVENT_CATEGORIES={EVENT_CATEGORIES}
+          />
 
-            {upcomingEvents.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <p className="text-5xl mb-3">{currentTheme === 'dark' ? '🦇' : '📆'}</p>
-                <p className="font-semibold text-gray-600">
-                  {currentTheme === 'dark' ? 'No omens on the horizon' : 'No upcoming events'}
-                </p>
-                <p className="text-sm">
-                  {currentTheme === 'dark' ? 'The night is quiet...' : 'Your calendar is clear!'}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2 md:space-y-3">
-                {upcomingEvents.map(event => {
-                  const category = EVENT_CATEGORIES[event.category] || EVENT_CATEGORIES.other;
-                  const assignedMembers = members.filter(m => event.assignedTo?.includes(m.id));
-                  const bgClass = currentTheme === 'dark' ? category.bgDark : category.bgLight;
-                  const textClass = currentTheme === 'dark' ? category.textDark : category.textLight;
-
-                  return (
-                    <motion.div
-                      key={event.id}
-                      whileHover={{ scale: 1.02 }}
-                      className={`${bgClass} p-3 md:p-4 rounded-xl md:rounded-2xl transition-all cursor-pointer`}
-                    >
-                      <div className="flex items-start gap-2 md:gap-4">
-                        <div className="flex-shrink-0">
-                          <div className={`${textClass} text-2xl md:text-3xl`}>
-                            {category.icon}
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2 mb-1 md:mb-2">
-                            <h3 className={`font-bold ${textClass} text-sm md:text-lg`}>
-                              {event.title}
-                            </h3>
-                            <span className={`${textClass} text-xs md:text-sm font-bold whitespace-nowrap`}>
-                              {getEventDateLabel(event)}
-                            </span>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs md:text-sm">
-                            <div className={`flex items-center gap-1 ${textClass}`}>
-                              <FaClock className="text-xs md:text-sm" />
-                              <span className="font-semibold">
-                                {format(
-                                  event.start?.toDate ? event.start.toDate() : new Date(event.start),
-                                  'h:mm a'
-                                )}
-                              </span>
-                            </div>
-
-                            {event.location && (
-                              <div className={`flex items-center gap-1 ${textClass}`}>
-                                <FaMapMarkerAlt className="text-xs md:text-sm" />
-                                <span className="font-semibold truncate">{event.location}</span>
-                              </div>
-                            )}
-
-                            {assignedMembers.length > 0 && (
-                              <div className="flex items-center gap-1">
-                                {assignedMembers.slice(0, 3).map(member => (
-                                  <UserAvatar key={member.id} user={member} size={20} />
-                                ))}
-                                {assignedMembers.length > 3 && (
-                                  <span className={`${textClass} text-xs font-bold`}>
-                                    +{assignedMembers.length - 3}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
-          </motion.div>
-
-          {/* Quick Actions */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl`}
-          >
-            <h2 className="text-lg md:text-2xl font-display font-bold mb-3 md:mb-4 flex items-center gap-2">
-              <span className="text-xl md:text-2xl">{currentTheme === 'dark' ? '🧪' : '⚡'}</span>
-              {currentTheme === 'dark' ? 'Sketchy Paths' : 'Quick Actions'}
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
-              <Link href="/movies">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className={`bg-gradient-to-br ${currentTheme === 'dark' ? 'from-red-900 to-pink-900' : 'from-red-500 to-pink-600'} p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-100 text-center cursor-pointer shadow-lg hover:shadow-xl transition-all`}
-                >
-                  <FaFilm className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
-                  <p className="font-bold text-xs md:text-base">Movie Night</p>
-                </motion.div>
-              </Link>
-              <Link href="/recipes">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className={`bg-gradient-to-br ${currentTheme === 'dark' ? 'from-orange-900 to-pink-900' : 'from-orange-400 to-pink-400'} p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-100 text-center cursor-pointer shadow-lg hover:shadow-xl transition-all`}
-                >
-                  <FaUtensils className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
-                  <p className="font-bold text-xs md:text-base">Recipes</p>
-                </motion.div>
-              </Link>
-              <Link href="/groceries">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className={`bg-gradient-to-br ${currentTheme === 'dark' ? 'from-green-900 to-blue-900' : 'from-green-400 to-blue-400'} p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-100 text-center cursor-pointer shadow-lg hover:shadow-xl transition-all`}
-                >
-                  <FaShoppingCart className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
-                  <p className="font-bold text-xs md:text-base">Groceries</p>
-                </motion.div>
-              </Link>
-              <Link href="/calendar">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className={`bg-gradient-to-br ${currentTheme === 'dark' ? 'from-blue-900 to-purple-900' : 'from-blue-400 to-purple-400'} p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-100 text-center cursor-pointer shadow-lg hover:shadow-xl transition-all`}
-                >
-                  <FaCalendarAlt className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
-                  <p className="font-bold text-xs md:text-base">Calendar</p>
-                </motion.div>
-              </Link>
-              <Link href="/documents">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className={`bg-gradient-to-br ${currentTheme === 'dark' ? 'from-indigo-900 to-cyan-900' : 'from-indigo-400 to-cyan-400'} p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-100 text-center cursor-pointer shadow-lg hover:shadow-xl transition-all`}
-                >
-                  <FaFileAlt className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
-                  <p className="font-bold text-xs md:text-base">Documents</p>
-                </motion.div>
-              </Link>
-              <Link href="/medication">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className={`bg-gradient-to-br ${currentTheme === 'dark' ? 'from-purple-900 to-pink-900' : 'from-purple-400 to-pink-400'} p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-100 text-center cursor-pointer shadow-lg hover:shadow-xl transition-all`}
-                >
-                  <FaPills className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
-                  <p className="font-bold text-xs md:text-base">Medication</p>
-                </motion.div>
-              </Link>
-              <Link href="/memories">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className={`bg-gradient-to-br ${currentTheme === 'dark' ? 'from-rose-900 to-orange-900' : 'from-rose-400 to-orange-400'} p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-100 text-center cursor-pointer shadow-lg hover:shadow-xl transition-all`}
-                >
-                  <FaImages className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
-                  <p className="font-bold text-xs md:text-base">Memories</p>
-                </motion.div>
-              </Link>
-              <Link href="/credentials">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className={`bg-gradient-to-br ${currentTheme === 'dark' ? 'from-blue-900 to-indigo-900' : 'from-blue-500 to-indigo-500'} p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-100 text-center cursor-pointer shadow-lg hover:shadow-xl transition-all`}
-                >
-                  <FaKey className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
-                  <p className="font-bold text-xs md:text-base">Credentials</p>
-                </motion.div>
-              </Link>
-            </div>
-          </motion.div>
+          <DynamicQuickActions />
         </div>
 
         {/* Right column - Recent Activity & Meme */}
         <div className="space-y-3 md:space-y-6">
-          {/* Recent Activity */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl`}
-          >
-            <h2 className="text-lg md:text-2xl font-display font-bold mb-3 md:mb-4 flex items-center gap-2">
-              <span className="text-xl md:text-2xl">{currentTheme === 'dark' ? '🦴' : '✨'}</span>
-              <span className="hidden sm:inline">{currentTheme === 'dark' ? 'Recent Rituals' : 'Recent Activity'}</span>
-              <span className="sm:hidden">{currentTheme === 'dark' ? 'Rituals' : 'Activity'}</span>
-            </h2>
+          <DynamicRecentActivity
+            todos={todos}
+            chores={chores}
+            members={members}
+          />
 
-            <div className="space-y-2 md:space-y-3">
-              {/* Show recent completed todos */}
-              {todos.filter(t => t.completed).slice(0, 2).map((todo) => {
-                const member = members.find(m => m.id === todo.assignedTo);
-                return (
-                  <div key={todo.id} className={`flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg md:rounded-xl ${currentTheme === 'dark' ? 'bg-green-900/20' : 'bg-green-50'}`}>
-                    <div className="text-xl md:text-2xl">✅</div>
-                    {member && <UserAvatar user={member} size={28} />}
-                    <div className="flex-1 min-w-0">
-                      <p className={`font-semibold ${theme.colors.text} text-xs md:text-sm truncate`}>
-                        {member?.displayName} completed
-                      </p>
-                      <p className={`text-xs ${theme.colors.textMuted} truncate`}>{todo.title}</p>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Show recent approved chores */}
-              {chores.filter(c => c.status === 'approved').slice(0, 2).map((chore) => {
-                const member = members.find(m => m.id === chore.assignedTo);
-                return (
-                  <div key={chore.id} className={`flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg md:rounded-xl ${currentTheme === 'dark' ? 'bg-yellow-900/20' : 'bg-yellow-50'}`}>
-                    <div className="text-xl md:text-2xl">🏆</div>
-                    {member && <UserAvatar user={member} size={28} />}
-                    <div className="flex-1 min-w-0">
-                      <p className={`font-semibold ${theme.colors.text} text-xs md:text-sm truncate`}>
-                        {member?.displayName} +{chore.pointValue}pts
-                      </p>
-                      <p className={`text-xs ${theme.colors.textMuted} truncate`}>{chore.title}</p>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {todos.filter(t => t.completed).length === 0 &&
-               chores.filter(c => c.status === 'approved').length === 0 && (
-                <div className="text-center py-8 text-gray-400">
-                  <p className="text-4xl mb-2">{currentTheme === 'dark' ? '🕸️' : '😴'}</p>
-                  <p className="font-semibold">{currentTheme === 'dark' ? 'No fresh incantations' : 'No recent activity'}</p>
-                  <p className="text-sm">{currentTheme === 'dark' ? 'Finish a task to rouse the spirits' : 'Complete tasks to see them here'}</p>
-                </div>
-              )}
-            </div>
-          </motion.div>
-
-          {/* Memory Spotlight */}
           {spotlightMemory && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-              className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl overflow-hidden shadow-xl border ${currentTheme === 'dark' ? 'border-purple-900/50' : 'border-purple-100'}`}
-            >
-              <Link href="/memories" className="block group">
-                <div className="relative h-64 md:h-80">
-                  {spotlightMemory.mimeType?.startsWith('video/') ? (
-                    <video
-                      src={spotlightMemory.downloadURL}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      muted
-                      loop
-                      playsInline
-                    />
-                  ) : (
-                    <Image
-                      src={spotlightMemory.downloadURL}
-                      alt="Memory spotlight"
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      priority
-                    />
-                  )}
-
-                  {/* Time Capsule Badge */}
-                  {spotlightMemory.isTimeCapsule && (
-                    <div className={`absolute top-3 right-3 ${currentTheme === 'dark' ? 'bg-purple-600' : 'bg-purple-500'} text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg animate-pulse`}>
-                      {currentTheme === 'dark' ? '⏳' : '⏳'} {currentTheme === 'dark' ? 'Coffin Unsealed!' : 'Time Capsule Revealed!'}
-                    </div>
-                  )}
-
-                  {/* Caption Overlay (if exists) */}
-                  {spotlightMemory.caption && (
-                    <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/60 to-transparent p-4">
-                      <p className="text-white text-sm line-clamp-2">
-                        {spotlightMemory.caption}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Bottom Info - Icon and Date */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-3xl">
-                        {spotlightMemory.isTimeCapsule
-                          ? (currentTheme === 'dark' ? '⚰️' : '⏱️')
-                          : (currentTheme === 'dark' ? '🕯️' : '📸')}
-                      </span>
-                      <p className="text-white font-semibold text-sm">
-                        {spotlightMemory.uploadedAt?.toDate
-                          ? format(spotlightMemory.uploadedAt.toDate(), 'MMM d, yyyy')
-                          : 'Recently'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            </motion.div>
+            <DynamicMemorySpotlight
+              spotlightMemory={spotlightMemory}
+            />
           )}
 
           {/* Daily Meme */}
-          <DailyMeme />
+          <DynamicDailyMeme />
         </div>
       </div>
 
-      {/* Family members with medication access */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className={`${theme.colors.bgCard} rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl`}
-      >
-        <h2 className="text-lg md:text-2xl font-display font-bold mb-4 md:mb-6 flex items-center gap-2">
-          <span className="text-xl md:text-2xl">{currentTheme === 'dark' ? '🕯️' : '👪'}</span>
-          {currentTheme === 'dark' ? 'Coven Members' : 'Family Members'}
-        </h2>
+      <DynamicFamilyMembers
+        members={members}
+        allMedications={allMedications}
+        getScheduleStatus={getScheduleStatus}
+        setSelectedMember={setSelectedMember}
+      />
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 md:gap-4">
-          {members.map((member) => (
-            <motion.div
-              key={member.id}
-              whileHover={{ scale: 1.05 }}
-              onClick={() => setSelectedMember(member)}
-              className={`text-center p-3 md:p-4 ${currentTheme === 'dark' ? 'bg-gradient-to-br from-purple-900/40 to-gray-900 border-2 border-purple-900/50' : 'bg-gradient-to-br from-purple-50 to-pink-50'} rounded-xl md:rounded-2xl cursor-pointer hover:shadow-lg transition-all`}
-            >
-              <div className="flex justify-center mb-1 md:mb-2 relative">
-                <UserAvatar user={member} size={48} />
-                {allMedications.filter(med => med.assignedTo === member.id && med.times.some(time => getScheduleStatus(time, med.takenLogs, med.assignedTo).status === 'missed')).length > 0 && (
-                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                    {allMedications.filter(med => med.assignedTo === member.id && med.times.some(time => getScheduleStatus(time, med.takenLogs, med.assignedTo).status === 'missed')).length}
-                  </div>
-                )}
-              </div>
-              <p className={`font-bold ${theme.colors.text} text-xs md:text-sm truncate`}>
-                {member.displayName}
-              </p>
-              <p className={`text-[10px] md:text-xs ${theme.colors.textMuted}`}>
-                {member.role === 'parent'
-                  ? (currentTheme === 'dark' ? '🧛 Parent' : '👑 Parent')
-                  : (currentTheme === 'dark' ? '🧟 Kid' : '🎮 Kid')}
-              </p>
-              {member.role !== 'parent' && (
-                <p className="text-[10px] md:text-xs font-bold text-yellow-600 mt-0.5 md:mt-1">
-                  {currentTheme === 'dark' ? '🩸' : '⭐'} {member.points || 0}
-                </p>
-              )}
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Member Detail Modal (with medications) */}
-      <AnimatePresence>
-        {selectedMember && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto p-4"
-            onClick={() => setSelectedMember(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-              onClick={(e) => e.stopPropagation()}
-              className={`${theme.colors.bgCard} rounded-3xl p-6 max-w-md w-full shadow-2xl my-8 max-h-[95vh] overflow-y-auto`}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                  <UserAvatar user={selectedMember} size={64} />
-                  <div>
-                    <h2 className="text-2xl font-display font-bold gradient-text">
-                      {selectedMember.displayName}
-                    </h2>
-                    <p className="text-gray-600">
-                      {selectedMember.role === 'parent'
-                        ? (currentTheme === 'dark' ? '🧛 Parent' : '👑 Parent')
-                        : (currentTheme === 'dark' ? '🧟 Kid' : '🎮 Kid')}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedMember(null)}
-                  className="text-gray-400 hover:text-gray-600 p-2"
-                >
-                  <FaTimes size={24} />
-                </button>
-              </div>
-
-              {/* Member Stats */}
-              {selectedMember.role !== 'parent' && (
-                <div className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-2xl p-4 mb-6 text-center">
-                  <p className="text-gray-100 font-semibold mb-1">Total Points</p>
-                  <p className="text-4xl font-display font-bold text-gray-100">
-                    {currentTheme === 'dark' ? '🩸' : '⭐'} {selectedMember.points || 0}
-                  </p>
-                </div>
-              )}
-
-              {/* Medications Section */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-bold flex items-center gap-2">
-                    <FaPills className="text-purple-500" />
-                    Medications
-                    {loadingMedications && <span className="ml-2 text-sm text-gray-500">Loading...</span>}
-                  </h3>
-                </div>
-
-                {memberMedications.length > 0 ? (
-                  <div className="space-y-3">
-                    {memberMedications.map((med) => (
-                      <div key={med.id} className={`${currentTheme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-purple-50 border-purple-100'} p-3 rounded-xl border relative`}>
-                        <p className={`font-bold ${theme.colors.text}`}>{med.name} - {med.dosage}</p>
-                        {med.frequency === 'weekly' && med.dayOfWeek && (
-                          <p className={`text-xs ${theme.colors.textMuted}`}>
-                            Every {med.dayOfWeek}
-                          </p>
-                        )}
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {med.times.map((time) => {
-                            const { status, color, icon } = getScheduleStatus(time, med.takenLogs, med.assignedTo);
-                            return (
-                              <button
-                                key={time}
-                                onClick={() => handleMarkAsTaken(med.id, time)}
-                                disabled={status === 'taken'}
-                                className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all ${color}`}
-                              >
-                                {formatTime(time)} {icon}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        {med.notes && (
-                          <p className={`text-xs italic mt-2 ${theme.colors.textMuted}`}>{med.notes}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-6 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                    <p className="text-3xl mb-2">💊</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">No medications assigned or loading.</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Quick Actions */}
-              <div className="grid grid-cols-2 gap-3">
-                <Link
-                  href="/medication"
-                  className="bg-purple-100 hover:bg-purple-200 text-purple-800 font-bold py-3 rounded-xl text-center transition-all"
-                >
-                  Add Medication
-                </Link>
-                <Link
-                  href="/calendar"
-                  className="bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-3 rounded-xl text-center transition-all"
-                >
-                  View Calendar
-                </Link>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <DynamicMemberDetailModal
+        selectedMember={selectedMember}
+        setSelectedMember={setSelectedMember}
+        allMedications={allMedications}
+      />
     </div>
   );
 }

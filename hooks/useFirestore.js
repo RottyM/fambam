@@ -16,13 +16,15 @@ import {
   writeBatch,
   limit,
   startAfter,
+  getCountFromServer,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 // --- 1. TODOS ---
-export function useTodos() {
+export function useTodos(options = {}) {
+  const { realtime = true, statusFilter = null } = options;
   const { userData } = useAuth();
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,22 +35,46 @@ export function useTodos() {
       return;
     }
 
-    const q = query(
-      collection(db, 'families', userData.familyId, 'todos'),
-      orderBy('createdAt', 'desc')
-    );
+    const todosCollectionRef = collection(db, 'families', userData.familyId, 'todos');
+    let q = query(todosCollectionRef, orderBy('createdAt', 'desc'));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const todosList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setTodos(todosList);
-      setLoading(false);
-    });
+    if (statusFilter === 'pending') {
+      q = query(q, where('completed', '==', false));
+    } else if (statusFilter === 'completed') {
+      q = query(q, where('completed', '==', true));
+    }
 
-    return unsubscribe;
-  }, [userData?.familyId]);
+    if (realtime) {
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const todosList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setTodos(todosList);
+        setLoading(false);
+      });
+      return unsubscribe;
+    } else {
+      const fetchTodos = async () => {
+        try {
+          const querySnapshot = await getDocs(q);
+          const todosList = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setTodos(todosList);
+        } catch (error) {
+          console.error("Error fetching todos: ", error);
+          toast.error("Failed to load todos.");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchTodos();
+      // For non-realtime, there's no unsubscribe, so return a no-op function
+      return () => {};
+    }
+  }, [userData?.familyId, realtime, statusFilter]);
 
   const addTodo = async (todoData) => {
     try {
@@ -112,7 +138,8 @@ export function useTodos() {
 }
 
 // --- 2. CHORES ---
-export function useChores() {
+export function useChores(options = {}) {
+  const { realtime = true, statusFilter = null } = options;
   const { userData } = useAuth();
   const [chores, setChores] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -123,22 +150,43 @@ export function useChores() {
       return;
     }
 
-    const q = query(
-      collection(db, 'families', userData.familyId, 'chores'),
-      orderBy('createdAt', 'desc')
-    );
+    const choresCollectionRef = collection(db, 'families', userData.familyId, 'chores');
+    let q = query(choresCollectionRef, orderBy('createdAt', 'desc'));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const choresList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setChores(choresList);
-      setLoading(false);
-    });
+    if (statusFilter) {
+      q = query(q, where('status', '==', statusFilter));
+    }
 
-    return unsubscribe;
-  }, [userData?.familyId]);
+    if (realtime) {
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const choresList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setChores(choresList);
+        setLoading(false);
+      });
+      return unsubscribe;
+    } else {
+      const fetchChores = async () => {
+        try {
+          const querySnapshot = await getDocs(q);
+          const choresList = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setChores(choresList);
+        } catch (error) {
+          console.error("Error fetching chores: ", error);
+          toast.error("Failed to load chores.");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchChores();
+      return () => {};
+    }
+  }, [userData?.familyId, realtime, statusFilter]);
 
   const addChore = async (choreData) => {
     try {
@@ -197,7 +245,8 @@ export function useChores() {
 }
 
 // --- 3. CALENDAR ---
-export function useCalendarEvents() {
+export function useCalendarEvents(options = {}) {
+  const { realtime = true, excludePastEvents = false } = options;
   const { userData } = useAuth();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -208,22 +257,43 @@ export function useCalendarEvents() {
       return;
     }
 
-    const q = query(
-      collection(db, 'families', userData.familyId, 'calendar-events'),
-      orderBy('start', 'asc')
-    );
+    const eventsCollectionRef = collection(db, 'families', userData.familyId, 'calendar-events');
+    let q = query(eventsCollectionRef, orderBy('start', 'asc'));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const eventsList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setEvents(eventsList);
-      setLoading(false);
-    });
+    if (excludePastEvents) {
+      q = query(q, where('start', '>=', new Date()));
+    }
 
-    return unsubscribe;
-  }, [userData?.familyId]);
+    if (realtime) {
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const eventsList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setEvents(eventsList);
+        setLoading(false);
+      });
+      return unsubscribe;
+    } else {
+      const fetchEvents = async () => {
+        try {
+          const querySnapshot = await getDocs(q);
+          const eventsList = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setEvents(eventsList);
+        } catch (error) {
+          console.error("Error fetching calendar events: ", error);
+          toast.error("Failed to load calendar events.");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchEvents();
+      return () => {};
+    }
+  }, [userData?.familyId, realtime, excludePastEvents]);
 
   return { events, loading };
 }
@@ -261,7 +331,8 @@ export function useDocuments() {
 }
 
 // --- 5. MEMORIES ---
-export function useMemories() {
+export function useMemories(options = {}) {
+  const { realtime = true, latestOnly = false } = options;
   const { userData } = useAuth();
   const [memories, setMemories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -272,22 +343,43 @@ export function useMemories() {
       return;
     }
 
-    const q = query(
-      collection(db, 'families', userData.familyId, 'memories'),
-      orderBy('uploadedAt', 'desc')
-    );
+    const memoriesCollectionRef = collection(db, 'families', userData.familyId, 'memories');
+    let baseQuery = query(memoriesCollectionRef, orderBy('uploadedAt', 'desc'));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const memoriesList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setMemories(memoriesList);
-      setLoading(false);
-    });
+    if (latestOnly) {
+      baseQuery = query(baseQuery, limit(1));
+    }
 
-    return unsubscribe;
-  }, [userData?.familyId]);
+    if (realtime) {
+      const unsubscribe = onSnapshot(baseQuery, (snapshot) => {
+        const memoriesList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setMemories(memoriesList);
+        setLoading(false);
+      });
+      return unsubscribe;
+    } else {
+      const fetchMemories = async () => {
+        try {
+          const querySnapshot = await getDocs(baseQuery);
+          const memoriesList = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setMemories(memoriesList);
+        } catch (error) {
+          console.error("Error fetching memories: ", error);
+          toast.error("Failed to load memories.");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchMemories();
+      return () => {};
+    }
+  }, [userData?.familyId, realtime, latestOnly]);
 
   const updateMemory = async (memoryId, updates) => {
     try {
@@ -391,6 +483,38 @@ export function usePaginatedMemories(pageSize = 30) {
     updateMemoryLocal,
     removeMemoryLocal,
   };
+}
+
+// --- 5c. MEMORIES COUNT ---
+export function useMemoriesCount() {
+  const { userData } = useAuth();
+  const [count, setCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userData?.familyId) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchCount = async () => {
+      try {
+        const memoriesCollectionRef = collection(db, 'families', userData.familyId, 'memories');
+        const q = query(memoriesCollectionRef);
+        const snapshot = await getCountFromServer(q);
+        setCount(snapshot.data().count);
+      } catch (error) {
+        console.error("Error fetching memories count: ", error);
+        toast.error("Failed to load memories count.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCount();
+  }, [userData?.familyId]);
+
+  return { count, loading };
 }
 
 // --- 6. FOLDERS ---

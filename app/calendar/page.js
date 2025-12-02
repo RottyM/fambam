@@ -42,7 +42,7 @@ const REMINDER_OPTIONS = [
 ];
 
 function CalendarContent() {
-  const { events, loading } = useCalendarEvents();
+  const { events, loading } = useCalendarEvents({ excludePastEvents: true });
   const { userData } = useAuth();
   const { members, isParent } = useFamily();
   const { theme, currentTheme } = useTheme();
@@ -382,8 +382,8 @@ function CalendarContent() {
       {viewMode === 'month' && (
         <div className={`${theme.colors.bgCard} rounded-2xl p-2 md:p-6 shadow-lg border ${theme.colors.border}`}>
           <div className="grid grid-cols-7 gap-1 md:gap-2 mb-2">
-            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
-              <div key={day} className={`text-center font-bold text-sm md:text-base py-2 ${theme.colors.text}`}>{day}</div>
+            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+              <div key={`${day}-${index}`} className={`text-center font-bold text-sm md:text-base py-2 ${theme.colors.text}`}>{day}</div>
             ))}
           </div>
           <div className="grid grid-cols-7 gap-1 md:gap-2">
