@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSwipeable } from 'react-swipeable';
 import { FaTimes, FaChevronLeft, FaChevronRight, FaHeart, FaComment, FaChevronDown, FaLock, FaTrash, FaFolder } from 'react-icons/fa';
 import Image from 'next/image';
 import UserAvatar from './UserAvatar';
 import { format } from 'date-fns';
+import CommentSection from './CommentSection'; // Import the new component
 
 export default function FolderView({
   isOpen,
@@ -18,30 +19,35 @@ export default function FolderView({
   onMemoryChange,
   onToggleLike,
   currentUserId,
-  comments = [],
-  newComment,
-  onChangeNewComment,
-  onSubmitComment,
-  onDeleteComment,
   isParent,
   folders = [],
   onMoveMemory,
-  onDeleteMemory, // <-- ADDED THIS PROP
+  onDeleteMemory,
+  user,
+  userData,
 }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isDetailsOpen, setIsDetailsOpen] = useState(detailsOpen);
   const [showChrome, setShowChrome] = useState(detailsOpen);
+  
+  const currentMemory = useMemo(() => memories[currentIndex], [memories, currentIndex]);
 
   useEffect(() => {
     setCurrentIndex(initialIndex);
   }, [initialIndex]);
 
-
-
   useEffect(() => {
     setIsDetailsOpen(detailsOpen);
     setShowChrome(detailsOpen);
   }, [detailsOpen, isOpen]);
+  
+  // When the folder view is opened, if details are supposed to be open,
+  // ensure we reset the comments state in the child component by changing the key.
+  useEffect(() => {
+    if (isOpen && detailsOpen) {
+      // Logic to force re-mount of CommentSection if needed, e.g. by changing a key prop
+    }
+  }, [isOpen, detailsOpen]);
 
   const handleNext = () => {
     setCurrentIndex((prevIndex) => {
@@ -70,11 +76,10 @@ export default function FolderView({
     trackMouse: true,
   });
 
-  if (!isOpen || memories.length === 0) {
+  if (!isOpen || !currentMemory) {
     return null;
   }
 
-  const currentMemory = memories[currentIndex];
   const uploader = getMemberById(currentMemory.uploadedBy);
   const isVideo = currentMemory.mimeType?.startsWith('video/');
   const isLiked = currentMemory.likes?.includes(currentUserId);
@@ -92,7 +97,7 @@ export default function FolderView({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
-          style={{ touchAction: 'pan-y' }} // allow horizontal swipes on mobile
+          style={{ touchAction: 'pan-y' }}
           {...handlers}
         >
           <div
@@ -157,7 +162,6 @@ export default function FolderView({
                     alt={currentMemory.caption || 'Memory'}
                     fill
                     className="object-contain"
-                    unoptimized
                     priority
                   />
                 )}
@@ -191,7 +195,7 @@ export default function FolderView({
                   aria-label="View comments"
                 >
                   <FaComment />
-                  <span>{comments.length}</span>
+                  {/* The comment count will now be managed by CommentSection */}
                 </button>
                 {canDelete && (
                   <>
@@ -261,7 +265,6 @@ export default function FolderView({
                         </p>
                       </div>
                     </div>
-                    {/* Repositioned collapse button */}
                     <button
                       onClick={() => setIsDetailsOpen(false)}
                       className="absolute top-3 right-3 bg-gray-100/70 text-gray-700 p-2 rounded-full hover:bg-gray-200 transition-all backdrop-blur-sm"
@@ -271,7 +274,6 @@ export default function FolderView({
                     </button>
                   </div>
 
-                  {/* Badges */}
                   <div className="flex flex-wrap gap-2 mb-4">
                     {currentMemory.isTimeCapsule && revealDate && (
                       <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-2">
@@ -284,14 +286,12 @@ export default function FolderView({
                     </span>
                   </div>
 
-                  {/* Caption */}
                   {currentMemory.caption && (
                     <p className="text-gray-800 mb-4 text-base leading-relaxed">
                       {currentMemory.caption}
                     </p>
                   )}
 
-                  {/* Actions */}
                   <div className="flex items-center gap-4 mb-6">
                     <button
                       onClick={() => onToggleLike?.(currentMemory.id, isLiked)}
@@ -302,102 +302,56 @@ export default function FolderView({
                       <FaHeart className={isLiked ? 'animate-pulse' : ''} />
                       <span>{currentMemory.likes?.length || 0}</span>
                     </button>
-                    <div className="text-sm text-gray-500">
-                      Comments {comments.length}
-                    </div>
+                    {/* The comment count will now be inside CommentSection */}
                   </div>
 
-                  {/* Comments */}
-                  <div className="space-y-4 mb-6 max-h-56 overflow-y-auto pr-1">
-                    {comments.map((comment) => (
-                      <div key={comment.id} className="flex gap-3">
-                        <UserAvatar user={getMemberById(comment.userId)} size={32} />
-                        <div className="flex-1 bg-gray-50 rounded-2xl p-3 flex justify-between items-start group">
-                          <div>
-                            <p className="font-bold text-sm text-gray-800">{comment.userName}</p>
-                            <p className="text-gray-700 break-words">{comment.text}</p>
-                            <p className="text-xs text-gray-400 mt-1">
-                              {comment.createdAt?.toDate?.()
-                                ? format(comment.createdAt.toDate(), 'MMM d h:mm a')
-                                : 'Just now'}
-                            </p>
-                          </div>
-                          {comment.userId === currentUserId && (
-                            <button
-                              onClick={() => onDeleteComment?.(comment.id)}
-                              className="text-gray-400 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                              title="Delete comment"
-                            >
-                                <FaTrash size={12} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                  {/* Replace old comment section with the new component */}
+                  <CommentSection
+                    key={currentMemory.id} // Use key to re-mount when memory changes
+                    currentMemory={currentMemory}
+                    user={user}
+                    userData={userData}
+                    getMemberById={getMemberById}
+                    currentUserId={currentUserId}
+                  />
 
-                      {comments.length === 0 && (
-                        <p className="text-center text-gray-400 py-8">
-                          No comments yet. Be the first to comment!
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Add Comment */}
-                    <form onSubmit={onSubmitComment} className="flex gap-3">
-                      <UserAvatar user={getMemberById(currentUserId)} size={40} />
-                      <input
-                        type="text"
-                        value={newComment}
-                        onChange={(e) => onChangeNewComment?.(e.target.value)}
-                        placeholder="Add a comment..."
-                        className="flex-1 px-4 py-3 rounded-full border-2 border-gray-200 dark:border-gray-700 focus:border-purple-500 focus:outline-none font-semibold bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-                      />
-                      <button
-                        type="submit"
-                        disabled={!newComment?.trim()}
-                        className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-full font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg disabled:opacity-50"
-                      >
-                        Post
-                      </button>
-                    </form>
-
-                    {canDelete && (
-                      <div className="border-t border-gray-200 pt-5 mt-6">
-                        <h4 className="text-lg font-bold mb-3 flex items-center gap-2">
-                          <FaFolder />
-                          Admin actions
-                        </h4>
-                        <div className="space-y-3">
-                          <label className="block text-sm font-semibold text-gray-700">
-                            Move to folder
-                          </label>
-                          <select
-                            value={currentMemory.folderId || ''}
-                            onChange={(e) => onMoveMemory?.(currentMemory.id, e.target.value || null)}
-                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold bg-white text-gray-900"
-                          >
-                            <option value="">All Memories (Root)</option>
-                            {folders.map((folder) => (
-                              <option key={folder.id} value={folder.id}>
-                                {folder.name}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            onClick={() => onDeleteMemory?.(currentMemory.id, currentMemory.storagePath)}
-                            className="w-full bg-red-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-600 transition-all shadow-lg flex items-center justify-center gap-2"
-                          >
-                            <FaTrash /> Delete Memory
-                          </button>
-                        </div>
+                  {canDelete && (
+                    <div className="border-t border-gray-200 pt-5 mt-6">
+                      <h4 className="text-lg font-bold mb-3 flex items-center gap-2">
+                        <FaFolder />
+                        Admin actions
+                      </h4>
+                      <div className="space-y-3">
+                        <label className="block text-sm font-semibold text-gray-700">
+                          Move to folder
+                        </label>
+                        <select
+                          value={currentMemory.folderId || ''}
+                          onChange={(e) => onMoveMemory?.(currentMemory.id, e.target.value || null)}
+                          className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-purple-500 focus:outline-none font-semibold bg-white text-gray-900"
+                        >
+                          <option value="">All Memories (Root)</option>
+                          {folders.map((folder) => (
+                            <option key={folder.id} value={folder.id}>
+                              {folder.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => onDeleteMemory?.(currentMemory.id, currentMemory.storagePath)}
+                          className="w-full bg-red-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-600 transition-all shadow-lg flex items-center justify-center gap-2"
+                        >
+                          <FaTrash /> Delete Memory
+                        </button>
                       </div>
-                    )}
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      )}
     </AnimatePresence>
   );
 }

@@ -186,7 +186,6 @@ export default function MemoriesGrid({ memories, onMove, onOpen, folders, isPare
                   fill
                   sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 16vw"
                   className="object-cover bg-gray-200 dark:bg-gray-800"
-                  unoptimized
                   draggable="false"
                 />
               )}
@@ -282,7 +281,6 @@ export default function MemoriesGrid({ memories, onMove, onOpen, folders, isPare
                   fill
                   sizes="128px"
                   className="object-cover"
-                  unoptimized
                 />
               )}
              </div>

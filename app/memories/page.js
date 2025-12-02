@@ -114,11 +114,9 @@ function MemoriesContent() {
   const [revealDate, setRevealDate] = useState('');
   const [isTimeCapsule, setIsTimeCapsule] = useState(false);
   const [showTimeCapsules, setShowTimeCapsules] = useState(false);
-  const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState('');
   const [showAddFolderModal, setShowAddFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
-  const [activeFilterId, setActiveFilterId] = useState('all'); // 'all' | 'root' | folderId
+  const [activeFilterId, setActiveFilterId] = useState('root'); // 'all' | 'root' | folderId
   const [folderView, setFolderView] = useState({ isOpen: false, memories: [], initialIndex: 0, detailsOpen: false });
   const [uploadAreaExpanded, setUploadAreaExpanded] = useState(false);
   const [activeId, setActiveId] = useState(null);
@@ -207,32 +205,6 @@ function MemoriesContent() {
       }
     }
   }, [filteredMemories, folderView.isOpen, folderView.memories, selectedMemory]); // keep modal in sync with latest data
-
-  // Load comments for selected memory
-  useEffect(() => {
-    if (!selectedMemory || !userData?.familyId) return;
-
-    const commentsRef = collection(
-      db,
-      'families',
-      userData.familyId,
-      'memories',
-      selectedMemory.id,
-      'comments'
-    );
-
-    const q = query(commentsRef, orderBy('createdAt', 'asc'));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const commentsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setComments(commentsData);
-    });
-
-    return unsubscribe;
-  }, [selectedMemory, userData?.familyId]);
 
   const onDrop = async (acceptedFiles) => {
     if (!userData?.familyId) return;
@@ -334,54 +306,6 @@ function MemoriesContent() {
       console.error('Error updating like:', error);
       toast.error('Failed to update like');
     }
-  };
-
-  const addComment = async (e) => {
-    e.preventDefault();
-    if (!newComment.trim() || !selectedMemory) return;
-
-    try {
-      await addDoc(
-        collection(db, 'families', userData.familyId, 'memories', selectedMemory.id, 'comments'),
-        {
-          userId: user.uid,
-          userName: userData.displayName,
-          text: newComment,
-          createdAt: serverTimestamp(),
-        }
-      );
-
-      setNewComment('');
-      toast.success('Comment added! 💬');
-    } catch (error) {
-      console.error('Error adding comment:', error);
-      toast.error('Failed to add comment');
-    }
-  };
-
-  const handleDeleteComment = (commentId) => {
-    showConfirmation({
-      title: 'Delete Comment',
-      message: 'Are you sure you want to permanently delete this comment?',
-      onConfirm: async () => {
-        try {
-          const commentRef = doc(
-            db,
-            'families',
-            userData.familyId,
-            'memories',
-            selectedMemory.id,
-            'comments',
-            commentId
-          );
-          await deleteDoc(commentRef);
-          toast.success('Comment deleted');
-        } catch (error) {
-          console.error('Error deleting comment:', error);
-          toast.error('Failed to delete comment');
-        }
-      },
-    });
   };
 
   const handleDelete = (memoryId, storagePath) => {
@@ -855,11 +779,8 @@ function MemoriesContent() {
           onMemoryChange={(memory) => setSelectedMemory(memory)}
           onToggleLike={toggleLike}
           currentUserId={user?.uid}
-          comments={comments}
-          newComment={newComment}
-          onChangeNewComment={setNewComment}
-          onSubmitComment={addComment}
-          onDeleteComment={handleDeleteComment}
+          user={user}
+          userData={userData}
           isParent={isParent}
           folders={folders}
           onMoveMemory={handleMoveMemory}
