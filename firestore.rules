@@ -68,6 +68,11 @@ service cloud.firestore {
       match /groceries/{groceryId} {
         allow read, write: if isFamilyMember(familyId);
       }
+      
+      match /pantry/{itemId} {
+        // Allow read/write if the user is a member of this family
+        allow read, write: if isFamilyMember(familyId);
+      }
 
       match /medications/{medicationId} {
         allow read: if isFamilyMember(familyId);
