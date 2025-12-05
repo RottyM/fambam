@@ -7,6 +7,15 @@ import { useTheme } from '@/contexts/ThemeContext';
 export default function RecentActivity({ todos, chores, members }) {
   const { theme, currentTheme } = useTheme();
 
+  const activityItems = [
+    ...todos
+      .filter(t => t.completed && t.completedAt)
+      .map(t => ({ ...t, type: 'todo', completedAt: t.completedAt })),
+    ...chores
+      .filter(c => c.status === 'approved' && c.approvedAt)
+      .map(c => ({ ...c, type: 'chore', completedAt: c.approvedAt })),
+  ].sort((a, b) => b.completedAt.toMillis() - a.completedAt.toMillis());
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -21,42 +30,40 @@ export default function RecentActivity({ todos, chores, members }) {
       </h2>
 
       <div className="space-y-2 md:space-y-3">
-        {/* Show recent completed todos */}
-        {todos.filter(t => t.completed).slice(0, 2).map((todo) => {
-          const member = members.find(m => m.id === todo.assignedTo);
-          return (
-            <div key={todo.id} className={`flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg md:rounded-xl ${currentTheme === 'dark' ? 'bg-green-900/20' : 'bg-green-50'}`}>
-              <div className="text-xl md:text-2xl">✅</div>
-              {member && <UserAvatar user={member} size={28} />}
-              <div className="flex-1 min-w-0">
-                <p className={`font-semibold ${theme.colors.text} text-xs md:text-sm truncate`}>
-                  {member?.displayName} completed
-                </p>
-                <p className={`text-xs ${theme.colors.textMuted} truncate`}>{todo.title}</p>
+        {activityItems.slice(0, 4).map((item) => {
+          const member = members.find(m => m.id === item.assignedTo);
+          if (item.type === 'todo') {
+            return (
+              <div key={`todo-${item.id}`} className={`flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg md:rounded-xl ${currentTheme === 'dark' ? 'bg-green-900/20' : 'bg-green-50'}`}>
+                <div className="text-xl md:text-2xl">✅</div>
+                {member && <UserAvatar user={member} size={28} />}
+                <div className="flex-1 min-w-0">
+                  <p className={`font-semibold ${theme.colors.text} text-xs md:text-sm truncate`}>
+                    {member?.displayName} completed
+                  </p>
+                  <p className={`text-xs ${theme.colors.textMuted} truncate`}>{item.title}</p>
+                </div>
               </div>
-            </div>
-          );
+            );
+          }
+          if (item.type === 'chore') {
+            return (
+              <div key={`chore-${item.id}`} className={`flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg md:rounded-xl ${currentTheme === 'dark' ? 'bg-yellow-900/20' : 'bg-yellow-50'}`}>
+                <div className="text-xl md:text-2xl">🏆</div>
+                {member && <UserAvatar user={member} size={28} />}
+                <div className="flex-1 min-w-0">
+                  <p className={`font-semibold ${theme.colors.text} text-xs md:text-sm truncate`}>
+                    {member?.displayName} +{item.pointValue}pts
+                  </p>
+                  <p className={`text-xs ${theme.colors.textMuted} truncate`}>{item.title}</p>
+                </div>
+              </div>
+            );
+          }
+          return null;
         })}
 
-        {/* Show recent approved chores */}
-        {chores.filter(c => c.status === 'approved').slice(0, 2).map((chore) => {
-          const member = members.find(m => m.id === chore.assignedTo);
-          return (
-            <div key={chore.id} className={`flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg md:rounded-xl ${currentTheme === 'dark' ? 'bg-yellow-900/20' : 'bg-yellow-50'}`}>
-              <div className="text-xl md:text-2xl">🏆</div>
-              {member && <UserAvatar user={member} size={28} />}
-              <div className="flex-1 min-w-0">
-                <p className={`font-semibold ${theme.colors.text} text-xs md:text-sm truncate`}>
-                  {member?.displayName} +{chore.pointValue}pts
-                </p>
-                <p className={`text-xs ${theme.colors.textMuted} truncate`}>{chore.title}</p>
-              </div>
-            </div>
-          );
-        })}
-
-        {todos.filter(t => t.completed).length === 0 &&
-         chores.filter(c => c.status === 'approved').length === 0 && (
+        {activityItems.length === 0 && (
           <div className="text-center py-8 text-gray-400">
             <p className="text-4xl mb-2">{currentTheme === 'dark' ? '🕸️' : '😴'}</p>
             <p className="font-semibold">{currentTheme === 'dark' ? 'No fresh incantations' : 'No recent activity'}</p>

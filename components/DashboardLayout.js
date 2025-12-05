@@ -150,7 +150,11 @@ export default function DashboardLayout({ children }) {
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:translate-x-0
         `}
-        style={{ backgroundColor: currentTheme === 'dark' ? '#030712' : '#ffffff' }}
+        style={{ 
+          backgroundColor: currentTheme === 'dark' ? '#030712' : '#ffffff',
+          height: '100vh',
+          height: '100dvh' // Dynamic viewport height for mobile browsers
+        }}
       >
         {/* Header */}
         <div className={`p-6 bg-gradient-to-br ${theme.colors.sidebarHeader}`}>
@@ -187,7 +191,7 @@ export default function DashboardLayout({ children }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-2">
+        <nav className="flex-1 overflow-y-auto py-2 scrollbar-thin scrollbar-thumb-purple-500 scrollbar-track-transparent">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -208,8 +212,8 @@ export default function DashboardLayout({ children }) {
           })}
         </nav>
 
-        {/* Bottom tools - compact */}
-        <div className={`border-t ${theme.colors.borderLight}`}>
+        {/* Bottom tools - compact - sticky to bottom with safe area */}
+        <div className={`border-t ${theme.colors.borderLight} pb-safe`} style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
           {/* Action buttons - icon grid */}
           <div className="flex justify-center p-2">
             <div className="grid grid-cols-4 gap-1">

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useTheme } from '@/contexts/ThemeContext';
 import {
-  FaFilm, FaUtensils, FaShoppingCart, FaCalendarAlt, FaFileAlt, FaPills, FaImages, FaKey
+  FaFilm, FaUtensils, FaShoppingCart, FaCalendarAlt, FaFileAlt, FaPills, FaImages, FaKey, FaCog
 } from 'react-icons/fa';
 
 export default function QuickActions() {
@@ -92,6 +92,15 @@ export default function QuickActions() {
           >
             <FaKey className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
             <p className="font-bold text-xs md:text-base">Credentials</p>
+          </motion.div>
+        </Link>
+        <Link href="/settings">
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            className={`bg-gradient-to-br ${currentTheme === 'dark' ? 'from-purple-900 to-gray-900' : 'from-gray-500 to-slate-600'} p-3 md:p-4 rounded-xl md:rounded-2xl text-gray-100 text-center cursor-pointer shadow-lg hover:shadow-xl transition-all`}
+          >
+            <FaCog className="text-2xl md:text-3xl mx-auto mb-1 md:mb-2" />
+            <p className="font-bold text-xs md:text-base">{currentTheme === 'dark' ? 'Inner Sanctum' : 'Settings'}</p>
           </motion.div>
         </Link>
       </div>

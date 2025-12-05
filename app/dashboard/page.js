@@ -58,6 +58,8 @@ function DashboardContent() {
   const router = useRouter();
   const { todos } = useTodos({ realtime: false, statusFilter: 'pending' });
   const { chores } = useChores({ realtime: false, statusFilter: 'pending' });
+  const { todos: completedTodos } = useTodos({ realtime: false, statusFilter: 'completed' });
+  const { chores: approvedChoores } = useChores({ realtime: false, statusFilter: 'approved' });
   const { count: memoriesCount } = useMemoriesCount();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { memories } = useMemories({ realtime: false, latestOnly: true });
@@ -316,8 +318,8 @@ function DashboardContent() {
         {/* Right column - Recent Activity & Meme */}
         <div className="space-y-3 md:space-y-6">
           <DynamicRecentActivity
-            todos={todos}
-            chores={chores}
+            todos={completedTodos}
+            chores={approvedChoores}
             members={members}
           />
 
